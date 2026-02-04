@@ -343,12 +343,23 @@ export default function ArtistDashboard() {
               <Skeleton key={i} className="h-24" />
             ))}
           </div>
+        ) : artists?.filter(a => !a.userId).length === 0 ? (
+          <Card className="p-8 text-center">
+            <Palette className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="font-semibold mb-2">No Available Artist Profiles</h3>
+            <p className="text-muted-foreground text-sm mb-4">
+              All artist profiles are already linked to accounts. Contact the gallery to create a new artist profile.
+            </p>
+            <Button variant="outline" asChild>
+              <a href="/api/logout">Log Out</a>
+            </Button>
+          </Card>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {artists?.filter(a => !a.userId).map((artist) => (
               <Card 
                 key={artist.id} 
-                className="hover-elevate cursor-pointer"
+                className={`hover-elevate cursor-pointer ${linkArtistMutation.isPending ? 'opacity-50 pointer-events-none' : ''}`}
                 onClick={() => linkArtistMutation.mutate(artist.id)}
                 data-testid={`card-link-artist-${artist.id}`}
               >

@@ -49,8 +49,17 @@ ArtVerse is an immersive art platform featuring a virtual 3D-like gallery, art s
 - Multi-item checkout
 - Order creation with shipping details
 
+### Authentication (Replit Auth)
+- **OAuth Login**: Google, GitHub, X (Twitter), Apple, email/password via Replit Auth
+- **Session Management**: Express-session with PostgreSQL storage
+- **API Endpoints**: `/api/login`, `/api/logout`, `/api/auth/user`
+- **Protected Routes**: Artist dashboard requires authentication
+- **Artist Linking**: Users link their account to an existing artist profile
+
 ### Artist Dashboard
-- Artist selection to manage portfolios
+- **Requires Login**: Only accessible to authenticated users
+- **Single Artist View**: Shows only the logged-in artist's content (no artist selection)
+- **Artist Linking**: New users can claim an unlinked artist profile
 - Artwork management: create, edit, delete artworks
 - Blog post management: create, edit, delete with draft/publish workflow
 - Form validation and file upload support
