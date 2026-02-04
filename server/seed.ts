@@ -1,6 +1,7 @@
 import { db } from "./db";
-import { artists, artworks, auctions } from "@shared/schema";
+import { artists, artworks, auctions, exhibitions, exhibitionArtworks } from "@shared/schema";
 import { sql } from "drizzle-orm";
+import type { MazeLayout } from "@shared/schema";
 
 const artistsData = [
   {
@@ -229,6 +230,58 @@ export async function seedDatabase() {
 
     const insertedAuctions = await db.insert(auctions).values(auctionsData).returning();
     console.log(`Inserted ${insertedAuctions.length} auctions`);
+
+    // Create default exhibition with maze layout
+    const defaultMazeLayout: MazeLayout = {
+      width: 5,
+      height: 5,
+      spawnPoint: { x: 2, z: 0 },
+      cells: [
+        { x: 0, z: 0, walls: { north: true, south: true, east: false, west: true }, artworkSlots: [{ wallId: "0-0-north", position: 0 }] },
+        { x: 1, z: 0, walls: { north: true, south: true, east: false, west: false }, artworkSlots: [{ wallId: "1-0-north", position: 0 }] },
+        { x: 2, z: 0, walls: { north: false, south: false, east: false, west: false }, artworkSlots: [] },
+        { x: 3, z: 0, walls: { north: true, south: true, east: false, west: false }, artworkSlots: [{ wallId: "3-0-north", position: 0 }] },
+        { x: 4, z: 0, walls: { north: true, south: true, east: true, west: false }, artworkSlots: [{ wallId: "4-0-north", position: 0 }] },
+        { x: 0, z: 1, walls: { north: false, south: true, east: false, west: true }, artworkSlots: [{ wallId: "0-1-west", position: 0 }] },
+        { x: 1, z: 1, walls: { north: false, south: true, east: false, west: false }, artworkSlots: [] },
+        { x: 2, z: 1, walls: { north: false, south: false, east: false, west: false }, artworkSlots: [] },
+        { x: 3, z: 1, walls: { north: false, south: true, east: false, west: false }, artworkSlots: [] },
+        { x: 4, z: 1, walls: { north: false, south: true, east: true, west: false }, artworkSlots: [{ wallId: "4-1-east", position: 0 }] },
+        { x: 0, z: 2, walls: { north: false, south: false, east: true, west: true }, artworkSlots: [{ wallId: "0-2-west", position: 0 }] },
+        { x: 1, z: 2, walls: { north: true, south: false, east: false, west: true }, artworkSlots: [{ wallId: "1-2-north", position: 0 }] },
+        { x: 2, z: 2, walls: { north: true, south: false, east: false, west: false }, artworkSlots: [{ wallId: "2-2-north", position: 0 }] },
+        { x: 3, z: 2, walls: { north: true, south: false, east: true, west: false }, artworkSlots: [{ wallId: "3-2-north", position: 0 }] },
+        { x: 4, z: 2, walls: { north: false, south: false, east: true, west: true }, artworkSlots: [{ wallId: "4-2-east", position: 0 }] },
+        { x: 0, z: 3, walls: { north: false, south: false, east: false, west: true }, artworkSlots: [] },
+        { x: 1, z: 3, walls: { north: false, south: true, east: false, west: false }, artworkSlots: [] },
+        { x: 2, z: 3, walls: { north: false, south: true, east: false, west: false }, artworkSlots: [] },
+        { x: 3, z: 3, walls: { north: false, south: true, east: false, west: false }, artworkSlots: [] },
+        { x: 4, z: 3, walls: { north: false, south: false, east: true, west: false }, artworkSlots: [] },
+        { x: 0, z: 4, walls: { north: true, south: false, east: false, west: true }, artworkSlots: [{ wallId: "0-4-south", position: 0 }] },
+        { x: 1, z: 4, walls: { north: true, south: false, east: false, west: false }, artworkSlots: [{ wallId: "1-4-south", position: 0 }] },
+        { x: 2, z: 4, walls: { north: true, south: false, east: false, west: false }, artworkSlots: [{ wallId: "2-4-south", position: 0 }] },
+        { x: 3, z: 4, walls: { north: true, south: false, east: false, west: false }, artworkSlots: [{ wallId: "3-4-south", position: 0 }] },
+        { x: 4, z: 4, walls: { north: true, south: false, east: true, west: false }, artworkSlots: [{ wallId: "4-4-south", position: 0 }] },
+      ],
+    };
+
+    const [exhibition] = await db.insert(exhibitions).values({
+      name: "Grand Opening Exhibition",
+      description: "Our inaugural exhibition featuring works from renowned contemporary artists. Walk through our immersive 3D gallery space and experience art in a new dimension.",
+      layout: JSON.stringify(defaultMazeLayout),
+      isActive: true,
+    }).returning();
+
+    // Assign artworks to exhibition walls
+    const exhibitionArtworksData = insertedArtworks.slice(0, 10).map((artwork, index) => ({
+      exhibitionId: exhibition.id,
+      artworkId: artwork.id,
+      wallId: defaultMazeLayout.cells.filter(c => c.artworkSlots.length > 0)[index]?.artworkSlots[0]?.wallId || `wall-${index}`,
+      position: 0,
+    }));
+
+    await db.insert(exhibitionArtworks).values(exhibitionArtworksData);
+    console.log(`Created exhibition with ${exhibitionArtworksData.length} artworks`);
 
     console.log("Database seeded successfully!");
   } catch (error) {

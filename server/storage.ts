@@ -5,9 +5,12 @@ import {
   type Auction, type InsertAuction,
   type Bid, type InsertBid,
   type Order, type InsertOrder,
+  type Exhibition, type InsertExhibition,
+  type ExhibitionArtwork, type InsertExhibitionArtwork,
   type ArtworkWithArtist,
   type AuctionWithArtwork,
-  users, artists, artworks, auctions, bids, orders
+  type ExhibitionWithArtworks,
+  users, artists, artworks, auctions, bids, orders, exhibitions, exhibitionArtworks
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
@@ -43,6 +46,13 @@ export interface IStorage {
   // Orders
   getOrders(): Promise<Order[]>;
   createOrder(order: InsertOrder): Promise<Order>;
+  
+  // Exhibitions
+  getExhibitions(): Promise<Exhibition[]>;
+  getExhibition(id: string): Promise<ExhibitionWithArtworks | undefined>;
+  getActiveExhibition(): Promise<ExhibitionWithArtworks | undefined>;
+  createExhibition(exhibition: InsertExhibition): Promise<Exhibition>;
+  addArtworkToExhibition(exhibitionArtwork: InsertExhibitionArtwork): Promise<ExhibitionArtwork>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -194,6 +204,51 @@ export class DatabaseStorage implements IStorage {
   async createOrder(insertOrder: InsertOrder): Promise<Order> {
     const [order] = await db.insert(orders).values(insertOrder).returning();
     return order;
+  }
+
+  // Exhibitions
+  async getExhibitions(): Promise<Exhibition[]> {
+    return db.select().from(exhibitions).orderBy(desc(exhibitions.createdAt));
+  }
+
+  async getExhibition(id: string): Promise<ExhibitionWithArtworks | undefined> {
+    const [exhibition] = await db.select().from(exhibitions).where(eq(exhibitions.id, id));
+    if (!exhibition) return undefined;
+
+    const exhibitionArtworksList = await db
+      .select()
+      .from(exhibitionArtworks)
+      .where(eq(exhibitionArtworks.exhibitionId, id));
+
+    const artworksWithData = await Promise.all(
+      exhibitionArtworksList.map(async (ea) => {
+        const artwork = await this.getArtwork(ea.artworkId);
+        return { ...ea, artwork: artwork! };
+      })
+    );
+
+    return { ...exhibition, artworks: artworksWithData };
+  }
+
+  async getActiveExhibition(): Promise<ExhibitionWithArtworks | undefined> {
+    const [exhibition] = await db
+      .select()
+      .from(exhibitions)
+      .where(eq(exhibitions.isActive, true))
+      .limit(1);
+    
+    if (!exhibition) return undefined;
+    return this.getExhibition(exhibition.id);
+  }
+
+  async createExhibition(insertExhibition: InsertExhibition): Promise<Exhibition> {
+    const [exhibition] = await db.insert(exhibitions).values(insertExhibition).returning();
+    return exhibition;
+  }
+
+  async addArtworkToExhibition(insertExhibitionArtwork: InsertExhibitionArtwork): Promise<ExhibitionArtwork> {
+    const [exhibitionArtwork] = await db.insert(exhibitionArtworks).values(insertExhibitionArtwork).returning();
+    return exhibitionArtwork;
   }
 }
 

@@ -174,5 +174,39 @@ export async function registerRoutes(
     }
   });
 
+  // Exhibitions routes
+  app.get("/api/exhibitions", async (req, res) => {
+    try {
+      const exhibitions = await storage.getExhibitions();
+      res.json(exhibitions);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch exhibitions" });
+    }
+  });
+
+  app.get("/api/exhibitions/active", async (req, res) => {
+    try {
+      const exhibition = await storage.getActiveExhibition();
+      if (!exhibition) {
+        return res.status(404).json({ error: "No active exhibition" });
+      }
+      res.json(exhibition);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch active exhibition" });
+    }
+  });
+
+  app.get("/api/exhibitions/:id", async (req, res) => {
+    try {
+      const exhibition = await storage.getExhibition(req.params.id);
+      if (!exhibition) {
+        return res.status(404).json({ error: "Exhibition not found" });
+      }
+      res.json(exhibition);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch exhibition" });
+    }
+  });
+
   return httpServer;
 }

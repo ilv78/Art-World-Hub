@@ -81,6 +81,33 @@ export const insertBidSchema = createInsertSchema(bids).omit({ id: true, timesta
 export type InsertBid = z.infer<typeof insertBidSchema>;
 export type Bid = typeof bids.$inferSelect;
 
+// Exhibitions table - defines customizable gallery layouts
+export const exhibitions = pgTable("exhibitions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  layout: text("layout").notNull(), // JSON string defining maze layout
+  isActive: boolean("is_active").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertExhibitionSchema = createInsertSchema(exhibitions).omit({ id: true, createdAt: true });
+export type InsertExhibition = z.infer<typeof insertExhibitionSchema>;
+export type Exhibition = typeof exhibitions.$inferSelect;
+
+// Exhibition artworks - which artworks are in which exhibition and their wall placement
+export const exhibitionArtworks = pgTable("exhibition_artworks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  exhibitionId: varchar("exhibition_id").references(() => exhibitions.id).notNull(),
+  artworkId: varchar("artwork_id").references(() => artworks.id).notNull(),
+  wallId: text("wall_id").notNull(), // Which wall in the maze
+  position: integer("position").notNull(), // Position on the wall
+});
+
+export const insertExhibitionArtworkSchema = createInsertSchema(exhibitionArtworks).omit({ id: true });
+export type InsertExhibitionArtwork = z.infer<typeof insertExhibitionArtworkSchema>;
+export type ExhibitionArtwork = typeof exhibitionArtworks.$inferSelect;
+
 // Orders table
 export const orders = pgTable("orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -100,3 +127,21 @@ export type Order = typeof orders.$inferSelect;
 // Extended types for frontend
 export type ArtworkWithArtist = Artwork & { artist: Artist };
 export type AuctionWithArtwork = Auction & { artwork: ArtworkWithArtist };
+export type ExhibitionWithArtworks = Exhibition & { 
+  artworks: (ExhibitionArtwork & { artwork: ArtworkWithArtist })[] 
+};
+
+// Layout types for the 3D maze
+export interface MazeCell {
+  x: number;
+  z: number;
+  walls: { north: boolean; south: boolean; east: boolean; west: boolean };
+  artworkSlots: { wallId: string; position: number }[];
+}
+
+export interface MazeLayout {
+  width: number;
+  height: number;
+  cells: MazeCell[];
+  spawnPoint: { x: number; z: number };
+}
