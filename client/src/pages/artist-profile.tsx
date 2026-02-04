@@ -1,0 +1,258 @@
+import { useQuery } from "@tanstack/react-query";
+import { useParams, Link } from "wouter";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  MapPin, 
+  Palette, 
+  Image as ImageIcon, 
+  FileText, 
+  Calendar,
+  ArrowLeft,
+  ShoppingCart,
+  ExternalLink
+} from "lucide-react";
+import { useCartStore } from "@/lib/cart-store";
+import type { Artist, ArtworkWithArtist, BlogPostWithArtist } from "@shared/schema";
+
+export default function ArtistProfile() {
+  const params = useParams<{ id: string }>();
+  const addItem = useCartStore((state) => state.addItem);
+
+  const { data: artist, isLoading: artistLoading } = useQuery<Artist>({
+    queryKey: ["/api/artists", params.id],
+  });
+
+  const { data: artworks, isLoading: artworksLoading } = useQuery<ArtworkWithArtist[]>({
+    queryKey: ["/api/artists", params.id, "artworks"],
+    enabled: !!params.id,
+  });
+
+  const { data: blogPosts, isLoading: blogLoading } = useQuery<BlogPostWithArtist[]>({
+    queryKey: ["/api/artists", params.id, "blog"],
+    enabled: !!params.id,
+  });
+
+  const publishedPosts = blogPosts?.filter(post => post.isPublished) || [];
+
+  const formatDate = (date: string | Date) => {
+    return new Date(date).toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  };
+
+  if (artistLoading) {
+    return (
+      <div className="p-6 space-y-6">
+        <Skeleton className="h-48" />
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-20 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!artist) {
+    return (
+      <div className="p-6 text-center">
+        <h1 className="font-serif text-2xl font-bold mb-4">Artist Not Found</h1>
+        <p className="text-muted-foreground mb-4">The artist you're looking for doesn't exist.</p>
+        <Link href="/artists">
+          <Button>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Artists
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen">
+      <div className="relative h-48 bg-gradient-to-br from-primary/20 via-primary/10 to-background">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMtOS45NDEgMC0xOCA4LjA1OS0xOCAxOHM4LjA1OSAxOCAxOCAxOCAxOC04LjA1OSAxOC0xOC04LjA1OS0xOC0xOC0xOHoiIHN0cm9rZT0icmdiYSgwLDAsMCwwLjAzKSIgc3Ryb2tlLXdpZHRoPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-30" />
+      </div>
+
+      <div className="max-w-5xl mx-auto px-6 -mt-24 relative z-10 pb-12">
+        <Card className="mb-8">
+          <CardContent className="pt-6">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+              <Avatar className="w-32 h-32 ring-4 ring-background shadow-xl">
+                <AvatarImage src={artist.avatarUrl || undefined} />
+                <AvatarFallback className="text-4xl font-serif">
+                  {artist.name.split(" ").map((n) => n[0]).join("")}
+                </AvatarFallback>
+              </Avatar>
+
+              <div className="flex-1 text-center sm:text-left">
+                <h1 className="font-serif text-3xl font-bold mb-2">{artist.name}</h1>
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 text-muted-foreground mb-4">
+                  {artist.country && (
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-4 w-4" />
+                      {artist.country}
+                    </span>
+                  )}
+                  {artist.specialization && (
+                    <Badge variant="outline">
+                      <Palette className="h-3 w-3 mr-1" />
+                      {artist.specialization}
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-muted-foreground leading-relaxed">{artist.bio}</p>
+              </div>
+
+              <Link href="/artists">
+                <Button variant="outline" size="icon">
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Tabs defaultValue="artworks" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="artworks" data-testid="tab-profile-artworks">
+              <ImageIcon className="h-4 w-4 mr-2" />
+              Artworks ({artworks?.length || 0})
+            </TabsTrigger>
+            <TabsTrigger value="blog" data-testid="tab-profile-blog">
+              <FileText className="h-4 w-4 mr-2" />
+              Blog ({publishedPosts.length})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="artworks" className="space-y-4">
+            {artworksLoading ? (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton key={i} className="aspect-[4/3] rounded-md" />
+                ))}
+              </div>
+            ) : artworks && artworks.length > 0 ? (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {artworks.map((artwork) => (
+                  <Card 
+                    key={artwork.id} 
+                    className="overflow-hidden group"
+                    data-testid={`card-profile-artwork-${artwork.id}`}
+                  >
+                    <div className="aspect-[4/3] relative overflow-hidden">
+                      <img 
+                        src={artwork.imageUrl} 
+                        alt={artwork.title}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                      {!artwork.isForSale && (
+                        <Badge className="absolute top-2 right-2" variant="secondary">
+                          Sold
+                        </Badge>
+                      )}
+                    </div>
+                    <CardContent className="p-4">
+                      <h3 className="font-semibold">{artwork.title}</h3>
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-lg font-bold text-primary">{artwork.price}</span>
+                        {artwork.year && (
+                          <span className="text-sm text-muted-foreground">{artwork.year}</span>
+                        )}
+                      </div>
+                      {artwork.medium && (
+                        <p className="text-sm text-muted-foreground mt-1">{artwork.medium}</p>
+                      )}
+                      {artwork.isForSale && (
+                        <Button 
+                          className="w-full mt-4" 
+                          size="sm"
+                          onClick={() => addItem(artwork)}
+                          data-testid={`button-add-to-cart-${artwork.id}`}
+                        >
+                          <ShoppingCart className="h-4 w-4 mr-2" />
+                          Add to Cart
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16">
+                <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="font-semibold mb-2">No artworks available</h3>
+                <p className="text-muted-foreground">
+                  This artist hasn't added any artworks yet.
+                </p>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="blog" className="space-y-6">
+            {blogLoading ? (
+              <div className="space-y-4">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-40" />
+                ))}
+              </div>
+            ) : publishedPosts.length > 0 ? (
+              <div className="space-y-6">
+                {publishedPosts.map((post) => (
+                  <Card 
+                    key={post.id} 
+                    className="overflow-hidden"
+                    data-testid={`card-profile-blog-${post.id}`}
+                  >
+                    {post.coverImageUrl && (
+                      <div className="aspect-[3/1] overflow-hidden">
+                        <img 
+                          src={post.coverImageUrl} 
+                          alt={post.title}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                    <CardHeader>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                        <Calendar className="h-4 w-4" />
+                        {formatDate(post.createdAt)}
+                      </div>
+                      <CardTitle className="font-serif text-2xl">{post.title}</CardTitle>
+                      {post.excerpt && (
+                        <CardDescription className="text-base">
+                          {post.excerpt}
+                        </CardDescription>
+                      )}
+                    </CardHeader>
+                    <CardContent>
+                      <div className="prose prose-sm dark:prose-invert max-w-none">
+                        <p className="whitespace-pre-wrap">{post.content}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16">
+                <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="font-semibold mb-2">No blog posts yet</h3>
+                <p className="text-muted-foreground">
+                  This artist hasn't published any blog posts.
+                </p>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  );
+}

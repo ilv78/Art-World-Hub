@@ -6,7 +6,7 @@ ArtVerse is an immersive art platform featuring a virtual 3D-like gallery, art s
 ## Architecture
 
 ### Frontend (React + Vite)
-- **Pages**: Home, Gallery, Store, Auctions, Artists
+- **Pages**: Home, Gallery, Store, Auctions, Artists, Artist Profile, Artist Dashboard
 - **Components**: Sidebar navigation, Cart system, Artwork cards/dialogs
 - **State Management**: Zustand for cart, TanStack Query for server state
 - **Styling**: Tailwind CSS with Shadcn UI components
@@ -49,6 +49,18 @@ ArtVerse is an immersive art platform featuring a virtual 3D-like gallery, art s
 - Multi-item checkout
 - Order creation with shipping details
 
+### Artist Dashboard
+- Artist selection to manage portfolios
+- Artwork management: create, edit, delete artworks
+- Blog post management: create, edit, delete with draft/publish workflow
+- Form validation and file upload support
+
+### Artist Profile (Public)
+- Full artist bio and avatar display
+- Artworks gallery with add-to-cart functionality
+- Published blog posts display (no comments - read-only)
+- Tabbed navigation between artworks and blog
+
 ## Database Schema
 
 ### Tables
@@ -60,6 +72,7 @@ ArtVerse is an immersive art platform featuring a virtual 3D-like gallery, art s
 - `orders` - Purchase orders
 - `exhibitions` - Gallery exhibitions with maze layouts
 - `exhibition_artworks` - Artworks linked to exhibitions with wall placement
+- `blog_posts` - Artist blog posts with title, content, excerpt, and publish status
 
 ## API Endpoints
 
@@ -67,10 +80,15 @@ ArtVerse is an immersive art platform featuring a virtual 3D-like gallery, art s
 - `GET /api/artists` - List all artists
 - `GET /api/artists/:id` - Get artist details
 - `GET /api/artists/:id/artworks` - Get artist's artworks
+- `GET /api/artists/:id/blog` - Get artist's blog posts
+- `PATCH /api/artists/:id` - Update artist profile
 
 ### Artworks
 - `GET /api/artworks` - List all artworks with artist info
 - `GET /api/artworks/:id` - Get artwork details
+- `POST /api/artworks` - Create new artwork
+- `PATCH /api/artworks/:id` - Update artwork
+- `DELETE /api/artworks/:id` - Delete artwork
 
 ### Auctions
 - `GET /api/auctions` - List all auctions
@@ -86,6 +104,13 @@ ArtVerse is an immersive art platform featuring a virtual 3D-like gallery, art s
 - `GET /api/exhibitions` - List all exhibitions
 - `GET /api/exhibitions/active` - Get active exhibition with artworks
 - `GET /api/exhibitions/:id` - Get exhibition details with artworks
+
+### Blog Posts
+- `GET /api/blog` - List all published blog posts
+- `GET /api/blog/:id` - Get blog post details
+- `POST /api/blog` - Create new blog post
+- `PATCH /api/blog/:id` - Update blog post
+- `DELETE /api/blog/:id` - Delete blog post
 
 ## Development
 

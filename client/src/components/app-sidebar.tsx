@@ -1,4 +1,4 @@
-import { Home, Image, ShoppingBag, Gavel, Users } from "lucide-react";
+import { Home, Image, ShoppingBag, Gavel, Users, LayoutDashboard } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import {
   Sidebar,
@@ -38,6 +38,11 @@ const menuItems = [
     title: "Artists",
     url: "/artists",
     icon: Users,
+  },
+  {
+    title: "Artist Dashboard",
+    url: "/dashboard",
+    icon: LayoutDashboard,
   },
 ];
 

@@ -128,10 +128,12 @@ export default function Artists() {
                   {artist.bio}
                 </p>
 
-                <Button variant="ghost" className="w-full" data-testid={`button-view-artist-${artist.id}`}>
-                  View Profile
-                  <ExternalLink className="h-4 w-4 ml-2" />
-                </Button>
+                <Link href={`/artists/${artist.id}`}>
+                  <Button variant="ghost" className="w-full" data-testid={`button-view-artist-${artist.id}`}>
+                    View Profile
+                    <ExternalLink className="h-4 w-4 ml-2" />
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
           ))}

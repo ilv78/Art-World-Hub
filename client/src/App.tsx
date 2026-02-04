@@ -13,6 +13,8 @@ import Gallery from "@/pages/gallery";
 import Store from "@/pages/store";
 import Auctions from "@/pages/auctions";
 import Artists from "@/pages/artists";
+import ArtistDashboard from "@/pages/artist-dashboard";
+import ArtistProfile from "@/pages/artist-profile";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -23,6 +25,8 @@ function Router() {
       <Route path="/store" component={Store} />
       <Route path="/auctions" component={Auctions} />
       <Route path="/artists" component={Artists} />
+      <Route path="/artists/:id" component={ArtistProfile} />
+      <Route path="/dashboard" component={ArtistDashboard} />
       <Route component={NotFound} />
     </Switch>
   );
