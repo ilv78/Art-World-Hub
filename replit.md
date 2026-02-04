@@ -18,11 +18,19 @@ ArtVerse is an immersive art platform featuring a virtual 3D-like gallery, art s
 
 ## Key Features
 
-### Virtual Gallery
-- 3D-like gallery experience with CSS transforms
-- Artwork navigation with thumbnails
-- Zoom controls and info panel
-- Add to cart directly from gallery
+### Virtual Gallery (3D Maze Experience)
+- **3D Walkable Maze**: Full Three.js-powered first-person walking experience
+- **First-Person Controls**: WASD/Arrow keys for movement, mouse for looking around
+- **Customizable Exhibition Layouts**: Maze layouts stored as JSON in database per exhibition
+- **Navigation Minimap**: Real-time minimap showing player position and maze layout
+- **Artwork Interaction**: Click on artworks to view details and add to cart
+- **WebGL Fallback**: Automatic detection with Classic view alternative
+- **View Modes**: Toggle between 3D Maze and Classic grid view
+
+### Exhibition System
+- **Database Tables**: `exhibitions` and `exhibition_artworks` for managing shows
+- **API Endpoints**: `/api/exhibitions`, `/api/exhibitions/active`, `/api/exhibitions/:id`
+- **Maze Layout Schema**: `MazeLayout` type with cells, walls, and artwork slots
 
 ### Art Store
 - Grid/list view toggle
@@ -50,6 +58,8 @@ ArtVerse is an immersive art platform featuring a virtual 3D-like gallery, art s
 - `auctions` - Auction listings with timing and bids
 - `bids` - Individual bids on auctions
 - `orders` - Purchase orders
+- `exhibitions` - Gallery exhibitions with maze layouts
+- `exhibition_artworks` - Artworks linked to exhibitions with wall placement
 
 ## API Endpoints
 
@@ -71,6 +81,11 @@ ArtVerse is an immersive art platform featuring a virtual 3D-like gallery, art s
 ### Orders
 - `GET /api/orders` - List all orders
 - `POST /api/orders` - Create new order
+
+### Exhibitions
+- `GET /api/exhibitions` - List all exhibitions
+- `GET /api/exhibitions/active` - Get active exhibition with artworks
+- `GET /api/exhibitions/:id` - Get exhibition details with artworks
 
 ## Development
 
