@@ -7,10 +7,12 @@ import {
   type Order, type InsertOrder,
   type Exhibition, type InsertExhibition,
   type ExhibitionArtwork, type InsertExhibitionArtwork,
+  type BlogPost, type InsertBlogPost,
   type ArtworkWithArtist,
   type AuctionWithArtwork,
   type ExhibitionWithArtworks,
-  users, artists, artworks, auctions, bids, orders, exhibitions, exhibitionArtworks
+  type BlogPostWithArtist,
+  users, artists, artworks, auctions, bids, orders, exhibitions, exhibitionArtworks, blogPosts
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
@@ -53,6 +55,18 @@ export interface IStorage {
   getActiveExhibition(): Promise<ExhibitionWithArtworks | undefined>;
   createExhibition(exhibition: InsertExhibition): Promise<Exhibition>;
   addArtworkToExhibition(exhibitionArtwork: InsertExhibitionArtwork): Promise<ExhibitionArtwork>;
+  
+  // Blog Posts
+  getBlogPosts(): Promise<BlogPostWithArtist[]>;
+  getBlogPost(id: string): Promise<BlogPostWithArtist | undefined>;
+  getBlogPostsByArtist(artistId: string): Promise<BlogPostWithArtist[]>;
+  createBlogPost(blogPost: InsertBlogPost): Promise<BlogPost>;
+  updateBlogPost(id: string, blogPost: Partial<InsertBlogPost>): Promise<BlogPost | undefined>;
+  deleteBlogPost(id: string): Promise<boolean>;
+  
+  // Artist management
+  updateArtist(id: string, artist: Partial<InsertArtist>): Promise<Artist | undefined>;
+  deleteArtwork(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -249,6 +263,81 @@ export class DatabaseStorage implements IStorage {
   async addArtworkToExhibition(insertExhibitionArtwork: InsertExhibitionArtwork): Promise<ExhibitionArtwork> {
     const [exhibitionArtwork] = await db.insert(exhibitionArtworks).values(insertExhibitionArtwork).returning();
     return exhibitionArtwork;
+  }
+
+  // Blog Posts
+  async getBlogPosts(): Promise<BlogPostWithArtist[]> {
+    const result = await db
+      .select()
+      .from(blogPosts)
+      .innerJoin(artists, eq(blogPosts.artistId, artists.id))
+      .where(eq(blogPosts.isPublished, true))
+      .orderBy(desc(blogPosts.createdAt));
+    
+    return result.map(({ blog_posts: post, artists: artist }) => ({
+      ...post,
+      artist,
+    }));
+  }
+
+  async getBlogPost(id: string): Promise<BlogPostWithArtist | undefined> {
+    const result = await db
+      .select()
+      .from(blogPosts)
+      .innerJoin(artists, eq(blogPosts.artistId, artists.id))
+      .where(eq(blogPosts.id, id));
+    
+    if (result.length === 0) return undefined;
+    const { blog_posts: post, artists: artist } = result[0];
+    return { ...post, artist };
+  }
+
+  async getBlogPostsByArtist(artistId: string): Promise<BlogPostWithArtist[]> {
+    const result = await db
+      .select()
+      .from(blogPosts)
+      .innerJoin(artists, eq(blogPosts.artistId, artists.id))
+      .where(eq(blogPosts.artistId, artistId))
+      .orderBy(desc(blogPosts.createdAt));
+    
+    return result.map(({ blog_posts: post, artists: artist }) => ({
+      ...post,
+      artist,
+    }));
+  }
+
+  async createBlogPost(insertBlogPost: InsertBlogPost): Promise<BlogPost> {
+    const [post] = await db.insert(blogPosts).values(insertBlogPost).returning();
+    return post;
+  }
+
+  async updateBlogPost(id: string, updateData: Partial<InsertBlogPost>): Promise<BlogPost | undefined> {
+    const [post] = await db
+      .update(blogPosts)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(blogPosts.id, id))
+      .returning();
+    return post;
+  }
+
+  async deleteBlogPost(id: string): Promise<boolean> {
+    const result = await db.delete(blogPosts).where(eq(blogPosts.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // Artist management
+  async updateArtist(id: string, updateData: Partial<InsertArtist>): Promise<Artist | undefined> {
+    const [artist] = await db
+      .update(artists)
+      .set(updateData)
+      .where(eq(artists.id, id))
+      .returning();
+    return artist;
+  }
+
+  async deleteArtwork(id: string): Promise<boolean> {
+    const result = await db.delete(artworks).where(eq(artworks.id, id)).returning();
+    return result.length > 0;
   }
 }
 

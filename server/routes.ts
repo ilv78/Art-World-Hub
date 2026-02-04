@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertArtworkSchema, insertArtistSchema, insertBidSchema, insertOrderSchema } from "@shared/schema";
+import { insertArtworkSchema, insertArtistSchema, insertBidSchema, insertOrderSchema, insertBlogPostSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(
@@ -205,6 +205,124 @@ export async function registerRoutes(
       res.json(exhibition);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch exhibition" });
+    }
+  });
+
+  // Blog posts routes
+  app.get("/api/blog", async (req, res) => {
+    try {
+      const posts = await storage.getBlogPosts();
+      res.json(posts);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch blog posts" });
+    }
+  });
+
+  app.get("/api/blog/:id", async (req, res) => {
+    try {
+      const post = await storage.getBlogPost(req.params.id);
+      if (!post) {
+        return res.status(404).json({ error: "Blog post not found" });
+      }
+      res.json(post);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch blog post" });
+    }
+  });
+
+  app.get("/api/artists/:id/blog", async (req, res) => {
+    try {
+      const posts = await storage.getBlogPostsByArtist(req.params.id);
+      res.json(posts);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch artist blog posts" });
+    }
+  });
+
+  app.post("/api/blog", async (req, res) => {
+    try {
+      const postData = insertBlogPostSchema.parse(req.body);
+      const post = await storage.createBlogPost(postData);
+      res.status(201).json(post);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors[0].message });
+      }
+      res.status(500).json({ error: "Failed to create blog post" });
+    }
+  });
+
+  app.patch("/api/blog/:id", async (req, res) => {
+    try {
+      const post = await storage.updateBlogPost(req.params.id, req.body);
+      if (!post) {
+        return res.status(404).json({ error: "Blog post not found" });
+      }
+      res.json(post);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update blog post" });
+    }
+  });
+
+  app.delete("/api/blog/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteBlogPost(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Blog post not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete blog post" });
+    }
+  });
+
+  // Artist management routes
+  app.patch("/api/artists/:id", async (req, res) => {
+    try {
+      const artist = await storage.updateArtist(req.params.id, req.body);
+      if (!artist) {
+        return res.status(404).json({ error: "Artist not found" });
+      }
+      res.json(artist);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update artist" });
+    }
+  });
+
+  app.post("/api/artworks", async (req, res) => {
+    try {
+      const artworkData = insertArtworkSchema.parse(req.body);
+      const artwork = await storage.createArtwork(artworkData);
+      res.status(201).json(artwork);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors[0].message });
+      }
+      res.status(500).json({ error: "Failed to create artwork" });
+    }
+  });
+
+  app.patch("/api/artworks/:id", async (req, res) => {
+    try {
+      const artwork = await storage.updateArtwork(req.params.id, req.body);
+      if (!artwork) {
+        return res.status(404).json({ error: "Artwork not found" });
+      }
+      res.json(artwork);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update artwork" });
+    }
+  });
+
+  app.delete("/api/artworks/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteArtwork(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Artwork not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete artwork" });
     }
   });
 

@@ -108,6 +108,23 @@ export const insertExhibitionArtworkSchema = createInsertSchema(exhibitionArtwor
 export type InsertExhibitionArtwork = z.infer<typeof insertExhibitionArtworkSchema>;
 export type ExhibitionArtwork = typeof exhibitionArtworks.$inferSelect;
 
+// Blog posts table - artists can share their thoughts and present themselves
+export const blogPosts = pgTable("blog_posts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  artistId: varchar("artist_id").references(() => artists.id).notNull(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  excerpt: text("excerpt"),
+  coverImageUrl: text("cover_image_url"),
+  isPublished: boolean("is_published").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertBlogPostSchema = createInsertSchema(blogPosts).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertBlogPost = z.infer<typeof insertBlogPostSchema>;
+export type BlogPost = typeof blogPosts.$inferSelect;
+
 // Orders table
 export const orders = pgTable("orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -129,6 +146,11 @@ export type ArtworkWithArtist = Artwork & { artist: Artist };
 export type AuctionWithArtwork = Auction & { artwork: ArtworkWithArtist };
 export type ExhibitionWithArtworks = Exhibition & { 
   artworks: (ExhibitionArtwork & { artwork: ArtworkWithArtist })[] 
+};
+export type BlogPostWithArtist = BlogPost & { artist: Artist };
+export type ArtistWithStats = Artist & { 
+  artworkCount: number; 
+  blogPostCount: number;
 };
 
 // Layout types for the 3D maze
