@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { X, ShoppingCart, Info, Move, Mouse, Keyboard, Maximize2, Minimize2, ZoomIn, ZoomOut, Box } from "lucide-react";
+import { X, ShoppingCart, Info, Move, Mouse, Keyboard, Maximize2, Minimize2, ZoomIn, ZoomOut, Box, Map as MapIcon } from "lucide-react";
 import type { ArtworkWithArtist, MazeLayout, MazeCell } from "@shared/schema";
 import { useCartStore } from "@/lib/cart-store";
 import { useToast } from "@/hooks/use-toast";
@@ -72,10 +72,13 @@ export function MazeGallery3D({ artworks, layout = defaultLayout }: MazeGallery3
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [webglError, setWebglError] = useState<string | null>(null);
+  const [showMinimap, setShowMinimap] = useState(true);
+  const [playerPosition, setPlayerPosition] = useState({ x: 0, z: 0, rotation: 0 });
   
   const keysPressed = useRef<Set<string>>(new Set());
   const euler = useRef(new THREE.Euler(0, 0, 0, "YXZ"));
   const velocity = useRef(new THREE.Vector3());
+  const playerPosRef = useRef({ x: 0, z: 0, rotation: 0 });
   
   const { addItem, items } = useCartStore();
   const { toast } = useToast();
@@ -470,6 +473,13 @@ export function MazeGallery3D({ artworks, layout = defaultLayout }: MazeGallery3
             camera.position.copy(newPosition);
           }
         }
+        
+        // Update player position ref for minimap (no state update in loop)
+        playerPosRef.current = {
+          x: camera.position.x / CELL_SIZE,
+          z: camera.position.z / CELL_SIZE,
+          rotation: euler.current.y
+        };
       }
 
       renderer.render(scene, camera);
@@ -537,6 +547,25 @@ export function MazeGallery3D({ artworks, layout = defaultLayout }: MazeGallery3
       document.removeEventListener("click", handleClick);
     };
   }, [isPointerLocked, selectedArtwork, handleClick]);
+
+  // Sync player position from ref to state at fixed interval (for minimap)
+  useEffect(() => {
+    if (!isPointerLocked) return;
+    
+    const interval = setInterval(() => {
+      setPlayerPosition(prev => {
+        const ref = playerPosRef.current;
+        if (Math.abs(prev.x - ref.x) > 0.05 || 
+            Math.abs(prev.z - ref.z) > 0.05 || 
+            Math.abs(prev.rotation - ref.rotation) > 0.05) {
+          return { ...ref };
+        }
+        return prev;
+      });
+    }, 100); // Update 10 times per second
+    
+    return () => clearInterval(interval);
+  }, [isPointerLocked]);
 
   const requestPointerLock = () => {
     if (containerRef.current && typeof containerRef.current.requestPointerLock === 'function') {
@@ -642,12 +671,115 @@ export function MazeGallery3D({ artworks, layout = defaultLayout }: MazeGallery3
       <Button
         size="icon"
         variant="ghost"
-        className="absolute top-4 right-4 text-white/70 hover:text-white hover:bg-white/10"
+        className="absolute top-4 right-4 text-white/70"
         onClick={toggleFullscreen}
         data-testid="button-fullscreen"
       >
         {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
       </Button>
+
+      {/* Minimap toggle button - only show when pointer locked */}
+      {isPointerLocked && (
+        <Button
+          size="icon"
+          variant="ghost"
+          className="absolute top-4 right-16 text-white/70"
+          onClick={() => setShowMinimap(!showMinimap)}
+          data-testid="button-toggle-minimap"
+        >
+          <MapIcon className="w-5 h-5" />
+        </Button>
+      )}
+
+      {/* Minimap */}
+      {showMinimap && isPointerLocked && (() => {
+        // Calculate scale to keep minimap within max size
+        const baseSize = 20;
+        const maxMapSize = 150;
+        const naturalWidth = layout.width * baseSize + 4;
+        const naturalHeight = layout.height * baseSize + 4;
+        const scale = Math.min(1, maxMapSize / Math.max(naturalWidth, naturalHeight));
+        const cellSize = baseSize * scale;
+        const mapWidth = layout.width * cellSize + 4;
+        const mapHeight = layout.height * cellSize + 4;
+        
+        return (
+        <div 
+          className="absolute top-16 right-4 bg-black/70 rounded-lg p-2 border border-white/20"
+          data-testid="minimap"
+        >
+          <svg 
+            width={mapWidth} 
+            height={mapHeight} 
+            className="block"
+          >
+            {/* Background */}
+            <rect 
+              x={0} 
+              y={0} 
+              width={mapWidth} 
+              height={mapHeight} 
+              fill="rgba(30,30,30,0.8)" 
+              rx={4}
+            />
+            
+            {/* Cells and walls */}
+            {layout.cells.map((cell) => {
+              const cx = cell.x * cellSize + 2;
+              const cz = cell.z * cellSize + 2;
+              const hasArtwork = cell.artworkSlots && cell.artworkSlots.length > 0;
+              
+              return (
+                <g key={`${cell.x}-${cell.z}`}>
+                  {/* Cell floor */}
+                  <rect
+                    x={cx}
+                    y={cz}
+                    width={cellSize}
+                    height={cellSize}
+                    fill={hasArtwork ? "rgba(249, 115, 22, 0.3)" : "rgba(60,60,60,0.5)"}
+                  />
+                  
+                  {/* Walls */}
+                  {cell.walls.north && (
+                    <line x1={cx} y1={cz} x2={cx + cellSize} y2={cz} stroke="#666" strokeWidth={1.5 * scale} />
+                  )}
+                  {cell.walls.south && (
+                    <line x1={cx} y1={cz + cellSize} x2={cx + cellSize} y2={cz + cellSize} stroke="#666" strokeWidth={1.5 * scale} />
+                  )}
+                  {cell.walls.west && (
+                    <line x1={cx} y1={cz} x2={cx} y2={cz + cellSize} stroke="#666" strokeWidth={1.5 * scale} />
+                  )}
+                  {cell.walls.east && (
+                    <line x1={cx + cellSize} y1={cz} x2={cx + cellSize} y2={cz + cellSize} stroke="#666" strokeWidth={1.5 * scale} />
+                  )}
+                </g>
+              );
+            })}
+            
+            {/* Player position */}
+            <g transform={`translate(${playerPosition.x * cellSize + 2 + cellSize/2}, ${playerPosition.z * cellSize + 2 + cellSize/2})`}>
+              <g transform={`rotate(${(-playerPosition.rotation * 180 / Math.PI)})`}>
+                <polygon 
+                  points={`0,${-5*scale} ${3*scale},${3*scale} 0,${1.5*scale} ${-3*scale},${3*scale}`}
+                  fill="#F97316" 
+                  stroke="#fff"
+                  strokeWidth={1}
+                />
+              </g>
+            </g>
+          </svg>
+          
+          {/* Legend */}
+          <div className="mt-2 text-xs text-white/60 space-y-1">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: "rgba(249, 115, 22, 0.5)" }} />
+              <span>Artwork</span>
+            </div>
+          </div>
+        </div>
+        );
+      })()}
 
       {/* Artwork detail panel */}
       {selectedArtwork && (
