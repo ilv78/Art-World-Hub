@@ -3,23 +3,13 @@ import { pgTable, text, varchar, integer, decimal, timestamp, boolean } from "dr
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-});
+// Re-export auth models (users and sessions tables)
+export * from "./models/auth";
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-});
-
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
-
-// Artists table
+// Artists table - linked to authenticated users
 export const artists = pgTable("artists", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"), // Links to authenticated user
   name: text("name").notNull(),
   bio: text("bio").notNull(),
   avatarUrl: text("avatar_url"),

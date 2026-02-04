@@ -1,5 +1,4 @@
 import { 
-  type User, type InsertUser,
   type Artist, type InsertArtist,
   type Artwork, type InsertArtwork,
   type Auction, type InsertAuction,
@@ -12,20 +11,16 @@ import {
   type AuctionWithArtwork,
   type ExhibitionWithArtworks,
   type BlogPostWithArtist,
-  users, artists, artworks, auctions, bids, orders, exhibitions, exhibitionArtworks, blogPosts
+  artists, artworks, auctions, bids, orders, exhibitions, exhibitionArtworks, blogPosts
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
 
 export interface IStorage {
-  // Users
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
-  
   // Artists
   getArtists(): Promise<Artist[]>;
   getArtist(id: string): Promise<Artist | undefined>;
+  getArtistByUserId(userId: string): Promise<Artist | undefined>;
   createArtist(artist: InsertArtist): Promise<Artist>;
   
   // Artworks
@@ -70,22 +65,6 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  // Users
-  async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user;
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser).returning();
-    return user;
-  }
-
   // Artists
   async getArtists(): Promise<Artist[]> {
     return db.select().from(artists);
@@ -93,6 +72,11 @@ export class DatabaseStorage implements IStorage {
 
   async getArtist(id: string): Promise<Artist | undefined> {
     const [artist] = await db.select().from(artists).where(eq(artists.id, id));
+    return artist;
+  }
+
+  async getArtistByUserId(userId: string): Promise<Artist | undefined> {
+    const [artist] = await db.select().from(artists).where(eq(artists.userId, userId));
     return artist;
   }
 

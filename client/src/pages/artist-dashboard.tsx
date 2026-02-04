@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -21,6 +21,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { 
   Plus, 
   Image as ImageIcon, 
@@ -31,17 +32,20 @@ import {
   EyeOff,
   Save,
   Palette,
-  X
+  X,
+  LogIn,
+  Link as LinkIcon
 } from "lucide-react";
 import type { Artist, ArtworkWithArtist, BlogPost, InsertArtwork, InsertBlogPost } from "@shared/schema";
 
 export default function ArtistDashboard() {
   const { toast } = useToast();
-  const [selectedArtistId, setSelectedArtistId] = useState<string | null>(null);
+  const { user, isLoading: authLoading, isAuthenticated } = useAuth();
   const [artworkDialogOpen, setArtworkDialogOpen] = useState(false);
   const [blogDialogOpen, setBlogDialogOpen] = useState(false);
   const [editingArtwork, setEditingArtwork] = useState<ArtworkWithArtist | null>(null);
   const [editingBlogPost, setEditingBlogPost] = useState<BlogPost | null>(null);
+  const [linkingArtist, setLinkingArtist] = useState(false);
 
   const [artworkForm, setArtworkForm] = useState({
     title: "",
@@ -63,11 +67,21 @@ export default function ArtistDashboard() {
     isPublished: false,
   });
 
-  const { data: artists, isLoading: artistsLoading } = useQuery<Artist[]>({
-    queryKey: ["/api/artists"],
+  // Get logged-in artist's profile
+  const { data: myArtist, isLoading: myArtistLoading, error: myArtistError } = useQuery<Artist>({
+    queryKey: ["/api/artists/me"],
+    enabled: isAuthenticated,
+    retry: false,
   });
 
-  const selectedArtist = artists?.find(a => a.id === selectedArtistId);
+  // Get all artists for linking (when no artist is linked yet)
+  const { data: artists, isLoading: artistsLoading } = useQuery<Artist[]>({
+    queryKey: ["/api/artists"],
+    enabled: isAuthenticated && !myArtist && !myArtistLoading,
+  });
+
+  const selectedArtist = myArtist;
+  const selectedArtistId = myArtist?.id;
 
   const { data: artworks, isLoading: artworksLoading } = useQuery<ArtworkWithArtist[]>({
     queryKey: ["/api/artists", selectedArtistId, "artworks"],
@@ -77,6 +91,21 @@ export default function ArtistDashboard() {
   const { data: blogPosts, isLoading: blogLoading } = useQuery<BlogPost[]>({
     queryKey: ["/api/artists", selectedArtistId, "blog"],
     enabled: !!selectedArtistId,
+  });
+
+  // Link artist to user account
+  const linkArtistMutation = useMutation({
+    mutationFn: async (artistId: string) => {
+      return apiRequest("POST", `/api/artists/link/${artistId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/artists/me"] });
+      setLinkingArtist(false);
+      toast({ title: "Artist profile linked successfully!" });
+    },
+    onError: () => {
+      toast({ title: "Failed to link artist profile", variant: "destructive" });
+    },
   });
 
   const createArtworkMutation = useMutation({
@@ -264,7 +293,8 @@ export default function ArtistDashboard() {
     setBlogDialogOpen(true);
   };
 
-  if (artistsLoading) {
+  // Loading state
+  if (authLoading || myArtistLoading) {
     return (
       <div className="p-6 space-y-6">
         <Skeleton className="h-10 w-64" />
@@ -277,41 +307,70 @@ export default function ArtistDashboard() {
     );
   }
 
-  if (!selectedArtistId) {
+  // Not logged in
+  if (!isAuthenticated) {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center min-h-[60vh] text-center">
+        <Palette className="h-16 w-16 text-muted-foreground mb-6" />
+        <h1 className="font-serif text-3xl font-bold mb-2">Artist Dashboard</h1>
+        <p className="text-muted-foreground mb-6 max-w-md">
+          Log in to manage your artworks and blog posts. Use your Google, GitHub, or email account.
+        </p>
+        <Button asChild size="lg" data-testid="button-login">
+          <a href="/api/login">
+            <LogIn className="h-4 w-4 mr-2" />
+            Log In to Continue
+          </a>
+        </Button>
+      </div>
+    );
+  }
+
+  // Logged in but no artist profile linked
+  if (!myArtist && !myArtistLoading) {
     return (
       <div className="p-6 space-y-6">
         <div className="space-y-1">
-          <h1 className="font-serif text-3xl font-bold">Artist Dashboard</h1>
+          <h1 className="font-serif text-3xl font-bold">Welcome, {user?.firstName || 'Artist'}!</h1>
           <p className="text-muted-foreground">
-            Select an artist profile to manage artworks and blog posts
+            Link your account to an artist profile to start managing your portfolio
           </p>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {artists?.map((artist) => (
-            <Card 
-              key={artist.id} 
-              className="hover-elevate cursor-pointer"
-              onClick={() => setSelectedArtistId(artist.id)}
-              data-testid={`card-select-artist-${artist.id}`}
-            >
-              <CardContent className="p-4 flex items-center gap-4">
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={artist.avatarUrl || undefined} />
-                  <AvatarFallback className="font-serif">
-                    {artist.name.split(" ").map((n) => n[0]).join("")}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold truncate">{artist.name}</h3>
-                  {artist.specialization && (
-                    <p className="text-sm text-muted-foreground truncate">{artist.specialization}</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {artistsLoading ? (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-24" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {artists?.filter(a => !a.userId).map((artist) => (
+              <Card 
+                key={artist.id} 
+                className="hover-elevate cursor-pointer"
+                onClick={() => linkArtistMutation.mutate(artist.id)}
+                data-testid={`card-link-artist-${artist.id}`}
+              >
+                <CardContent className="p-4 flex items-center gap-4">
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={artist.avatarUrl || undefined} />
+                    <AvatarFallback className="font-serif">
+                      {artist.name.split(" ").map((n) => n[0]).join("")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold truncate">{artist.name}</h3>
+                    {artist.specialization && (
+                      <p className="text-sm text-muted-foreground truncate">{artist.specialization}</p>
+                    )}
+                  </div>
+                  <LinkIcon className="h-4 w-4 text-muted-foreground" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
     );
   }
@@ -320,14 +379,6 @@ export default function ArtistDashboard() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={() => setSelectedArtistId(null)}
-            data-testid="button-back"
-          >
-            <X className="h-4 w-4" />
-          </Button>
           <Avatar className="h-12 w-12">
             <AvatarImage src={selectedArtist?.avatarUrl || undefined} />
             <AvatarFallback className="font-serif">
@@ -336,9 +387,12 @@ export default function ArtistDashboard() {
           </Avatar>
           <div>
             <h1 className="font-serif text-2xl font-bold">{selectedArtist?.name}</h1>
-            <p className="text-sm text-muted-foreground">Dashboard</p>
+            <p className="text-sm text-muted-foreground">Your Artist Dashboard</p>
           </div>
         </div>
+        <Button variant="outline" asChild data-testid="button-logout">
+          <a href="/api/logout">Log Out</a>
+        </Button>
       </div>
 
       <Tabs defaultValue="artworks" className="space-y-6">

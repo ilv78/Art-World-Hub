@@ -3,12 +3,53 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertArtworkSchema, insertArtistSchema, insertBidSchema, insertOrderSchema, insertBlogPostSchema } from "@shared/schema";
 import { z } from "zod";
+import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
   
+  // Setup authentication (BEFORE other routes)
+  await setupAuth(app);
+  registerAuthRoutes(app);
+
+  // Get current artist for logged-in user
+  app.get("/api/artists/me", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const artist = await storage.getArtistByUserId(userId);
+      if (!artist) {
+        return res.status(404).json({ error: "No artist profile linked to this account" });
+      }
+      res.json(artist);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch artist profile" });
+    }
+  });
+
+  // Link artist to user account
+  app.post("/api/artists/link/:artistId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const artistId = req.params.artistId;
+      
+      // Check if artist exists and is not already linked
+      const artist = await storage.getArtist(artistId);
+      if (!artist) {
+        return res.status(404).json({ error: "Artist not found" });
+      }
+      if (artist.userId && artist.userId !== userId) {
+        return res.status(403).json({ error: "Artist is already linked to another account" });
+      }
+      
+      const updatedArtist = await storage.updateArtist(artistId, { userId });
+      res.json(updatedArtist);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to link artist profile" });
+    }
+  });
+
   // Artists routes
   app.get("/api/artists", async (req, res) => {
     try {
