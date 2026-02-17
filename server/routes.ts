@@ -456,6 +456,7 @@ export async function registerRoutes(
       }
       res.status(204).send();
     } catch (error) {
+      console.error("Delete artwork error:", error);
       res.status(500).json({ error: "Failed to delete artwork" });
     }
   });

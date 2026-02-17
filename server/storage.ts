@@ -16,7 +16,7 @@ import {
   artists, artworks, auctions, bids, orders, exhibitions, exhibitionArtworks, blogPosts
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, asc, and } from "drizzle-orm";
+import { eq, desc, asc, and, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Artists
@@ -326,6 +326,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteArtwork(id: string): Promise<boolean> {
+    await db.delete(exhibitionArtworks).where(eq(exhibitionArtworks.artworkId, id));
+    await db.delete(bids).where(
+      sql`${bids.auctionId} IN (SELECT id FROM auctions WHERE artwork_id = ${id})`
+    );
+    await db.delete(auctions).where(eq(auctions.artworkId, id));
+    await db.delete(orders).where(eq(orders.artworkId, id));
     const result = await db.delete(artworks).where(eq(artworks.id, id)).returning();
     return result.length > 0;
   }
