@@ -157,6 +157,7 @@ export default function ArtistProfile() {
                 <MazeGallery3D 
                   artworks={galleryArtworks} 
                   layout={galleryLayout}
+                  whiteRoom={true}
                 />
               </div>
             ) : (

@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 interface MazeGallery3DProps {
   artworks: ArtworkWithArtist[];
   layout?: MazeLayout;
+  whiteRoom?: boolean;
 }
 
 // Default maze layout - a simple gallery with multiple rooms
@@ -59,7 +60,7 @@ const PLAYER_HEIGHT = 1.7;
 const MOVE_SPEED = 0.08;
 const LOOK_SPEED = 0.002;
 
-export function MazeGallery3D({ artworks, layout = defaultLayout }: MazeGallery3DProps) {
+export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = false }: MazeGallery3DProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -98,9 +99,13 @@ export function MazeGallery3D({ artworks, layout = defaultLayout }: MazeGallery3
 
   // Create maze geometry
   const createMaze = useCallback((scene: THREE.Scene) => {
+    const floorColor = whiteRoom ? 0xe8e0d8 : 0x2a2a2a;
+    const ceilingColor = whiteRoom ? 0xffffff : 0x1a1a1a;
+    const wallColor = whiteRoom ? 0xf5f0eb : 0x3d3d3d;
+
     const floorGeometry = new THREE.PlaneGeometry(layout.width * CELL_SIZE + 4, layout.height * CELL_SIZE + 4);
     const floorMaterial = new THREE.MeshStandardMaterial({ 
-      color: 0x2a2a2a,
+      color: floorColor,
       roughness: 0.8,
     });
     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
@@ -112,7 +117,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout }: MazeGallery3
     // Ceiling
     const ceilingGeometry = new THREE.PlaneGeometry(layout.width * CELL_SIZE + 4, layout.height * CELL_SIZE + 4);
     const ceilingMaterial = new THREE.MeshStandardMaterial({ 
-      color: 0x1a1a1a,
+      color: ceilingColor,
       roughness: 0.9,
     });
     const ceiling = new THREE.Mesh(ceilingGeometry, ceilingMaterial);
@@ -122,7 +127,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout }: MazeGallery3
 
     // Wall material
     const wallMaterial = new THREE.MeshStandardMaterial({ 
-      color: 0x3d3d3d,
+      color: wallColor,
       roughness: 0.7,
     });
 
@@ -179,7 +184,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout }: MazeGallery3
         scene.add(wall);
       }
     });
-  }, [layout]);
+  }, [layout, whiteRoom]);
 
   // Place artworks on walls
   const placeArtworks = useCallback((scene: THREE.Scene) => {
@@ -308,19 +313,28 @@ export function MazeGallery3D({ artworks, layout = defaultLayout }: MazeGallery3
 
   // Setup lighting - minimal to avoid shader limits
   const setupLighting = useCallback((scene: THREE.Scene) => {
-    // Main ambient light for overall visibility
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-    scene.add(ambientLight);
+    if (whiteRoom) {
+      const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+      scene.add(ambientLight);
 
-    // Single directional light for shadows and depth
-    const directionalLight = new THREE.DirectionalLight(0xfff5e6, 0.5);
-    directionalLight.position.set(layout.width * CELL_SIZE / 2, WALL_HEIGHT * 2, layout.height * CELL_SIZE / 2);
-    scene.add(directionalLight);
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      directionalLight.position.set(layout.width * CELL_SIZE / 2, WALL_HEIGHT * 2, layout.height * CELL_SIZE / 2);
+      scene.add(directionalLight);
 
-    // Just one central hemisphere light for soft fill
-    const hemiLight = new THREE.HemisphereLight(0xfff5e6, 0x444444, 0.3);
-    scene.add(hemiLight);
-  }, [layout]);
+      const hemiLight = new THREE.HemisphereLight(0xffffff, 0xe8e0d8, 0.5);
+      scene.add(hemiLight);
+    } else {
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+      scene.add(ambientLight);
+
+      const directionalLight = new THREE.DirectionalLight(0xfff5e6, 0.5);
+      directionalLight.position.set(layout.width * CELL_SIZE / 2, WALL_HEIGHT * 2, layout.height * CELL_SIZE / 2);
+      scene.add(directionalLight);
+
+      const hemiLight = new THREE.HemisphereLight(0xfff5e6, 0x444444, 0.3);
+      scene.add(hemiLight);
+    }
+  }, [layout, whiteRoom]);
 
   // Collision detection
   const checkCollision = useCallback((position: THREE.Vector3): boolean => {
@@ -401,8 +415,9 @@ export function MazeGallery3D({ artworks, layout = defaultLayout }: MazeGallery3
 
     // Scene
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0a0a0a);
-    scene.fog = new THREE.Fog(0x0a0a0a, 5, 40);
+    const bgColor = whiteRoom ? 0xf5f0eb : 0x0a0a0a;
+    scene.background = new THREE.Color(bgColor);
+    scene.fog = new THREE.Fog(bgColor, whiteRoom ? 10 : 5, whiteRoom ? 60 : 40);
     sceneRef.current = scene;
 
     // Camera
@@ -507,7 +522,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout }: MazeGallery3
       renderer.dispose();
       container.removeChild(renderer.domElement);
     };
-  }, [layout, artworks, createMaze, placeArtworks, setupLighting, checkCollision]);
+  }, [layout, artworks, whiteRoom, createMaze, placeArtworks, setupLighting, checkCollision]);
 
   // Pointer lock and controls
   useEffect(() => {
