@@ -364,48 +364,47 @@ function generateWhiteRoomLayout(artworkCount: number): MazeLayout {
   const roomHeight = Math.max(3, wallsPerSide + 2);
 
   const cells: MazeCell[] = [];
-  let slotIndex = 0;
-
   for (let z = 0; z < roomHeight; z++) {
     for (let x = 0; x < roomWidth; x++) {
-      const isBottomRow = z === 0;
-      const isTopRow = z === roomHeight - 1;
-      const isLeftCol = x === 0;
-      const isRightCol = x === roomWidth - 1;
-
-      const cell: MazeCell = {
+      cells.push({
         x,
         z,
         walls: {
-          south: isBottomRow,
-          north: isTopRow,
-          west: isLeftCol,
-          east: isRightCol,
+          south: z === 0,
+          north: z === roomHeight - 1,
+          west: x === 0,
+          east: x === roomWidth - 1,
         },
         artworkSlots: [],
-      };
-
-      if (artworkCount > 0) {
-        if (isTopRow && !isLeftCol && !isRightCol && slotIndex < artworkCount) {
-          cell.artworkSlots.push({ wallId: `${x}-${z}-north`, position: slotIndex });
-          slotIndex++;
-        }
-        if (isRightCol && !isBottomRow && !isTopRow && slotIndex < artworkCount) {
-          cell.artworkSlots.push({ wallId: `${x}-${z}-east`, position: slotIndex });
-          slotIndex++;
-        }
-        if (isBottomRow && !isLeftCol && !isRightCol && slotIndex < artworkCount) {
-          cell.artworkSlots.push({ wallId: `${x}-${z}-south`, position: slotIndex });
-          slotIndex++;
-        }
-        if (isLeftCol && !isBottomRow && !isTopRow && slotIndex < artworkCount) {
-          cell.artworkSlots.push({ wallId: `${x}-${z}-west`, position: slotIndex });
-          slotIndex++;
-        }
-      }
-
-      cells.push(cell);
+      });
     }
+  }
+
+  if (artworkCount === 0) {
+    return { width: roomWidth, height: roomHeight, spawnPoint: { x: Math.floor(roomWidth / 2), z: Math.floor(roomHeight / 2) }, cells };
+  }
+
+  const getCell = (cx: number, cz: number) => cells.find(c => c.x === cx && c.z === cz)!;
+
+  const orderedSlots: { x: number; z: number; wall: string }[] = [];
+
+  for (let z = 1; z < roomHeight - 1; z++) {
+    orderedSlots.push({ x: 0, z, wall: "west" });
+  }
+  for (let x = 1; x < roomWidth - 1; x++) {
+    orderedSlots.push({ x, z: roomHeight - 1, wall: "north" });
+  }
+  for (let z = roomHeight - 2; z >= 1; z--) {
+    orderedSlots.push({ x: roomWidth - 1, z, wall: "east" });
+  }
+  for (let x = roomWidth - 2; x >= 1; x--) {
+    orderedSlots.push({ x, z: 0, wall: "south" });
+  }
+
+  for (let i = 0; i < Math.min(artworkCount, orderedSlots.length); i++) {
+    const slot = orderedSlots[i];
+    const cell = getCell(slot.x, slot.z);
+    cell.artworkSlots.push({ wallId: `${slot.x}-${slot.z}-${slot.wall}`, position: i });
   }
 
   return {
