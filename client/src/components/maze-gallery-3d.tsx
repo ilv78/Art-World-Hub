@@ -813,11 +813,11 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
         );
       })()}
 
-      {/* Artwork detail panel */}
+      {/* Artwork detail panel - compact overlay */}
       {selectedArtwork && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm overflow-y-auto p-4" style={{ zIndex: 50 }}>
-          <Card className="max-w-2xl w-full overflow-hidden">
-            <div className="relative aspect-video max-h-[40vh]">
+        <div className="absolute bottom-4 right-4 max-w-xs" style={{ zIndex: 50 }} data-testid="artwork-detail-panel">
+          <Card className="overflow-hidden shadow-xl border border-white/20">
+            <div className="relative h-36">
               <img
                 src={selectedArtwork.imageUrl}
                 alt={selectedArtwork.title}
@@ -826,50 +826,46 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
               <Button
                 size="icon"
                 variant="ghost"
-                className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white"
+                className="absolute top-1 right-1 bg-black/50 text-white h-7 w-7"
                 onClick={() => {
                   setSelectedArtwork(null);
                   requestPointerLock();
                 }}
                 data-testid="button-close-artwork"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </Button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-3 space-y-2">
               <div>
-                <h2 className="font-serif text-2xl font-bold">{selectedArtwork.title}</h2>
-                <p className="text-muted-foreground">by {selectedArtwork.artist.name}</p>
+                <h3 className="font-serif text-sm font-bold leading-tight">{selectedArtwork.title}</h3>
+                <p className="text-xs text-muted-foreground">by {selectedArtwork.artist.name}</p>
               </div>
               
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="secondary">{selectedArtwork.category}</Badge>
-                <Badge variant="outline">{selectedArtwork.medium}</Badge>
-                {selectedArtwork.year && (
-                  <Badge variant="outline">{selectedArtwork.year}</Badge>
-                )}
+              <div className="flex flex-wrap gap-1">
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{selectedArtwork.category}</Badge>
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0">{selectedArtwork.medium}</Badge>
               </div>
 
-              <p className="text-sm text-muted-foreground">{selectedArtwork.description}</p>
-
-              <div className="flex items-center justify-between pt-4 border-t">
+              <div className="flex items-center justify-between gap-2 pt-2 border-t">
                 <div>
-                  <p className="text-2xl font-bold text-primary">
+                  <p className="text-sm font-bold text-primary">
                     ${parseFloat(selectedArtwork.price).toLocaleString()}
                   </p>
                   {selectedArtwork.dimensions && (
-                    <p className="text-sm text-muted-foreground">{selectedArtwork.dimensions}</p>
+                    <p className="text-[10px] text-muted-foreground">{selectedArtwork.dimensions}</p>
                   )}
                 </div>
                 
                 {selectedArtwork.isForSale && (
                   <Button
+                    size="sm"
                     onClick={handleAddToCart}
                     disabled={isInCart}
                     data-testid="button-add-to-cart-3d"
                   >
-                    <ShoppingCart className="w-4 h-4 mr-2" />
-                    {isInCart ? "In Cart" : "Add to Cart"}
+                    <ShoppingCart className="w-3 h-3 mr-1" />
+                    {isInCart ? "In Cart" : "Add"}
                   </Button>
                 )}
               </div>
