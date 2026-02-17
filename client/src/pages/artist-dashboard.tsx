@@ -34,7 +34,8 @@ import {
   Palette,
   X,
   LogIn,
-  Link as LinkIcon
+  Link as LinkIcon,
+  User
 } from "lucide-react";
 import type { Artist, ArtworkWithArtist, BlogPost, InsertArtwork, InsertBlogPost } from "@shared/schema";
 
@@ -46,6 +47,15 @@ export default function ArtistDashboard() {
   const [editingArtwork, setEditingArtwork] = useState<ArtworkWithArtist | null>(null);
   const [editingBlogPost, setEditingBlogPost] = useState<BlogPost | null>(null);
   const [linkingArtist, setLinkingArtist] = useState(false);
+
+  const [profileForm, setProfileForm] = useState({
+    name: "",
+    avatarUrl: "",
+    bio: "",
+    country: "",
+    specialization: "",
+  });
+  const [profileEditing, setProfileEditing] = useState(false);
 
   const [artworkForm, setArtworkForm] = useState({
     title: "",
@@ -93,6 +103,34 @@ export default function ArtistDashboard() {
   const { data: blogPosts, isLoading: blogLoading } = useQuery<BlogPost[]>({
     queryKey: ["/api/artists", selectedArtistId, "blog"],
     enabled: !!selectedArtistId,
+  });
+
+  useEffect(() => {
+    if (myArtist && !profileEditing) {
+      setProfileForm({
+        name: myArtist.name || "",
+        avatarUrl: myArtist.avatarUrl || "",
+        bio: myArtist.bio || "",
+        country: myArtist.country || "",
+        specialization: myArtist.specialization || "",
+      });
+    }
+  }, [myArtist, profileEditing]);
+
+  const updateProfileMutation = useMutation({
+    mutationFn: async (data: { name: string; avatarUrl: string; bio: string; country: string; specialization: string }) => {
+      return apiRequest("PATCH", `/api/artists/${selectedArtistId}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/artists/me"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/artists"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/artists", selectedArtistId] });
+      setProfileEditing(false);
+      toast({ title: "Profile updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update profile", variant: "destructive" });
+    },
   });
 
   // Link artist to user account
@@ -426,6 +464,10 @@ export default function ArtistDashboard() {
           <TabsTrigger value="blog" data-testid="tab-blog">
             <FileText className="h-4 w-4 mr-2" />
             Blog Posts
+          </TabsTrigger>
+          <TabsTrigger value="profile" data-testid="tab-profile">
+            <User className="h-4 w-4 mr-2" />
+            Profile
           </TabsTrigger>
         </TabsList>
 
@@ -807,6 +849,137 @@ export default function ArtistDashboard() {
               </Button>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="profile" className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="font-semibold text-lg">My Profile</h2>
+            {!profileEditing ? (
+              <Button onClick={() => setProfileEditing(true)} data-testid="button-edit-profile">
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Profile
+              </Button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setProfileEditing(false);
+                    if (myArtist) {
+                      setProfileForm({
+                        name: myArtist.name || "",
+                        avatarUrl: myArtist.avatarUrl || "",
+                        bio: myArtist.bio || "",
+                        country: myArtist.country || "",
+                        specialization: myArtist.specialization || "",
+                      });
+                    }
+                  }}
+                  data-testid="button-cancel-profile"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => updateProfileMutation.mutate(profileForm)}
+                  disabled={updateProfileMutation.isPending || !profileForm.name.trim()}
+                  data-testid="button-save-profile"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <Card>
+            <CardContent className="p-6 space-y-6">
+              <div className="flex items-start gap-6">
+                <div className="flex flex-col items-center gap-2">
+                  <Avatar className="h-24 w-24">
+                    <AvatarImage src={profileForm.avatarUrl || undefined} />
+                    <AvatarFallback className="font-serif text-2xl">
+                      {profileForm.name.split(" ").map((n) => n[0]).join("")}
+                    </AvatarFallback>
+                  </Avatar>
+                  {profileEditing && (
+                    <span className="text-xs text-muted-foreground">Update URL below</span>
+                  )}
+                </div>
+                {!profileEditing ? (
+                  <div className="flex-1 space-y-2">
+                    <h3 className="font-serif text-xl font-bold" data-testid="text-profile-name">{profileForm.name}</h3>
+                    {profileForm.specialization && (
+                      <Badge variant="secondary" data-testid="text-profile-specialization">{profileForm.specialization}</Badge>
+                    )}
+                    {profileForm.country && (
+                      <p className="text-sm text-muted-foreground" data-testid="text-profile-country">{profileForm.country}</p>
+                    )}
+                    {profileForm.bio ? (
+                      <p className="text-sm leading-relaxed" data-testid="text-profile-bio">{profileForm.bio}</p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">No bio added yet</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex-1 space-y-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="profile-name">Name *</Label>
+                      <Input
+                        id="profile-name"
+                        value={profileForm.name}
+                        onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                        placeholder="Your name"
+                        data-testid="input-profile-name"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="profile-avatar">Profile Picture URL</Label>
+                      <Input
+                        id="profile-avatar"
+                        value={profileForm.avatarUrl}
+                        onChange={(e) => setProfileForm({ ...profileForm, avatarUrl: e.target.value })}
+                        placeholder="https://..."
+                        data-testid="input-profile-avatar"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="profile-specialization">Specialization</Label>
+                        <Input
+                          id="profile-specialization"
+                          value={profileForm.specialization}
+                          onChange={(e) => setProfileForm({ ...profileForm, specialization: e.target.value })}
+                          placeholder="e.g. Oil Painting"
+                          data-testid="input-profile-specialization"
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="profile-country">Country</Label>
+                        <Input
+                          id="profile-country"
+                          value={profileForm.country}
+                          onChange={(e) => setProfileForm({ ...profileForm, country: e.target.value })}
+                          placeholder="e.g. Japan"
+                          data-testid="input-profile-country"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="profile-bio">Bio / Description</Label>
+                      <Textarea
+                        id="profile-bio"
+                        value={profileForm.bio}
+                        onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
+                        placeholder="Tell visitors about yourself, your art, and your journey..."
+                        className="min-h-[120px]"
+                        data-testid="input-profile-bio"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
