@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { X, ShoppingCart, Move, Mouse, Keyboard, Maximize2, Minimize2, ZoomIn, Box, Map as MapIcon } from "lucide-react";
+import { X, ShoppingCart, Move, Mouse, Keyboard, Maximize2, Minimize2, ZoomIn, Box, Map as MapIcon, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, RotateCcw, RotateCw } from "lucide-react";
 import type { ArtworkWithArtist } from "@shared/schema";
 import { useCartStore } from "@/lib/cart-store";
 import { useToast } from "@/hooks/use-toast";
@@ -17,17 +17,56 @@ interface HallwayGallery3DProps {
   artistRooms: ArtistRoom[];
 }
 
-const CELL = 6;
-const WALL_H = 4.5;
-const WALL_T = 0.15;
+const WALL_H = 5.5;
+const WALL_T = 0.18;
 const PLAYER_H = 1.7;
-const MOVE_SPEED = 0.1;
+const MOVE_SPEED = 0.12;
 const LOOK_SPEED = 0.002;
 
-const HALLWAY_W = 3;
-const ROOM_W = 4;
-const ROOM_D = 3;
-const DOOR_W = 2.4;
+const HALLWAY_W = 5;
+const ROOM_W = 7;
+const ROOM_D = 6;
+const DOOR_W = 3.2;
+
+const textureCache = new Map<string, THREE.Texture>();
+const loadingTextures = new Map<string, Promise<THREE.Texture>>();
+
+function loadTextureWithCache(url: string, retries = 3): Promise<THREE.Texture> {
+  if (textureCache.has(url)) {
+    return Promise.resolve(textureCache.get(url)!.clone());
+  }
+  if (loadingTextures.has(url)) {
+    return loadingTextures.get(url)!.then(t => t.clone());
+  }
+  const promise = new Promise<THREE.Texture>((resolve, reject) => {
+    let attempt = 0;
+    const tryLoad = () => {
+      attempt++;
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        const texture = new THREE.Texture(img);
+        texture.needsUpdate = true;
+        texture.colorSpace = THREE.SRGBColorSpace;
+        textureCache.set(url, texture);
+        loadingTextures.delete(url);
+        resolve(texture.clone());
+      };
+      img.onerror = () => {
+        if (attempt < retries) {
+          setTimeout(tryLoad, 1000 * attempt);
+        } else {
+          loadingTextures.delete(url);
+          reject(new Error(`Failed to load image: ${url}`));
+        }
+      };
+      img.src = url + (attempt > 1 ? `?retry=${attempt}` : "");
+    };
+    tryLoad();
+  });
+  loadingTextures.set(url, promise);
+  return promise;
+}
 
 export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -46,10 +85,12 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
   const [playerPosition, setPlayerPosition] = useState({ x: 0, z: 0, rotation: 0 });
 
   const keysPressed = useRef<Set<string>>(new Set());
+  const virtualKeysPressed = useRef<Set<string>>(new Set());
   const euler = useRef(new THREE.Euler(0, 0, 0, "YXZ"));
   const playerPosRef = useRef({ x: 0, z: 0, rotation: 0 });
   const isPointerLockedRef = useRef(false);
   const selectedArtworkRef = useRef<ArtworkWithArtist | null>(null);
+  const [showArrowControls, setShowArrowControls] = useState(true);
 
   const { addItem, items } = useCartStore();
   const { toast } = useToast();
@@ -198,8 +239,8 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
     scene.add(dirLight);
 
     // Hallway ceiling lights
-    for (let z = 1; z < hallEnd; z += 3) {
-      const pl = new THREE.PointLight(0xfff5e6, 0.6, 12);
+    for (let z = 2; z < hallEnd; z += 4) {
+      const pl = new THREE.PointLight(0xfff5e6, 0.8, 18);
       pl.position.set(0, WALL_H - 0.3, z);
       scene.add(pl);
     }
@@ -210,7 +251,7 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
       const isLeft = i % 2 === 0;
       const roomCenterZ = pairIdx * ROOM_W + ROOM_W / 2 + 1;
       const roomCenterX = isLeft ? hallLeft - ROOM_D / 2 : hallRight + ROOM_D / 2;
-      const roomLight = new THREE.PointLight(0xffffff, 0.8, 10);
+      const roomLight = new THREE.PointLight(0xffffff, 1.0, 15);
       roomLight.position.set(roomCenterX, WALL_H - 0.3, roomCenterZ);
       scene.add(roomLight);
     }
@@ -227,65 +268,71 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
     const artworks = room.artworks;
     if (!artworks.length) return;
 
-    const frameSize = 1.8;
-    const frameDepth = 0.08;
-    const spacing = 2.2;
+    const frameSize = 2.4;
+    const frameDepth = 0.1;
+    const spacing = 3.0;
 
     type WallSlot = { x: number; z: number; rotY: number };
     const slots: WallSlot[] = [];
 
-    const farWallZ1 = roomCenterZ - ROOM_W / 2 + 0.3;
-    const farWallZ2 = roomCenterZ + ROOM_W / 2 - 0.3;
+    const farWallZ1 = roomCenterZ - ROOM_W / 2 + 0.5;
+    const farWallZ2 = roomCenterZ + ROOM_W / 2 - 0.5;
 
-    const farCount = Math.floor(ROOM_W / spacing);
+    const farCount = Math.max(1, Math.floor(ROOM_W / spacing));
     for (let j = 0; j < farCount; j++) {
       const t = (j + 0.5) / farCount;
       const z = farWallZ1 + t * (farWallZ2 - farWallZ1);
       slots.push({
-        x: roomFarX + (isLeft ? 0.3 : -0.3),
+        x: roomFarX + (isLeft ? 0.35 : -0.35),
         z,
         rotY: isLeft ? Math.PI / 2 : -Math.PI / 2,
       });
     }
 
-    const sideWallX1 = isLeft ? roomFarX + 0.3 : roomFarX - 0.3;
-    const sideWallX2 = isLeft ? roomCenterX + ROOM_D / 2 - 0.3 : roomCenterX - ROOM_D / 2 + 0.3;
+    const sideWallX1 = isLeft ? roomFarX + 0.35 : roomFarX - 0.35;
+    const sideWallX2 = isLeft ? roomCenterX + ROOM_D / 2 - 0.35 : roomCenterX - ROOM_D / 2 + 0.35;
 
-    slots.push({ x: (sideWallX1 + sideWallX2) / 2, z: roomCenterZ - ROOM_W / 2 + 0.3, rotY: 0 });
-    slots.push({ x: (sideWallX1 + sideWallX2) / 2, z: roomCenterZ + ROOM_W / 2 - 0.3, rotY: Math.PI });
+    const sideLen = Math.abs(sideWallX2 - sideWallX1);
+    const sideCount = Math.max(1, Math.floor(sideLen / spacing));
+    for (let j = 0; j < sideCount; j++) {
+      const t = (j + 0.5) / sideCount;
+      const x = sideWallX1 + t * (sideWallX2 - sideWallX1);
+      slots.push({ x, z: roomCenterZ - ROOM_W / 2 + 0.35, rotY: 0 });
+    }
+    for (let j = 0; j < sideCount; j++) {
+      const t = (j + 0.5) / sideCount;
+      const x = sideWallX1 + t * (sideWallX2 - sideWallX1);
+      slots.push({ x, z: roomCenterZ + ROOM_W / 2 - 0.35, rotY: Math.PI });
+    }
 
     for (let ai = 0; ai < artworks.length && ai < slots.length; ai++) {
       const artwork = artworks[ai];
       const slot = slots[ai];
 
-      const frameGeo = new THREE.BoxGeometry(frameSize + 0.15, frameSize + 0.15, frameDepth);
+      const frameGeo = new THREE.BoxGeometry(frameSize + 0.2, frameSize + 0.2, frameDepth);
       const frameMat = new THREE.MeshStandardMaterial({ color: 0x2c2418, roughness: 0.5, metalness: 0.3 });
       const frame = new THREE.Mesh(frameGeo, frameMat);
-      frame.position.set(slot.x, PLAYER_H + 0.4, slot.z);
+      frame.position.set(slot.x, PLAYER_H + 0.5, slot.z);
       frame.rotation.y = slot.rotY;
       scene.add(frame);
 
       const artGeo = new THREE.PlaneGeometry(frameSize, frameSize);
       const placeholderMat = new THREE.MeshStandardMaterial({ color: 0xddd8d0, roughness: 0.5 });
       const artMesh = new THREE.Mesh(artGeo, placeholderMat);
-      artMesh.position.set(slot.x, PLAYER_H + 0.4, slot.z);
+      artMesh.position.set(slot.x, PLAYER_H + 0.5, slot.z);
       artMesh.rotation.y = slot.rotY;
       artMesh.translateZ(frameDepth / 2 + 0.01);
       scene.add(artMesh);
       artworkMeshesRef.current.set(artwork.id, { mesh: artMesh, artwork });
 
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => {
-        const texture = new THREE.Texture(img);
-        texture.needsUpdate = true;
-        texture.colorSpace = THREE.SRGBColorSpace;
+      loadTextureWithCache(artwork.imageUrl).then(texture => {
         artMesh.material = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.3 });
-      };
-      img.src = artwork.imageUrl;
+      }).catch(() => {
+        artMesh.material = new THREE.MeshStandardMaterial({ color: 0xc0b8a8, roughness: 0.5 });
+      });
 
-      const spotLight = new THREE.SpotLight(0xfff5e6, 1.5, 5, Math.PI / 6, 0.5);
-      spotLight.position.set(slot.x, WALL_H - 0.2, slot.z);
+      const spotLight = new THREE.SpotLight(0xfff5e6, 2.0, 8, Math.PI / 5, 0.5);
+      spotLight.position.set(slot.x, WALL_H - 0.3, slot.z);
       spotLight.target = artMesh;
       scene.add(spotLight);
       scene.add(spotLight.target);
@@ -359,7 +406,7 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x1a1915);
-    scene.fog = new THREE.Fog(0x1a1915, 8, 35);
+    scene.fog = new THREE.Fog(0x1a1915, 12, 50);
     sceneRef.current = scene;
 
     const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 100);
@@ -387,18 +434,32 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
 
     const animate = () => {
       animationIdRef.current = requestAnimationFrame(animate);
-      if (isPointerLockedRef.current && cameraRef.current) {
-        const cam = cameraRef.current;
+      const cam = cameraRef.current;
+      if (!cam) { renderer.render(scene, camera); return; }
+
+      const allKeys = new Set(Array.from(keysPressed.current).concat(Array.from(virtualKeysPressed.current)));
+      const isActive = isPointerLockedRef.current || virtualKeysPressed.current.size > 0;
+
+      if (isActive) {
+        if (allKeys.has("RotateLeft")) {
+          euler.current.y += 0.03;
+          cam.quaternion.setFromEuler(euler.current);
+        }
+        if (allKeys.has("RotateRight")) {
+          euler.current.y -= 0.03;
+          cam.quaternion.setFromEuler(euler.current);
+        }
+
         const dir = new THREE.Vector3();
         const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
         forward.y = 0; forward.normalize();
         const right = new THREE.Vector3(1, 0, 0).applyQuaternion(cam.quaternion);
         right.y = 0; right.normalize();
 
-        if (keysPressed.current.has("KeyW") || keysPressed.current.has("ArrowUp")) dir.add(forward);
-        if (keysPressed.current.has("KeyS") || keysPressed.current.has("ArrowDown")) dir.sub(forward);
-        if (keysPressed.current.has("KeyA") || keysPressed.current.has("ArrowLeft")) dir.sub(right);
-        if (keysPressed.current.has("KeyD") || keysPressed.current.has("ArrowRight")) dir.add(right);
+        if (allKeys.has("KeyW") || allKeys.has("ArrowUp")) dir.add(forward);
+        if (allKeys.has("KeyS") || allKeys.has("ArrowDown")) dir.sub(forward);
+        if (allKeys.has("KeyA") || allKeys.has("ArrowLeft")) dir.sub(right);
+        if (allKeys.has("KeyD") || allKeys.has("ArrowRight")) dir.add(right);
 
         if (dir.length() > 0) {
           dir.normalize().multiplyScalar(MOVE_SPEED);
@@ -478,7 +539,6 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
   }, [handleClick]);
 
   useEffect(() => {
-    if (!isPointerLocked) return;
     const interval = setInterval(() => {
       setPlayerPosition(prev => {
         const ref = playerPosRef.current;
@@ -488,7 +548,7 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
       });
     }, 100);
     return () => clearInterval(interval);
-  }, [isPointerLocked]);
+  }, []);
 
   const requestPointerLock = () => {
     if (containerRef.current && typeof containerRef.current.requestPointerLock === "function") {
@@ -581,55 +641,76 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
         </Button>
       )}
 
-      {showMinimap && isPointerLocked && (() => {
-        const mapW = totalW * mapScale + 8;
-        const mapH = totalD * mapScale + 8;
-        const ox = mapW / 2;
-        const oz = 4;
-
-        return (
-          <div className="absolute top-16 right-4 bg-black/70 rounded-lg p-2 border border-white/20" style={{ zIndex: 5 }} data-testid="minimap">
-            <svg width={Math.min(mapW, 180)} height={Math.min(mapH, 200)} viewBox={`0 0 ${mapW} ${mapH}`} className="block">
-              <rect x={0} y={0} width={mapW} height={mapH} fill="rgba(30,30,30,0.8)" rx={4} />
-              <rect x={ox + hallLeft * mapScale} y={oz} width={HALLWAY_W * mapScale} height={totalD * mapScale} fill="rgba(200,195,185,0.4)" />
-              {artistRooms.map((room, i) => {
-                const pairIdx = Math.floor(i / 2);
-                const isLeft = i % 2 === 0;
-                const rZ = pairIdx * ROOM_W + 1;
-                const rX = isLeft ? hallLeft - ROOM_D : hallRight;
-                return (
-                  <g key={room.artist.id}>
-                    <rect
-                      x={ox + rX * mapScale}
-                      y={oz + rZ * mapScale}
-                      width={ROOM_D * mapScale}
-                      height={ROOM_W * mapScale}
-                      fill="rgba(249, 115, 22, 0.3)"
-                      stroke="rgba(249, 115, 22, 0.5)"
-                      strokeWidth={0.5}
-                    />
-                    <text
-                      x={ox + (rX + ROOM_D / 2) * mapScale}
-                      y={oz + (rZ + ROOM_W / 2) * mapScale}
-                      fill="rgba(255,255,255,0.7)"
-                      fontSize={6}
-                      textAnchor="middle"
-                      dominantBaseline="middle"
-                    >
-                      {room.artist.name.split(" ").pop()}
-                    </text>
-                  </g>
-                );
-              })}
-              <g transform={`translate(${ox + playerPosition.x * mapScale}, ${oz + playerPosition.z * mapScale})`}>
-                <g transform={`rotate(${-playerPosition.rotation * 180 / Math.PI})`}>
-                  <polygon points="0,-4 3,3 0,1.5 -3,3" fill="#F97316" stroke="#fff" strokeWidth={0.8} />
-                </g>
-              </g>
-            </svg>
+      {!selectedArtwork && showArrowControls && (
+        <div className="absolute bottom-6 right-6 select-none" style={{ zIndex: 10 }} data-testid="arrow-controls">
+          <div className="grid grid-cols-3 gap-1" style={{ width: "144px" }}>
+            <button
+              className="w-11 h-11 rounded-md bg-white/15 border border-white/20 flex items-center justify-center text-white/80 hover:bg-white/25 active:bg-white/35 transition-colors"
+              onPointerDown={() => virtualKeysPressed.current.add("RotateLeft")}
+              onPointerUp={() => virtualKeysPressed.current.delete("RotateLeft")}
+              onPointerLeave={() => virtualKeysPressed.current.delete("RotateLeft")}
+              data-testid="button-rotate-left"
+            >
+              <RotateCcw className="w-5 h-5" />
+            </button>
+            <button
+              className="w-11 h-11 rounded-md bg-white/15 border border-white/20 flex items-center justify-center text-white/80 hover:bg-white/25 active:bg-white/35 transition-colors"
+              onPointerDown={() => virtualKeysPressed.current.add("KeyW")}
+              onPointerUp={() => virtualKeysPressed.current.delete("KeyW")}
+              onPointerLeave={() => virtualKeysPressed.current.delete("KeyW")}
+              data-testid="button-move-forward"
+            >
+              <ChevronUp className="w-6 h-6" />
+            </button>
+            <button
+              className="w-11 h-11 rounded-md bg-white/15 border border-white/20 flex items-center justify-center text-white/80 hover:bg-white/25 active:bg-white/35 transition-colors"
+              onPointerDown={() => virtualKeysPressed.current.add("RotateRight")}
+              onPointerUp={() => virtualKeysPressed.current.delete("RotateRight")}
+              onPointerLeave={() => virtualKeysPressed.current.delete("RotateRight")}
+              data-testid="button-rotate-right"
+            >
+              <RotateCw className="w-5 h-5" />
+            </button>
+            <button
+              className="w-11 h-11 rounded-md bg-white/15 border border-white/20 flex items-center justify-center text-white/80 hover:bg-white/25 active:bg-white/35 transition-colors"
+              onPointerDown={() => virtualKeysPressed.current.add("KeyA")}
+              onPointerUp={() => virtualKeysPressed.current.delete("KeyA")}
+              onPointerLeave={() => virtualKeysPressed.current.delete("KeyA")}
+              data-testid="button-move-left"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+            <button
+              className="w-11 h-11 rounded-md bg-white/15 border border-white/20 flex items-center justify-center text-white/80 hover:bg-white/25 active:bg-white/35 transition-colors"
+              onPointerDown={() => virtualKeysPressed.current.add("KeyS")}
+              onPointerUp={() => virtualKeysPressed.current.delete("KeyS")}
+              onPointerLeave={() => virtualKeysPressed.current.delete("KeyS")}
+              data-testid="button-move-backward"
+            >
+              <ChevronDown className="w-6 h-6" />
+            </button>
+            <button
+              className="w-11 h-11 rounded-md bg-white/15 border border-white/20 flex items-center justify-center text-white/80 hover:bg-white/25 active:bg-white/35 transition-colors"
+              onPointerDown={() => virtualKeysPressed.current.add("KeyD")}
+              onPointerUp={() => virtualKeysPressed.current.delete("KeyD")}
+              onPointerLeave={() => virtualKeysPressed.current.delete("KeyD")}
+              data-testid="button-move-right"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
           </div>
-        );
-      })()}
+        </div>
+      )}
+
+      {showMinimap && <Minimap
+        artistRooms={artistRooms}
+        hallLeft={hallLeft}
+        hallRight={hallRight}
+        totalW={totalW}
+        totalD={totalD}
+        mapScale={mapScale}
+        playerPosition={playerPosition}
+      />}
 
       {selectedArtwork && (
         <div className="absolute inset-0 flex bg-black/80 backdrop-blur-sm" style={{ zIndex: 50 }} data-testid="artwork-detail-panel">
