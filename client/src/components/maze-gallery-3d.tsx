@@ -813,64 +813,67 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
         );
       })()}
 
-      {/* Artwork detail panel - compact overlay */}
+      {/* Artwork detail panel - fits exactly within gallery */}
       {selectedArtwork && (
-        <div className="absolute bottom-4 right-4 max-w-xs" style={{ zIndex: 50 }} data-testid="artwork-detail-panel">
-          <Card className="overflow-hidden shadow-xl border border-white/20">
-            <div className="relative h-36">
-              <img
-                src={selectedArtwork.imageUrl}
-                alt={selectedArtwork.title}
-                className="w-full h-full object-cover"
-              />
-              <Button
-                size="icon"
-                variant="ghost"
-                className="absolute top-1 right-1 bg-black/50 text-white h-7 w-7"
-                onClick={() => {
-                  setSelectedArtwork(null);
-                  requestPointerLock();
-                }}
-                data-testid="button-close-artwork"
-              >
-                <X className="w-4 h-4" />
-              </Button>
+        <div className="absolute inset-0 flex bg-black/80 backdrop-blur-sm" style={{ zIndex: 50 }} data-testid="artwork-detail-panel">
+          <div className="flex-1 relative">
+            <img
+              src={selectedArtwork.imageUrl}
+              alt={selectedArtwork.title}
+              className="w-full h-full object-contain bg-black/40"
+            />
+            <Button
+              size="icon"
+              variant="ghost"
+              className="absolute top-2 right-2 bg-black/50 text-white"
+              onClick={() => {
+                setSelectedArtwork(null);
+                requestPointerLock();
+              }}
+              data-testid="button-close-artwork"
+            >
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
+          <div className="w-64 flex flex-col bg-card p-4 gap-3">
+            <div>
+              <h3 className="font-serif text-base font-bold leading-tight">{selectedArtwork.title}</h3>
+              <p className="text-sm text-muted-foreground">by {selectedArtwork.artist.name}</p>
             </div>
-            <div className="p-3 space-y-2">
-              <div>
-                <h3 className="font-serif text-sm font-bold leading-tight">{selectedArtwork.title}</h3>
-                <p className="text-xs text-muted-foreground">by {selectedArtwork.artist.name}</p>
-              </div>
-              
-              <div className="flex flex-wrap gap-1">
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{selectedArtwork.category}</Badge>
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0">{selectedArtwork.medium}</Badge>
-              </div>
+            
+            <div className="flex flex-wrap gap-1">
+              <Badge variant="secondary">{selectedArtwork.category}</Badge>
+              <Badge variant="outline">{selectedArtwork.medium}</Badge>
+              {selectedArtwork.year && (
+                <Badge variant="outline">{selectedArtwork.year}</Badge>
+              )}
+            </div>
 
-              <div className="flex items-center justify-between gap-2 pt-2 border-t">
-                <div>
-                  <p className="text-sm font-bold text-primary">
-                    ${parseFloat(selectedArtwork.price).toLocaleString()}
-                  </p>
-                  {selectedArtwork.dimensions && (
-                    <p className="text-[10px] text-muted-foreground">{selectedArtwork.dimensions}</p>
-                  )}
-                </div>
-                
-                {selectedArtwork.isForSale && (
-                  <Button
-                    size="sm"
-                    onClick={handleAddToCart}
-                    disabled={isInCart}
-                    data-testid="button-add-to-cart-3d"
-                  >
-                    <ShoppingCart className="w-3 h-3 mr-1" />
-                    {isInCart ? "In Cart" : "Add"}
-                  </Button>
+            <p className="text-xs text-muted-foreground flex-1">{selectedArtwork.description}</p>
+
+            <div className="pt-2 border-t space-y-2">
+              <div>
+                <p className="text-lg font-bold text-primary">
+                  ${parseFloat(selectedArtwork.price).toLocaleString()}
+                </p>
+                {selectedArtwork.dimensions && (
+                  <p className="text-xs text-muted-foreground">{selectedArtwork.dimensions}</p>
                 )}
               </div>
+              
+              {selectedArtwork.isForSale && (
+                <Button
+                  className="w-full"
+                  onClick={handleAddToCart}
+                  disabled={isInCart}
+                  data-testid="button-add-to-cart-3d"
+                >
+                  <ShoppingCart className="w-4 h-4 mr-2" />
+                  {isInCart ? "In Cart" : "Add to Cart"}
+                </Button>
+              )}
             </div>
-          </Card>
+          </div>
         </div>
       )}
     </div>
