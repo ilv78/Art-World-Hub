@@ -526,12 +526,20 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
 
   // Pointer lock and controls
   useEffect(() => {
+    const movementKeys = new Set(["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]);
+    
     const handleKeyDown = (e: KeyboardEvent) => {
       if (selectedArtwork) return;
+      if (movementKeys.has(e.code) && isPointerLockedRef.current) {
+        e.preventDefault();
+      }
       keysPressed.current.add(e.code);
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
+      if (movementKeys.has(e.code)) {
+        e.preventDefault();
+      }
       keysPressed.current.delete(e.code);
     };
 
@@ -608,7 +616,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
   // Fallback UI when WebGL is not available
   if (webglError) {
     return (
-      <div className="relative w-full h-full min-h-[600px] bg-gradient-to-b from-stone-900 to-black rounded-lg overflow-hidden flex items-center justify-center" data-testid="webgl-fallback">
+      <div className="relative w-full bg-gradient-to-b from-stone-900 to-black rounded-lg overflow-hidden flex items-center justify-center" style={{ height: "600px" }} data-testid="webgl-fallback">
         <Card className="p-8 max-w-md text-center space-y-4">
           <Box className="w-16 h-16 mx-auto text-muted-foreground" />
           <h2 className="font-serif text-2xl font-bold">3D Gallery Unavailable</h2>
@@ -622,8 +630,8 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
   }
 
   return (
-    <div className="relative w-full h-full min-h-[600px] bg-black rounded-lg overflow-hidden">
-      <div ref={containerRef} className="w-full h-full cursor-crosshair" />
+    <div className="relative w-full rounded-lg overflow-hidden" style={{ height: "600px" }}>
+      <div ref={containerRef} className="absolute inset-0 cursor-crosshair" />
 
       {/* Controls overlay */}
       {!isPointerLocked && !selectedArtwork && (
