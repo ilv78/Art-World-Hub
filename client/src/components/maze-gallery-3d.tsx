@@ -218,98 +218,60 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
 
         // Create artwork plane
         const artworkGeometry = new THREE.PlaneGeometry(frameSize, frameSize);
-        
-        textureLoader.load(
-          artwork.imageUrl,
-          (texture) => {
-            texture.colorSpace = THREE.SRGBColorSpace;
-            const artworkMaterial = new THREE.MeshStandardMaterial({ 
-              map: texture,
-              roughness: 0.3,
-            });
-            const artworkMesh = new THREE.Mesh(artworkGeometry, artworkMaterial);
-            
-            // Position based on wall direction
-            let x = baseX + CELL_SIZE / 2;
-            let z = baseZ + CELL_SIZE / 2;
-            let rotY = 0;
 
-            switch (direction) {
-              case "north":
-                z = baseZ + CELL_SIZE - 0.3;
-                rotY = Math.PI;
-                break;
-              case "south":
-                z = baseZ + 0.3;
-                rotY = 0;
-                break;
-              case "east":
-                x = baseX + CELL_SIZE - 0.3;
-                rotY = -Math.PI / 2;
-                break;
-              case "west":
-                x = baseX + 0.3;
-                rotY = Math.PI / 2;
-                break;
-            }
+        // Position based on wall direction
+        let x = baseX + CELL_SIZE / 2;
+        let z = baseZ + CELL_SIZE / 2;
+        let rotY = 0;
 
-            frame.position.set(x, PLAYER_HEIGHT + 0.3, z);
-            frame.rotation.y = rotY;
-            
-            artworkMesh.position.set(x, PLAYER_HEIGHT + 0.3, z);
-            artworkMesh.rotation.y = rotY;
-            artworkMesh.translateZ(frameDepth / 2 + 0.01);
-            
-            scene.add(frame);
-            scene.add(artworkMesh);
-            
-            artworkMeshesRef.current.set(artwork.id, { mesh: artworkMesh, artwork });
-          },
-          undefined,
-          () => {
-            // Fallback if image fails to load
-            const placeholderMaterial = new THREE.MeshStandardMaterial({ 
-              color: 0x666666,
-              roughness: 0.5,
-            });
-            const artworkMesh = new THREE.Mesh(artworkGeometry, placeholderMaterial);
-            
-            let x = baseX + CELL_SIZE / 2;
-            let z = baseZ + CELL_SIZE / 2;
-            let rotY = 0;
+        switch (direction) {
+          case "north":
+            z = baseZ + CELL_SIZE - 0.3;
+            rotY = Math.PI;
+            break;
+          case "south":
+            z = baseZ + 0.3;
+            rotY = 0;
+            break;
+          case "east":
+            x = baseX + CELL_SIZE - 0.3;
+            rotY = -Math.PI / 2;
+            break;
+          case "west":
+            x = baseX + 0.3;
+            rotY = Math.PI / 2;
+            break;
+        }
 
-            switch (direction) {
-              case "north":
-                z = baseZ + CELL_SIZE - 0.3;
-                rotY = Math.PI;
-                break;
-              case "south":
-                z = baseZ + 0.3;
-                rotY = 0;
-                break;
-              case "east":
-                x = baseX + CELL_SIZE - 0.3;
-                rotY = -Math.PI / 2;
-                break;
-              case "west":
-                x = baseX + 0.3;
-                rotY = Math.PI / 2;
-                break;
-            }
+        // Place frame and placeholder immediately so artwork is always visible
+        frame.position.set(x, PLAYER_HEIGHT + 0.3, z);
+        frame.rotation.y = rotY;
+        scene.add(frame);
 
-            frame.position.set(x, PLAYER_HEIGHT + 0.3, z);
-            frame.rotation.y = rotY;
-            
-            artworkMesh.position.set(x, PLAYER_HEIGHT + 0.3, z);
-            artworkMesh.rotation.y = rotY;
-            artworkMesh.translateZ(frameDepth / 2 + 0.01);
-            
-            scene.add(frame);
-            scene.add(artworkMesh);
-            
-            artworkMeshesRef.current.set(artwork.id, { mesh: artworkMesh, artwork });
-          }
-        );
+        const placeholderMaterial = new THREE.MeshStandardMaterial({ 
+          color: 0xcccccc,
+          roughness: 0.5,
+        });
+        const artworkMesh = new THREE.Mesh(artworkGeometry, placeholderMaterial);
+        artworkMesh.position.set(x, PLAYER_HEIGHT + 0.3, z);
+        artworkMesh.rotation.y = rotY;
+        artworkMesh.translateZ(frameDepth / 2 + 0.01);
+        scene.add(artworkMesh);
+        artworkMeshesRef.current.set(artwork.id, { mesh: artworkMesh, artwork });
+
+        // Load texture via an Image element to handle CORS properly
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          const texture = new THREE.Texture(img);
+          texture.needsUpdate = true;
+          texture.colorSpace = THREE.SRGBColorSpace;
+          artworkMesh.material = new THREE.MeshStandardMaterial({
+            map: texture,
+            roughness: 0.3,
+          });
+        };
+        img.src = artwork.imageUrl;
       });
     });
   }, [layout, artworks]);
