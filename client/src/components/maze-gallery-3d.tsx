@@ -81,11 +81,14 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
   const velocity = useRef(new THREE.Vector3());
   const playerPosRef = useRef({ x: 0, z: 0, rotation: 0 });
   const isPointerLockedRef = useRef(false);
+  const selectedArtworkRef = useRef<ArtworkWithArtist | null>(null);
   
   const { addItem, items } = useCartStore();
   const { toast } = useToast();
 
   const isInCart = selectedArtwork ? items.some(item => item.artwork.id === selectedArtwork.id) : false;
+
+  selectedArtworkRef.current = selectedArtwork;
 
   const handleAddToCart = useCallback(() => {
     if (selectedArtwork && !isInCart) {
@@ -375,7 +378,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
 
   // Handle artwork click
   const handleClick = useCallback((event: MouseEvent) => {
-    if (!cameraRef.current || !sceneRef.current || !isPointerLocked) return;
+    if (!cameraRef.current || !sceneRef.current || !isPointerLockedRef.current) return;
 
     const raycaster = new THREE.Raycaster();
     const center = new THREE.Vector2(0, 0);
@@ -395,7 +398,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
         }
       }
     }
-  }, [isPointerLocked]);
+  }, []);
 
   // Initialize Three.js
   useEffect(() => {
@@ -529,7 +532,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
     const movementKeys = new Set(["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]);
     
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (selectedArtwork) return;
+      if (selectedArtworkRef.current) return;
       if (movementKeys.has(e.code) && isPointerLockedRef.current) {
         e.preventDefault();
       }
@@ -544,7 +547,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
     };
 
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isPointerLocked || !cameraRef.current) return;
+      if (!isPointerLockedRef.current || !cameraRef.current) return;
 
       euler.current.setFromQuaternion(cameraRef.current.quaternion);
       euler.current.y -= e.movementX * LOOK_SPEED;
@@ -572,7 +575,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
       document.removeEventListener("pointerlockchange", handlePointerLockChange);
       document.removeEventListener("click", handleClick);
     };
-  }, [isPointerLocked, selectedArtwork, handleClick]);
+  }, [handleClick]);
 
   // Sync player position from ref to state at fixed interval (for minimap)
   useEffect(() => {
@@ -631,11 +634,11 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
 
   return (
     <div className="relative w-full rounded-lg overflow-hidden" style={{ height: "600px" }}>
-      <div ref={containerRef} className="absolute inset-0 cursor-crosshair" />
+      <div ref={containerRef} className="absolute inset-0 cursor-crosshair" style={{ zIndex: 0 }} />
 
       {/* Controls overlay */}
       {!isPointerLocked && !selectedArtwork && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm" style={{ zIndex: 10 }}>
           <Card className="p-8 max-w-md text-center space-y-6">
             <h2 className="font-serif text-2xl font-bold">Virtual Gallery</h2>
             <p className="text-muted-foreground">
@@ -679,7 +682,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
 
       {/* HUD */}
       {isPointerLocked && (
-        <>
+        <div style={{ zIndex: 5 }}>
           {/* Crosshair */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
             <div className="w-4 h-4 border-2 border-white/50 rounded-full" />
@@ -690,7 +693,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
             <p>WASD to move | Mouse to look</p>
             <p>Click artwork to view | ESC to pause</p>
           </div>
-        </>
+        </div>
       )}
 
       {/* Fullscreen button */}
@@ -700,6 +703,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
         className="absolute top-4 right-4 text-white/70"
         onClick={toggleFullscreen}
         data-testid="button-fullscreen"
+        style={{ zIndex: 5 }}
       >
         {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
       </Button>
@@ -712,6 +716,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
           className="absolute top-4 right-16 text-white/70"
           onClick={() => setShowMinimap(!showMinimap)}
           data-testid="button-toggle-minimap"
+          style={{ zIndex: 5 }}
         >
           <MapIcon className="w-5 h-5" />
         </Button>
@@ -732,6 +737,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
         return (
         <div 
           className="absolute top-16 right-4 bg-black/70 rounded-lg p-2 border border-white/20"
+          style={{ zIndex: 5 }}
           data-testid="minimap"
         >
           <svg 
@@ -809,9 +815,9 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
 
       {/* Artwork detail panel */}
       {selectedArtwork && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm z-50">
-          <Card className="max-w-2xl w-full mx-4 overflow-hidden">
-            <div className="relative aspect-square max-h-[50vh]">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm overflow-y-auto p-4" style={{ zIndex: 50 }}>
+          <Card className="max-w-2xl w-full overflow-hidden">
+            <div className="relative aspect-video max-h-[40vh]">
               <img
                 src={selectedArtwork.imageUrl}
                 alt={selectedArtwork.title}
