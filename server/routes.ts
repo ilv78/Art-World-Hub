@@ -4,6 +4,8 @@ import { storage } from "./storage";
 import { insertArtworkSchema, insertArtistSchema, insertBidSchema, insertOrderSchema, insertBlogPostSchema } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
+import https from "https";
+import http from "http";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -13,6 +15,43 @@ export async function registerRoutes(
   // Setup authentication (BEFORE other routes)
   await setupAuth(app);
   registerAuthRoutes(app);
+
+  app.get("/api/image-proxy", (req, res) => {
+    const imageUrl = req.query.url as string;
+    if (!imageUrl) {
+      return res.status(400).json({ error: "Missing url parameter" });
+    }
+    try {
+      new URL(imageUrl);
+    } catch {
+      return res.status(400).json({ error: "Invalid URL" });
+    }
+    const client = imageUrl.startsWith("https") ? https : http;
+    const proxyReq = client.get(imageUrl, { headers: { "User-Agent": "Mozilla/5.0" } }, (proxyRes) => {
+      if (proxyRes.statusCode && proxyRes.statusCode >= 300 && proxyRes.statusCode < 400 && proxyRes.headers.location) {
+        const redirectUrl = proxyRes.headers.location;
+        const redirectClient = redirectUrl.startsWith("https") ? https : http;
+        redirectClient.get(redirectUrl, { headers: { "User-Agent": "Mozilla/5.0" } }, (redirectRes) => {
+          const contentType = redirectRes.headers["content-type"] || "image/jpeg";
+          res.setHeader("Content-Type", contentType);
+          res.setHeader("Cache-Control", "public, max-age=86400");
+          res.setHeader("Access-Control-Allow-Origin", "*");
+          redirectRes.pipe(res);
+        }).on("error", () => res.status(502).json({ error: "Failed to fetch image" }));
+        return;
+      }
+      const contentType = proxyRes.headers["content-type"] || "image/jpeg";
+      res.setHeader("Content-Type", contentType);
+      res.setHeader("Cache-Control", "public, max-age=86400");
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      if (proxyRes.statusCode && proxyRes.statusCode >= 400) {
+        return res.status(proxyRes.statusCode).json({ error: "Remote image not found" });
+      }
+      proxyRes.pipe(res);
+    });
+    proxyReq.on("error", () => res.status(502).json({ error: "Failed to fetch image" }));
+    proxyReq.setTimeout(10000, () => { proxyReq.destroy(); res.status(504).json({ error: "Timeout" }); });
+  });
 
   // Get current artist for logged-in user
   app.get("/api/artists/me", isAuthenticated, async (req: any, res) => {

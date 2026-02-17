@@ -259,7 +259,6 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
         scene.add(artworkMesh);
         artworkMeshesRef.current.set(artwork.id, { mesh: artworkMesh, artwork });
 
-        // Load texture via an Image element to handle CORS properly
         const img = new Image();
         img.crossOrigin = "anonymous";
         img.onload = () => {
@@ -271,7 +270,15 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
             roughness: 0.3,
           });
         };
-        img.src = artwork.imageUrl;
+        const imgUrl = artwork.imageUrl;
+        try {
+          const u = new URL(imgUrl);
+          const host = u.hostname.toLowerCase();
+          const isCorsOk = host.includes("unsplash.com") || host === window.location.hostname;
+          img.src = isCorsOk ? imgUrl : `/api/image-proxy?url=${encodeURIComponent(imgUrl)}`;
+        } catch {
+          img.src = imgUrl;
+        }
       });
     });
   }, [layout, artworks]);

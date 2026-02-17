@@ -31,6 +31,26 @@ const DOOR_W = 3.2;
 const textureCache = new Map<string, THREE.Texture>();
 const loadingTextures = new Map<string, Promise<THREE.Texture>>();
 
+function needsProxy(url: string): boolean {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase();
+    if (host.includes("unsplash.com")) return false;
+    if (host === window.location.hostname) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function getImageSrc(url: string, attempt: number): string {
+  const retryParam = attempt > 1 ? (url.includes("?") ? `&retry=${attempt}` : `?retry=${attempt}`) : "";
+  if (needsProxy(url)) {
+    return `/api/image-proxy?url=${encodeURIComponent(url + retryParam)}`;
+  }
+  return url + retryParam;
+}
+
 function loadTextureWithCache(url: string, retries = 3): Promise<THREE.Texture> {
   if (textureCache.has(url)) {
     return Promise.resolve(textureCache.get(url)!.clone());
@@ -60,7 +80,7 @@ function loadTextureWithCache(url: string, retries = 3): Promise<THREE.Texture> 
           reject(new Error(`Failed to load image: ${url}`));
         }
       };
-      img.src = url + (attempt > 1 ? (url.includes("?") ? `&retry=${attempt}` : `?retry=${attempt}`) : "");
+      img.src = getImageSrc(url, attempt);
     };
     tryLoad();
   });
