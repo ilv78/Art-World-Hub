@@ -18,12 +18,17 @@ import {
   Box,
   Frame,
 } from "lucide-react";
-import type { ArtworkWithArtist, ExhibitionWithArtworks, MazeLayout } from "@shared/schema";
+import type { ArtworkWithArtist } from "@shared/schema";
 import { useCartStore } from "@/lib/cart-store";
 import { useToast } from "@/hooks/use-toast";
-import { MazeGallery3D } from "@/components/maze-gallery-3d";
+import { HallwayGallery3D } from "@/components/hallway-gallery-3d";
 
 type ViewMode = "3d" | "classic";
+
+interface ArtistRoom {
+  artist: { id: string; name: string; avatarUrl: string | null; specialization: string | null };
+  artworks: ArtworkWithArtist[];
+}
 
 export default function Gallery() {
   const [viewMode, setViewMode] = useState<ViewMode>("3d");
@@ -32,24 +37,13 @@ export default function Gallery() {
   const [showInfo, setShowInfo] = useState(false);
   const galleryRef = useRef<HTMLDivElement>(null);
 
-  const { data: artworks, isLoading } = useQuery<ArtworkWithArtist[]>({
+  const { data: artworks, isLoading: artworksLoading } = useQuery<ArtworkWithArtist[]>({
     queryKey: ["/api/artworks"],
   });
 
-  const { data: activeExhibition } = useQuery<ExhibitionWithArtworks>({
-    queryKey: ["/api/exhibitions/active"],
+  const { data: hallwayData, isLoading: hallwayLoading } = useQuery<ArtistRoom[]>({
+    queryKey: ["/api/gallery/hallway"],
   });
-
-  // Parse exhibition layout if available, with error handling
-  const exhibitionLayout: MazeLayout | undefined = (() => {
-    if (!activeExhibition?.layout) return undefined;
-    try {
-      return JSON.parse(activeExhibition.layout) as MazeLayout;
-    } catch (e) {
-      console.error("Failed to parse exhibition layout:", e);
-      return undefined;
-    }
-  })();
 
   const { addItem, items } = useCartStore();
   const { toast } = useToast();
@@ -98,6 +92,8 @@ export default function Gallery() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [galleryArtworks.length, viewMode]);
 
+  const isLoading = artworksLoading || hallwayLoading;
+
   if (isLoading) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -128,12 +124,13 @@ export default function Gallery() {
 
   return (
     <div className="h-full flex flex-col relative overflow-hidden" ref={galleryRef}>
-      {/* Mode Toggle Header */}
       <div className="relative z-20 flex items-center justify-between p-4 border-b bg-background">
         <div>
           <h1 className="font-serif text-2xl font-bold">Virtual Gallery</h1>
           <p className="text-sm text-muted-foreground">
-            {viewMode === "3d" ? "Walk through our 3D gallery" : `Artwork ${currentIndex + 1} of ${galleryArtworks.length}`}
+            {viewMode === "3d"
+              ? `Museum hallway with ${hallwayData?.length || 0} artist rooms`
+              : `Artwork ${currentIndex + 1} of ${galleryArtworks.length}`}
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -141,7 +138,7 @@ export default function Gallery() {
             <TabsList>
               <TabsTrigger value="3d" className="gap-2" data-testid="tab-3d-view">
                 <Box className="h-4 w-4" />
-                <span className="hidden sm:inline">3D Maze</span>
+                <span className="hidden sm:inline">3D Museum</span>
               </TabsTrigger>
               <TabsTrigger value="classic" className="gap-2" data-testid="tab-classic-view">
                 <Frame className="h-4 w-4" />
@@ -162,40 +159,34 @@ export default function Gallery() {
         </div>
       </div>
 
-      {/* 3D Maze View */}
       {viewMode === "3d" && (
         <div className="flex-1 relative">
-          <MazeGallery3D 
-            artworks={galleryArtworks} 
-            layout={exhibitionLayout}
-          />
-          {activeExhibition && (
-            <div className="absolute top-4 left-4 z-10 bg-background/80 backdrop-blur-sm rounded-lg p-3 max-w-xs">
-              <h3 className="font-serif font-bold text-sm">{activeExhibition.name}</h3>
-              {activeExhibition.description && (
-                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                  {activeExhibition.description}
+          {hallwayData && hallwayData.length > 0 ? (
+            <HallwayGallery3D artistRooms={hallwayData} />
+          ) : (
+            <div className="h-full flex items-center justify-center">
+              <div className="text-center space-y-4">
+                <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center mx-auto">
+                  <Box className="h-10 w-10 text-muted-foreground" />
+                </div>
+                <h2 className="font-serif text-2xl font-bold">No Exhibition Rooms Yet</h2>
+                <p className="text-muted-foreground">
+                  Artists are preparing their exhibitions. Switch to Classic view to browse all artworks.
                 </p>
-              )}
+              </div>
             </div>
           )}
         </div>
       )}
 
-      {/* Classic View */}
       {viewMode === "classic" && (
         <>
-          {/* Gallery Room Background */}
           <div className="absolute inset-0 bg-gradient-to-b from-stone-100 to-stone-200 dark:from-stone-900 dark:to-stone-950">
-            {/* Floor */}
             <div className="absolute bottom-0 left-0 right-0 h-1/4 bg-gradient-to-t from-amber-900/20 to-transparent" />
-            {/* Spotlights */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-32 bg-gradient-to-b from-yellow-100/30 to-transparent dark:from-yellow-100/10 blur-xl" />
           </div>
 
-          {/* Main Gallery View */}
           <div className="relative flex-1 flex items-center justify-center p-8">
-            {/* Navigation Buttons */}
             <Button
               variant="secondary"
               size="icon"
@@ -216,23 +207,15 @@ export default function Gallery() {
               <ChevronRight className="h-6 w-6" />
             </Button>
 
-            {/* Artwork Frame */}
             <div
               className="relative transition-transform duration-500 ease-out"
               style={{ transform: `scale(${zoom})` }}
             >
-              {/* Frame Shadow */}
               <div className="absolute -inset-4 bg-black/20 blur-2xl -z-10" />
-
-              {/* Ornate Frame */}
               <div className="relative p-4 sm:p-6 bg-gradient-to-br from-amber-800 via-amber-900 to-amber-950 rounded-sm shadow-2xl">
-                {/* Inner Frame */}
                 <div className="p-1 bg-gradient-to-br from-amber-700 via-amber-800 to-amber-900 rounded-sm">
-                  {/* Gold Inlay */}
                   <div className="p-0.5 bg-gradient-to-br from-yellow-600 via-yellow-700 to-yellow-800 rounded-sm">
-                    {/* Mat */}
                     <div className="p-3 sm:p-5 bg-stone-100 dark:bg-stone-200">
-                      {/* Artwork */}
                       <div className="relative max-w-lg max-h-[50vh] overflow-hidden shadow-inner">
                         <img
                           src={currentArtwork.imageUrl}
@@ -245,8 +228,6 @@ export default function Gallery() {
                   </div>
                 </div>
               </div>
-
-              {/* Museum Label */}
               <div className="absolute -bottom-20 left-1/2 -translate-x-1/2 w-64 p-3 bg-white dark:bg-stone-800 shadow-lg rounded-sm text-center">
                 <h3 className="font-serif font-bold text-sm truncate" data-testid="text-artwork-title">
                   {currentArtwork.title}
@@ -260,49 +241,26 @@ export default function Gallery() {
             </div>
           </div>
 
-          {/* Zoom Controls */}
           <div className="absolute bottom-4 left-4 z-20 flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-full p-1 shadow-lg">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))}
-              disabled={zoom <= 0.5}
-              data-testid="button-zoom-out"
-            >
+            <Button variant="ghost" size="icon" onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))} disabled={zoom <= 0.5} data-testid="button-zoom-out">
               <ZoomOut className="h-4 w-4" />
             </Button>
             <span className="text-sm w-12 text-center">{Math.round(zoom * 100)}%</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setZoom((z) => Math.min(2, z + 0.25))}
-              disabled={zoom >= 2}
-              data-testid="button-zoom-in"
-            >
+            <Button variant="ghost" size="icon" onClick={() => setZoom((z) => Math.min(2, z + 0.25))} disabled={zoom >= 2} data-testid="button-zoom-in">
               <ZoomIn className="h-4 w-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setZoom(1)}
-              data-testid="button-zoom-reset"
-            >
+            <Button variant="ghost" size="icon" onClick={() => setZoom(1)} data-testid="button-zoom-reset">
               <RotateCcw className="h-4 w-4" />
             </Button>
           </div>
 
-          {/* Thumbnail Navigation */}
           <div className="relative z-10 p-4 border-t bg-background/80 backdrop-blur-sm">
             <ScrollArea className="w-full">
               <div className="flex gap-2 pb-2">
                 {galleryArtworks.map((artwork, index) => (
                   <button
                     key={artwork.id}
-                    onClick={() => {
-                      setCurrentIndex(index);
-                      setZoom(1);
-                      setShowInfo(false);
-                    }}
+                    onClick={() => { setCurrentIndex(index); setZoom(1); setShowInfo(false); }}
                     className={`flex-shrink-0 w-16 h-16 rounded-md overflow-hidden border-2 transition-all ${
                       index === currentIndex
                         ? "border-primary ring-2 ring-primary/30"
@@ -310,49 +268,32 @@ export default function Gallery() {
                     }`}
                     data-testid={`button-thumbnail-${artwork.id}`}
                   >
-                    <img
-                      src={artwork.imageUrl}
-                      alt={artwork.title}
-                      className="w-full h-full object-cover"
-                    />
+                    <img src={artwork.imageUrl} alt={artwork.title} className="w-full h-full object-cover" />
                   </button>
                 ))}
               </div>
             </ScrollArea>
           </div>
 
-          {/* Info Panel */}
           {showInfo && currentArtwork && (
             <div className="absolute right-0 top-0 bottom-0 w-full sm:w-96 bg-background border-l shadow-2xl z-30 flex flex-col">
               <div className="flex items-center justify-between p-4 border-b">
                 <h2 className="font-serif text-lg font-bold">Artwork Details</h2>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowInfo(false)}
-                  data-testid="button-close-info"
-                >
+                <Button variant="ghost" size="icon" onClick={() => setShowInfo(false)} data-testid="button-close-info">
                   <X className="h-5 w-5" />
                 </Button>
               </div>
               <ScrollArea className="flex-1">
                 <div className="p-4 space-y-6">
                   <div className="aspect-[4/3] rounded-lg overflow-hidden">
-                    <img
-                      src={currentArtwork.imageUrl}
-                      alt={currentArtwork.title}
-                      className="w-full h-full object-cover"
-                    />
+                    <img src={currentArtwork.imageUrl} alt={currentArtwork.title} className="w-full h-full object-cover" />
                   </div>
-
                   <div className="space-y-4">
                     <div>
                       <h3 className="font-serif text-xl font-bold">{currentArtwork.title}</h3>
                       <p className="text-muted-foreground">{currentArtwork.artist.name}</p>
                     </div>
-
                     <p className="text-sm leading-relaxed">{currentArtwork.description}</p>
-
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <span className="text-muted-foreground">Medium</span>
@@ -375,39 +316,28 @@ export default function Gallery() {
                         <p className="font-medium">{currentArtwork.category}</p>
                       </div>
                     </div>
-
                     <Card>
                       <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center justify-between gap-2 mb-4">
                           <span className="text-sm text-muted-foreground">Price</span>
                           <span className="text-2xl font-bold text-primary">
                             ${parseFloat(currentArtwork.price).toLocaleString()}
                           </span>
                         </div>
                         {currentArtwork.isForSale ? (
-                          <Button
-                            className="w-full"
-                            onClick={handleAddToCart}
-                            disabled={isInCart}
-                            data-testid="button-gallery-add-cart"
-                          >
+                          <Button className="w-full" onClick={handleAddToCart} disabled={isInCart} data-testid="button-gallery-add-cart">
                             <ShoppingCart className="h-4 w-4 mr-2" />
                             {isInCart ? "Already in Cart" : "Add to Cart"}
                           </Button>
                         ) : (
-                          <Button className="w-full" disabled>
-                            Sold Out
-                          </Button>
+                          <Button className="w-full" disabled>Sold Out</Button>
                         )}
                       </CardContent>
                     </Card>
-
                     {currentArtwork.artist.bio && (
                       <div className="pt-4 border-t">
                         <h4 className="font-serif font-semibold mb-2">About the Artist</h4>
-                        <p className="text-sm text-muted-foreground leading-relaxed">
-                          {currentArtwork.artist.bio}
-                        </p>
+                        <p className="text-sm text-muted-foreground leading-relaxed">{currentArtwork.artist.bio}</p>
                       </div>
                     )}
                   </div>

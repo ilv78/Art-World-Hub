@@ -98,6 +98,24 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/gallery/hallway", async (req, res) => {
+    try {
+      const artists = await storage.getArtists();
+      const artistRooms = await Promise.all(
+        artists.map(async (artist) => {
+          const readyArtworks = await storage.getExhibitionReadyArtworks(artist.id);
+          return {
+            artist: { id: artist.id, name: artist.name, avatarUrl: artist.avatarUrl, specialization: artist.specialization },
+            artworks: readyArtworks,
+          };
+        })
+      );
+      res.json(artistRooms.filter(r => r.artworks.length > 0));
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch hallway gallery data" });
+    }
+  });
+
   // Artworks routes
   app.get("/api/artworks", async (req, res) => {
     try {

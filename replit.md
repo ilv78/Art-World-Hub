@@ -18,14 +18,17 @@ ArtVerse is an immersive art platform featuring a virtual 3D-like gallery, art s
 
 ## Key Features
 
-### Virtual Gallery (3D Maze Experience)
-- **3D Walkable Maze**: Full Three.js-powered first-person walking experience
+### Virtual Gallery (Museum Hallway)
+- **Museum Hallway Layout**: Central corridor with individual artist rooms on each side
+- **HallwayGallery3D Component**: `client/src/components/hallway-gallery-3d.tsx` - procedurally generates hallway + rooms
 - **First-Person Controls**: WASD/Arrow keys for movement, mouse for looking around
-- **Customizable Exhibition Layouts**: Maze layouts stored as JSON in database per exhibition
-- **Navigation Minimap**: Real-time minimap showing player position and maze layout
+- **Per-Artist Rooms**: Each artist with exhibition-ready artworks gets their own room
+- **Navigation Minimap**: Real-time minimap showing player position, hallway, and room labels
 - **Artwork Interaction**: Click on artworks to view details and add to cart
 - **WebGL Fallback**: Automatic detection with Classic view alternative
-- **View Modes**: Toggle between 3D Maze and Classic grid view
+- **View Modes**: Toggle between 3D Museum and Classic grid view
+- **API**: `GET /api/gallery/hallway` returns artist rooms with exhibition-ready artworks
+- **Original MazeGallery3D**: Still used for individual artist profile galleries (`maze-gallery-3d.tsx`)
 
 ### Exhibition System
 - **Database Tables**: `exhibitions` and `exhibition_artworks` for managing shows
@@ -94,6 +97,9 @@ ArtVerse is an immersive art platform featuring a virtual 3D-like gallery, art s
 - `blog_posts` - Artist blog posts with title, content, excerpt, and publish status
 
 ## API Endpoints
+
+### Gallery
+- `GET /api/gallery/hallway` - Get all artist rooms with exhibition-ready artworks for hallway view
 
 ### Artists
 - `GET /api/artists` - List all artists
