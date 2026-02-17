@@ -11,10 +11,12 @@ import {
   type AuctionWithArtwork,
   type ExhibitionWithArtworks,
   type BlogPostWithArtist,
+  type MazeLayout,
+  type MazeCell,
   artists, artworks, auctions, bids, orders, exhibitions, exhibitionArtworks, blogPosts
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, asc, and } from "drizzle-orm";
 
 export interface IStorage {
   // Artists
@@ -62,6 +64,10 @@ export interface IStorage {
   // Artist management
   updateArtist(id: string, artist: Partial<InsertArtist>): Promise<Artist | undefined>;
   deleteArtwork(id: string): Promise<boolean>;
+  
+  // Gallery
+  getExhibitionReadyArtworks(artistId: string): Promise<ArtworkWithArtist[]>;
+  regenerateArtistGallery(artistId: string): Promise<MazeLayout>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -323,6 +329,102 @@ export class DatabaseStorage implements IStorage {
     const result = await db.delete(artworks).where(eq(artworks.id, id)).returning();
     return result.length > 0;
   }
+
+  async getExhibitionReadyArtworks(artistId: string): Promise<ArtworkWithArtist[]> {
+    const result = await db
+      .select()
+      .from(artworks)
+      .innerJoin(artists, eq(artworks.artistId, artists.id))
+      .where(and(eq(artworks.artistId, artistId), eq(artworks.isReadyForExhibition, true)))
+      .orderBy(asc(artworks.exhibitionOrder), asc(artworks.title));
+
+    return result.map(({ artworks: artwork, artists: artist }) => ({
+      ...artwork,
+      artist,
+    }));
+  }
+
+  async regenerateArtistGallery(artistId: string): Promise<MazeLayout> {
+    const readyArtworks = await this.getExhibitionReadyArtworks(artistId);
+    const layout = generateWhiteRoomLayout(readyArtworks.length);
+    await db.update(artists).set({ galleryLayout: layout }).where(eq(artists.id, artistId));
+    return layout;
+  }
+}
+
+function generateWhiteRoomLayout(artworkCount: number): MazeLayout {
+  if (artworkCount === 0) {
+    return {
+      width: 3,
+      height: 3,
+      spawnPoint: { x: 1, z: 1 },
+      cells: [
+        { x: 0, z: 0, walls: { north: true, south: true, east: false, west: true }, artworkSlots: [] },
+        { x: 1, z: 0, walls: { north: true, south: false, east: false, west: false }, artworkSlots: [] },
+        { x: 2, z: 0, walls: { north: true, south: true, east: true, west: false }, artworkSlots: [] },
+        { x: 0, z: 1, walls: { north: true, south: true, east: false, west: true }, artworkSlots: [] },
+        { x: 1, z: 1, walls: { north: false, south: false, east: false, west: false }, artworkSlots: [] },
+        { x: 2, z: 1, walls: { north: true, south: true, east: true, west: false }, artworkSlots: [] },
+        { x: 0, z: 2, walls: { north: true, south: true, east: false, west: true }, artworkSlots: [] },
+        { x: 1, z: 2, walls: { north: false, south: true, east: false, west: false }, artworkSlots: [] },
+        { x: 2, z: 2, walls: { north: true, south: true, east: true, west: false }, artworkSlots: [] },
+      ],
+    };
+  }
+
+  const wallsPerSide = Math.ceil(artworkCount / 4);
+  const roomWidth = Math.max(3, wallsPerSide + 2);
+  const roomHeight = Math.max(3, wallsPerSide + 2);
+
+  const cells: MazeCell[] = [];
+  let slotIndex = 0;
+
+  for (let z = 0; z < roomHeight; z++) {
+    for (let x = 0; x < roomWidth; x++) {
+      const isNorthWall = z === 0;
+      const isSouthWall = z === roomHeight - 1;
+      const isWestWall = x === 0;
+      const isEastWall = x === roomWidth - 1;
+
+      const cell: MazeCell = {
+        x,
+        z,
+        walls: {
+          north: isNorthWall,
+          south: isSouthWall,
+          east: isEastWall,
+          west: isWestWall,
+        },
+        artworkSlots: [],
+      };
+
+      if (isNorthWall && !isWestWall && !isEastWall && slotIndex < artworkCount) {
+        cell.artworkSlots.push({ wallId: `${x}-${z}-north`, position: slotIndex });
+        slotIndex++;
+      }
+      if (isEastWall && !isNorthWall && !isSouthWall && slotIndex < artworkCount) {
+        cell.artworkSlots.push({ wallId: `${x}-${z}-east`, position: slotIndex });
+        slotIndex++;
+      }
+      if (isSouthWall && !isWestWall && !isEastWall && slotIndex < artworkCount) {
+        cell.artworkSlots.push({ wallId: `${x}-${z}-south`, position: slotIndex });
+        slotIndex++;
+      }
+      if (isWestWall && !isNorthWall && !isSouthWall && slotIndex < artworkCount) {
+        cell.artworkSlots.push({ wallId: `${x}-${z}-west`, position: slotIndex });
+        slotIndex++;
+      }
+
+      cells.push(cell);
+    }
+  }
+
+  return {
+    width: roomWidth,
+    height: roomHeight,
+    spawnPoint: { x: Math.floor(roomWidth / 2), z: Math.floor(roomHeight / 2) },
+    cells,
+  };
 }
 
 export const storage = new DatabaseStorage();

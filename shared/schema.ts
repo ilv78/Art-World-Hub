@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, decimal, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, decimal, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -9,12 +9,13 @@ export * from "./models/auth";
 // Artists table - linked to authenticated users
 export const artists = pgTable("artists", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id"), // Links to authenticated user
+  userId: varchar("user_id"),
   name: text("name").notNull(),
   bio: text("bio").notNull(),
   avatarUrl: text("avatar_url"),
   country: text("country"),
   specialization: text("specialization"),
+  galleryLayout: jsonb("gallery_layout"),
 });
 
 export const insertArtistSchema = createInsertSchema(artists).omit({ id: true });
@@ -34,6 +35,8 @@ export const artworks = pgTable("artworks", {
   year: integer("year"),
   isForSale: boolean("is_for_sale").default(true),
   isInGallery: boolean("is_in_gallery").default(true),
+  isReadyForExhibition: boolean("is_ready_for_exhibition").default(false),
+  exhibitionOrder: integer("exhibition_order"),
   category: text("category").notNull(),
 });
 
