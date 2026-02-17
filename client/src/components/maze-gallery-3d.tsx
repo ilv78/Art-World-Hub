@@ -79,6 +79,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout }: MazeGallery3
   const euler = useRef(new THREE.Euler(0, 0, 0, "YXZ"));
   const velocity = useRef(new THREE.Vector3());
   const playerPosRef = useRef({ x: 0, z: 0, rotation: 0 });
+  const isPointerLockedRef = useRef(false);
   
   const { addItem, items } = useCartStore();
   const { toast } = useToast();
@@ -438,7 +439,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout }: MazeGallery3
     const animate = () => {
       animationIdRef.current = requestAnimationFrame(animate);
 
-      if (isPointerLocked && cameraRef.current) {
+      if (isPointerLockedRef.current && cameraRef.current) {
         const camera = cameraRef.current;
         const direction = new THREE.Vector3();
 
@@ -530,7 +531,9 @@ export function MazeGallery3D({ artworks, layout = defaultLayout }: MazeGallery3
     };
 
     const handlePointerLockChange = () => {
-      setIsPointerLocked(document.pointerLockElement === containerRef.current);
+      const locked = document.pointerLockElement === containerRef.current;
+      isPointerLockedRef.current = locked;
+      setIsPointerLocked(locked);
     };
 
     document.addEventListener("keydown", handleKeyDown);
