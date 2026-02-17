@@ -60,12 +60,70 @@ function loadTextureWithCache(url: string, retries = 3): Promise<THREE.Texture> 
           reject(new Error(`Failed to load image: ${url}`));
         }
       };
-      img.src = url + (attempt > 1 ? `?retry=${attempt}` : "");
+      img.src = url + (attempt > 1 ? (url.includes("?") ? `&retry=${attempt}` : `?retry=${attempt}`) : "");
     };
     tryLoad();
   });
   loadingTextures.set(url, promise);
   return promise;
+}
+
+function Minimap({ artistRooms, hallLeft, hallRight, totalW, totalD, mapScale, playerPosition }: {
+  artistRooms: ArtistRoom[];
+  hallLeft: number;
+  hallRight: number;
+  totalW: number;
+  totalD: number;
+  mapScale: number;
+  playerPosition: { x: number; z: number; rotation: number };
+}) {
+  const mapW = totalW * mapScale + 8;
+  const mapH = totalD * mapScale + 8;
+  const ox = mapW / 2;
+  const oz = 4;
+
+  return (
+    <div className="absolute top-16 right-4 bg-black/70 rounded-lg p-2 border border-white/20" style={{ zIndex: 5 }} data-testid="minimap">
+      <svg width={Math.min(mapW, 180)} height={Math.min(mapH, 200)} viewBox={`0 0 ${mapW} ${mapH}`} className="block">
+        <rect x={0} y={0} width={mapW} height={mapH} fill="rgba(30,30,30,0.8)" rx={4} />
+        <rect x={ox + hallLeft * mapScale} y={oz} width={HALLWAY_W * mapScale} height={totalD * mapScale} fill="rgba(200,195,185,0.4)" />
+        {artistRooms.map((room, i) => {
+          const pairIdx = Math.floor(i / 2);
+          const isLeft = i % 2 === 0;
+          const rZ = pairIdx * ROOM_W + 1;
+          const rX = isLeft ? hallLeft - ROOM_D : hallRight;
+          return (
+            <g key={room.artist.id}>
+              <rect
+                x={ox + rX * mapScale}
+                y={oz + rZ * mapScale}
+                width={ROOM_D * mapScale}
+                height={ROOM_W * mapScale}
+                fill="rgba(249, 115, 22, 0.3)"
+                stroke="rgba(249, 115, 22, 0.5)"
+                strokeWidth={0.5}
+              />
+              <text
+                x={ox + (rX + ROOM_D / 2) * mapScale}
+                y={oz + (rZ + ROOM_W / 2) * mapScale}
+                fill="rgba(255,255,255,0.7)"
+                fontSize={6}
+                textAnchor="middle"
+                dominantBaseline="middle"
+              >
+                {room.artist.name.split(" ").pop()}
+              </text>
+            </g>
+          );
+        })}
+        <g transform={`translate(${ox + playerPosition.x * mapScale}, ${oz + playerPosition.z * mapScale})`}>
+          <g transform={`rotate(${-playerPosition.rotation * 180 / Math.PI})`}>
+            <polygon points="0,-4 3,3 0,1.5 -3,3" fill="#F97316" stroke="#fff" strokeWidth={0.8} />
+          </g>
+        </g>
+      </svg>
+    </div>
+  );
 }
 
 export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
@@ -387,6 +445,7 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
       for (let ei = 0; ei < entries.length; ei++) {
         if (entries[ei][1].mesh === mesh) {
           setSelectedArtwork(entries[ei][1].artwork);
+          virtualKeysPressed.current.clear();
           document.exitPointerLock();
           break;
         }
