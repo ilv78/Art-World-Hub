@@ -353,26 +353,7 @@ export class DatabaseStorage implements IStorage {
 }
 
 function generateWhiteRoomLayout(artworkCount: number): MazeLayout {
-  if (artworkCount === 0) {
-    return {
-      width: 3,
-      height: 3,
-      spawnPoint: { x: 1, z: 1 },
-      cells: [
-        { x: 0, z: 0, walls: { north: true, south: true, east: false, west: true }, artworkSlots: [] },
-        { x: 1, z: 0, walls: { north: true, south: false, east: false, west: false }, artworkSlots: [] },
-        { x: 2, z: 0, walls: { north: true, south: true, east: true, west: false }, artworkSlots: [] },
-        { x: 0, z: 1, walls: { north: true, south: true, east: false, west: true }, artworkSlots: [] },
-        { x: 1, z: 1, walls: { north: false, south: false, east: false, west: false }, artworkSlots: [] },
-        { x: 2, z: 1, walls: { north: true, south: true, east: true, west: false }, artworkSlots: [] },
-        { x: 0, z: 2, walls: { north: true, south: true, east: false, west: true }, artworkSlots: [] },
-        { x: 1, z: 2, walls: { north: false, south: true, east: false, west: false }, artworkSlots: [] },
-        { x: 2, z: 2, walls: { north: true, south: true, east: true, west: false }, artworkSlots: [] },
-      ],
-    };
-  }
-
-  const wallsPerSide = Math.ceil(artworkCount / 4);
+  const wallsPerSide = Math.max(1, Math.ceil(artworkCount / 4));
   const roomWidth = Math.max(3, wallsPerSide + 2);
   const roomHeight = Math.max(3, wallsPerSide + 2);
 
@@ -381,38 +362,40 @@ function generateWhiteRoomLayout(artworkCount: number): MazeLayout {
 
   for (let z = 0; z < roomHeight; z++) {
     for (let x = 0; x < roomWidth; x++) {
-      const isNorthWall = z === 0;
-      const isSouthWall = z === roomHeight - 1;
-      const isWestWall = x === 0;
-      const isEastWall = x === roomWidth - 1;
+      const isBottomRow = z === 0;
+      const isTopRow = z === roomHeight - 1;
+      const isLeftCol = x === 0;
+      const isRightCol = x === roomWidth - 1;
 
       const cell: MazeCell = {
         x,
         z,
         walls: {
-          north: isNorthWall,
-          south: isSouthWall,
-          east: isEastWall,
-          west: isWestWall,
+          south: isBottomRow,
+          north: isTopRow,
+          west: isLeftCol,
+          east: isRightCol,
         },
         artworkSlots: [],
       };
 
-      if (isNorthWall && !isWestWall && !isEastWall && slotIndex < artworkCount) {
-        cell.artworkSlots.push({ wallId: `${x}-${z}-north`, position: slotIndex });
-        slotIndex++;
-      }
-      if (isEastWall && !isNorthWall && !isSouthWall && slotIndex < artworkCount) {
-        cell.artworkSlots.push({ wallId: `${x}-${z}-east`, position: slotIndex });
-        slotIndex++;
-      }
-      if (isSouthWall && !isWestWall && !isEastWall && slotIndex < artworkCount) {
-        cell.artworkSlots.push({ wallId: `${x}-${z}-south`, position: slotIndex });
-        slotIndex++;
-      }
-      if (isWestWall && !isNorthWall && !isSouthWall && slotIndex < artworkCount) {
-        cell.artworkSlots.push({ wallId: `${x}-${z}-west`, position: slotIndex });
-        slotIndex++;
+      if (artworkCount > 0) {
+        if (isTopRow && !isLeftCol && !isRightCol && slotIndex < artworkCount) {
+          cell.artworkSlots.push({ wallId: `${x}-${z}-north`, position: slotIndex });
+          slotIndex++;
+        }
+        if (isRightCol && !isBottomRow && !isTopRow && slotIndex < artworkCount) {
+          cell.artworkSlots.push({ wallId: `${x}-${z}-east`, position: slotIndex });
+          slotIndex++;
+        }
+        if (isBottomRow && !isLeftCol && !isRightCol && slotIndex < artworkCount) {
+          cell.artworkSlots.push({ wallId: `${x}-${z}-south`, position: slotIndex });
+          slotIndex++;
+        }
+        if (isLeftCol && !isBottomRow && !isTopRow && slotIndex < artworkCount) {
+          cell.artworkSlots.push({ wallId: `${x}-${z}-west`, position: slotIndex });
+          slotIndex++;
+        }
       }
 
       cells.push(cell);
