@@ -57,6 +57,8 @@ export default function ArtistDashboard() {
     year: new Date().getFullYear().toString(),
     category: "painting",
     isForSale: true,
+    isReadyForExhibition: false,
+    exhibitionOrder: "",
   });
 
   const [blogForm, setBlogForm] = useState({
@@ -114,6 +116,7 @@ export default function ArtistDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/artists", selectedArtistId, "artworks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/artists", selectedArtistId, "gallery"] });
       queryClient.invalidateQueries({ queryKey: ["/api/artworks"] });
       setArtworkDialogOpen(false);
       resetArtworkForm();
@@ -130,6 +133,7 @@ export default function ArtistDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/artists", selectedArtistId, "artworks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/artists", selectedArtistId, "gallery"] });
       queryClient.invalidateQueries({ queryKey: ["/api/artworks"] });
       setArtworkDialogOpen(false);
       setEditingArtwork(null);
@@ -147,6 +151,7 @@ export default function ArtistDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/artists", selectedArtistId, "artworks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/artists", selectedArtistId, "gallery"] });
       queryClient.invalidateQueries({ queryKey: ["/api/artworks"] });
       toast({ title: "Artwork deleted successfully" });
     },
@@ -210,6 +215,8 @@ export default function ArtistDashboard() {
       year: new Date().getFullYear().toString(),
       category: "painting",
       isForSale: true,
+      isReadyForExhibition: false,
+      exhibitionOrder: "",
     });
   };
 
@@ -237,6 +244,8 @@ export default function ArtistDashboard() {
       year: artworkForm.year ? parseInt(artworkForm.year) : null,
       category: artworkForm.category || "painting",
       isForSale: artworkForm.isForSale,
+      isReadyForExhibition: artworkForm.isReadyForExhibition,
+      exhibitionOrder: artworkForm.exhibitionOrder ? parseInt(artworkForm.exhibitionOrder) : null,
     };
 
     if (editingArtwork) {
@@ -277,6 +286,8 @@ export default function ArtistDashboard() {
       year: artwork.year?.toString() || "",
       category: artwork.category || "painting",
       isForSale: artwork.isForSale ?? true,
+      isReadyForExhibition: artwork.isReadyForExhibition ?? false,
+      exhibitionOrder: artwork.exhibitionOrder?.toString() || "",
     });
     setArtworkDialogOpen(true);
   };
@@ -526,6 +537,29 @@ export default function ArtistDashboard() {
                     />
                     <Label htmlFor="isForSale">Available for sale</Label>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="isReadyForExhibition"
+                      checked={artworkForm.isReadyForExhibition}
+                      onCheckedChange={(checked) => setArtworkForm({ ...artworkForm, isReadyForExhibition: checked })}
+                      data-testid="switch-artwork-exhibition"
+                    />
+                    <Label htmlFor="isReadyForExhibition">Ready for exhibition</Label>
+                  </div>
+                  {artworkForm.isReadyForExhibition && (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="exhibitionOrder">Exhibition order</Label>
+                      <Input
+                        id="exhibitionOrder"
+                        type="number"
+                        min="1"
+                        value={artworkForm.exhibitionOrder}
+                        onChange={(e) => setArtworkForm({ ...artworkForm, exhibitionOrder: e.target.value })}
+                        placeholder="Display order in gallery (1, 2, 3...)"
+                        data-testid="input-artwork-exhibition-order"
+                      />
+                    </div>
+                  )}
                 </div>
                 <DialogFooter>
                   <Button 
@@ -557,11 +591,16 @@ export default function ArtistDashboard() {
                       alt={artwork.title}
                       className="w-full h-full object-cover"
                     />
-                    {!artwork.isForSale && (
-                      <Badge className="absolute top-2 right-2" variant="secondary">
-                        Not for sale
-                      </Badge>
-                    )}
+                    <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+                      {!artwork.isForSale && (
+                        <Badge variant="secondary">Not for sale</Badge>
+                      )}
+                      {artwork.isReadyForExhibition && (
+                        <Badge variant="default">
+                          In Gallery{artwork.exhibitionOrder ? ` #${artwork.exhibitionOrder}` : ''}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   <CardContent className="p-4">
                     <h3 className="font-semibold truncate">{artwork.title}</h3>

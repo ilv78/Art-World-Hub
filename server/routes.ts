@@ -81,6 +81,23 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/artists/:id/gallery", async (req, res) => {
+    try {
+      const artist = await storage.getArtist(req.params.id);
+      if (!artist) {
+        return res.status(404).json({ error: "Artist not found" });
+      }
+      const readyArtworks = await storage.getExhibitionReadyArtworks(req.params.id);
+      let layout = artist.galleryLayout as any;
+      if (!layout) {
+        layout = await storage.regenerateArtistGallery(req.params.id);
+      }
+      res.json({ layout, artworks: readyArtworks });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch artist gallery" });
+    }
+  });
+
   // Artworks routes
   app.get("/api/artworks", async (req, res) => {
     try {
@@ -334,6 +351,9 @@ export async function registerRoutes(
     try {
       const artworkData = insertArtworkSchema.parse(req.body);
       const artwork = await storage.createArtwork(artworkData);
+      if (artwork.isReadyForExhibition) {
+        await storage.regenerateArtistGallery(artwork.artistId);
+      }
       res.status(201).json(artwork);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -345,9 +365,18 @@ export async function registerRoutes(
 
   app.patch("/api/artworks/:id", async (req, res) => {
     try {
+      const existingArtwork = await storage.getArtwork(req.params.id);
+      if (!existingArtwork) {
+        return res.status(404).json({ error: "Artwork not found" });
+      }
       const artwork = await storage.updateArtwork(req.params.id, req.body);
       if (!artwork) {
         return res.status(404).json({ error: "Artwork not found" });
+      }
+      const readinessChanged = existingArtwork.isReadyForExhibition !== artwork.isReadyForExhibition;
+      const orderChanged = artwork.isReadyForExhibition && existingArtwork.exhibitionOrder !== artwork.exhibitionOrder;
+      if (readinessChanged || orderChanged) {
+        await storage.regenerateArtistGallery(artwork.artistId);
       }
       res.json(artwork);
     } catch (error) {
@@ -357,9 +386,16 @@ export async function registerRoutes(
 
   app.delete("/api/artworks/:id", async (req, res) => {
     try {
+      const artwork = await storage.getArtwork(req.params.id);
+      if (!artwork) {
+        return res.status(404).json({ error: "Artwork not found" });
+      }
       const deleted = await storage.deleteArtwork(req.params.id);
       if (!deleted) {
         return res.status(404).json({ error: "Artwork not found" });
+      }
+      if (artwork.isReadyForExhibition) {
+        await storage.regenerateArtistGallery(artwork.artistId);
       }
       res.status(204).send();
     } catch (error) {

@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   MapPin, 
@@ -15,10 +14,16 @@ import {
   Calendar,
   ArrowLeft,
   ShoppingCart,
-  ExternalLink
+  Box
 } from "lucide-react";
 import { useCartStore } from "@/lib/cart-store";
-import type { Artist, ArtworkWithArtist, BlogPostWithArtist } from "@shared/schema";
+import { MazeGallery3D } from "@/components/maze-gallery-3d";
+import type { Artist, ArtworkWithArtist, BlogPostWithArtist, MazeLayout } from "@shared/schema";
+
+interface GalleryData {
+  layout: MazeLayout;
+  artworks: ArtworkWithArtist[];
+}
 
 export default function ArtistProfile() {
   const params = useParams<{ id: string }>();
@@ -33,12 +38,19 @@ export default function ArtistProfile() {
     enabled: !!params.id,
   });
 
+  const { data: galleryData, isLoading: galleryLoading } = useQuery<GalleryData>({
+    queryKey: ["/api/artists", params.id, "gallery"],
+    enabled: !!params.id,
+  });
+
   const { data: blogPosts, isLoading: blogLoading } = useQuery<BlogPostWithArtist[]>({
     queryKey: ["/api/artists", params.id, "blog"],
     enabled: !!params.id,
   });
 
   const publishedPosts = blogPosts?.filter(post => post.isPublished) || [];
+  const galleryArtworks = galleryData?.artworks || [];
+  const galleryLayout = galleryData?.layout;
 
   const formatDate = (date: string | Date) => {
     return new Date(date).toLocaleDateString('en-US', { 
@@ -94,7 +106,7 @@ export default function ArtistProfile() {
               </Avatar>
 
               <div className="flex-1 text-center sm:text-left">
-                <h1 className="font-serif text-3xl font-bold mb-2">{artist.name}</h1>
+                <h1 className="font-serif text-3xl font-bold mb-2" data-testid="text-artist-name">{artist.name}</h1>
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 text-muted-foreground mb-4">
                   {artist.country && (
                     <span className="flex items-center gap-1">
@@ -121,11 +133,15 @@ export default function ArtistProfile() {
           </CardContent>
         </Card>
 
-        <Tabs defaultValue="artworks" className="space-y-6">
+        <Tabs defaultValue="gallery" className="space-y-6">
           <TabsList>
-            <TabsTrigger value="artworks" data-testid="tab-profile-artworks">
+            <TabsTrigger value="gallery" data-testid="tab-profile-gallery">
+              <Box className="h-4 w-4 mr-2" />
+              Gallery ({galleryArtworks.length})
+            </TabsTrigger>
+            <TabsTrigger value="portfolio" data-testid="tab-profile-portfolio">
               <ImageIcon className="h-4 w-4 mr-2" />
-              Artworks ({artworks?.length || 0})
+              Portfolio ({artworks?.length || 0})
             </TabsTrigger>
             <TabsTrigger value="blog" data-testid="tab-profile-blog">
               <FileText className="h-4 w-4 mr-2" />
@@ -133,7 +149,28 @@ export default function ArtistProfile() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="artworks" className="space-y-4">
+          <TabsContent value="gallery" className="space-y-4">
+            {galleryLoading ? (
+              <Skeleton className="h-[500px] rounded-md" />
+            ) : galleryArtworks.length > 0 && galleryLayout ? (
+              <div data-testid="artist-gallery-3d">
+                <MazeGallery3D 
+                  artworks={galleryArtworks} 
+                  layout={galleryLayout}
+                />
+              </div>
+            ) : (
+              <div className="text-center py-16">
+                <Box className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="font-semibold mb-2">No exhibition artworks</h3>
+                <p className="text-muted-foreground">
+                  This artist hasn't set up their personal gallery exhibition yet.
+                </p>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="portfolio" className="space-y-4">
             {artworksLoading ? (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {Array.from({ length: 6 }).map((_, i) => (
@@ -154,11 +191,14 @@ export default function ArtistProfile() {
                         alt={artwork.title}
                         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />
-                      {!artwork.isForSale && (
-                        <Badge className="absolute top-2 right-2" variant="secondary">
-                          Sold
-                        </Badge>
-                      )}
+                      <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+                        {!artwork.isForSale && (
+                          <Badge variant="secondary">Sold</Badge>
+                        )}
+                        {artwork.isReadyForExhibition && (
+                          <Badge variant="default">In Gallery</Badge>
+                        )}
+                      </div>
                     </div>
                     <CardContent className="p-4">
                       <h3 className="font-semibold">{artwork.title}</h3>

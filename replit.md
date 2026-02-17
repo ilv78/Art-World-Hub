@@ -61,21 +61,31 @@ ArtVerse is an immersive art platform featuring a virtual 3D-like gallery, art s
 - **Single Artist View**: Shows only the logged-in artist's content (no artist selection)
 - **Artist Linking**: New users can claim an unlinked artist profile
 - Artwork management: create, edit, delete artworks
+- **Exhibition Controls**: isReadyForExhibition checkbox and exhibitionOrder number per artwork
 - Blog post management: create, edit, delete with draft/publish workflow
 - Form validation and file upload support
 
+### Personal Gallery System
+- **Auto-generated Layout**: White room layout generated server-side based on exhibition-ready artworks
+- **Dynamic Sizing**: Room dimensions scale with number of artworks
+- **Artwork Ordering**: Artworks placed on walls in exhibitionOrder sequence
+- **Trigger**: Gallery regenerated when isReadyForExhibition changes on any artwork
+- **Storage**: galleryLayout stored as JSON on the artists table
+- **API**: `GET /api/artists/:id/gallery` returns layout + ready artworks
+
 ### Artist Profile (Public)
 - Full artist bio and avatar display
-- Artworks gallery with add-to-cart functionality
-- Published blog posts display (no comments - read-only)
-- Tabbed navigation between artworks and blog
+- **3 Sections**: Gallery (3D personal exhibition), Portfolio (all artworks), Blog (published posts)
+- Gallery tab shows the artist's personal 3D gallery with exhibition-ready artworks
+- Portfolio tab shows all artworks with add-to-cart functionality
+- Blog tab shows published blog posts (no comments - read-only)
 
 ## Database Schema
 
 ### Tables
 - `users` - User accounts
-- `artists` - Artist profiles with bio and specialization
-- `artworks` - Art pieces with pricing and metadata
+- `artists` - Artist profiles with bio, specialization, and galleryLayout (jsonb)
+- `artworks` - Art pieces with pricing, metadata, isReadyForExhibition, and exhibitionOrder
 - `auctions` - Auction listings with timing and bids
 - `bids` - Individual bids on auctions
 - `orders` - Purchase orders
@@ -89,6 +99,7 @@ ArtVerse is an immersive art platform featuring a virtual 3D-like gallery, art s
 - `GET /api/artists` - List all artists
 - `GET /api/artists/:id` - Get artist details
 - `GET /api/artists/:id/artworks` - Get artist's artworks
+- `GET /api/artists/:id/gallery` - Get artist's personal gallery layout + ready artworks
 - `GET /api/artists/:id/blog` - Get artist's blog posts
 - `PATCH /api/artists/:id` - Update artist profile
 
