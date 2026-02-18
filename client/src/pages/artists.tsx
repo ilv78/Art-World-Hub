@@ -196,7 +196,7 @@ export default function Artists() {
                   <div>
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="font-semibold">Artworks</h4>
-                      <Link href="/store">
+                      <Link href={`/artists/${selectedArtist.id}`}>
                         <Button variant="ghost" size="sm">
                           View All
                           <ExternalLink className="h-3 w-3 ml-2" />
