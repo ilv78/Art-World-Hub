@@ -9,7 +9,12 @@ import type { ArtworkWithArtist } from "@shared/schema";
 
 export default function Home() {
   const { data: featuredArtworks, isLoading: artworksLoading } = useQuery<ArtworkWithArtist[]>({
-    queryKey: ["/api/artworks"],
+    queryKey: ["/api/artists", "4493f600-2619-47f9-979c-abc5b45ba92d", "artworks"],
+    queryFn: async () => {
+      const res = await fetch("/api/artists/4493f600-2619-47f9-979c-abc5b45ba92d/artworks");
+      if (!res.ok) throw new Error("Failed to fetch");
+      return res.json();
+    },
   });
 
 
