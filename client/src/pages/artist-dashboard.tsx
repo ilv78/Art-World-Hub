@@ -35,9 +35,25 @@ import {
   X,
   LogIn,
   Link as LinkIcon,
-  User
+  User,
+  Globe
 } from "lucide-react";
+import { SiInstagram, SiX, SiFacebook, SiYoutube, SiTiktok, SiLinkedin, SiBehance, SiDribbble, SiDeviantart, SiPinterest } from "react-icons/si";
 import type { Artist, ArtworkWithArtist, BlogPost, InsertArtwork, InsertBlogPost } from "@shared/schema";
+
+const socialPlatformsList = [
+  { key: "website", label: "Website", icon: Globe, placeholder: "https://yourwebsite.com" },
+  { key: "instagram", label: "Instagram", icon: SiInstagram, placeholder: "https://instagram.com/username" },
+  { key: "x", label: "X (Twitter)", icon: SiX, placeholder: "https://x.com/username" },
+  { key: "facebook", label: "Facebook", icon: SiFacebook, placeholder: "https://facebook.com/username" },
+  { key: "youtube", label: "YouTube", icon: SiYoutube, placeholder: "https://youtube.com/@channel" },
+  { key: "tiktok", label: "TikTok", icon: SiTiktok, placeholder: "https://tiktok.com/@username" },
+  { key: "linkedin", label: "LinkedIn", icon: SiLinkedin, placeholder: "https://linkedin.com/in/username" },
+  { key: "behance", label: "Behance", icon: SiBehance, placeholder: "https://behance.net/username" },
+  { key: "dribbble", label: "Dribbble", icon: SiDribbble, placeholder: "https://dribbble.com/username" },
+  { key: "deviantart", label: "DeviantArt", icon: SiDeviantart, placeholder: "https://deviantart.com/username" },
+  { key: "pinterest", label: "Pinterest", icon: SiPinterest, placeholder: "https://pinterest.com/username" },
+];
 
 export default function ArtistDashboard() {
   const { toast } = useToast();
@@ -54,6 +70,7 @@ export default function ArtistDashboard() {
     bio: "",
     country: "",
     specialization: "",
+    socialLinks: {} as Record<string, string>,
   });
   const [profileEditing, setProfileEditing] = useState(false);
 
@@ -113,12 +130,13 @@ export default function ArtistDashboard() {
         bio: myArtist.bio || "",
         country: myArtist.country || "",
         specialization: myArtist.specialization || "",
+        socialLinks: (myArtist.socialLinks as Record<string, string>) || {},
       });
     }
   }, [myArtist, profileEditing]);
 
   const updateProfileMutation = useMutation({
-    mutationFn: async (data: { name: string; avatarUrl: string; bio: string; country: string; specialization: string }) => {
+    mutationFn: async (data: { name: string; avatarUrl: string; bio: string; country: string; specialization: string; socialLinks: Record<string, string> }) => {
       return apiRequest("PATCH", `/api/artists/${selectedArtistId}`, data);
     },
     onSuccess: () => {
@@ -872,6 +890,7 @@ export default function ArtistDashboard() {
                         bio: myArtist.bio || "",
                         country: myArtist.country || "",
                         specialization: myArtist.specialization || "",
+                        socialLinks: (myArtist.socialLinks as Record<string, string>) || {},
                       });
                     }
                   }}
@@ -880,7 +899,12 @@ export default function ArtistDashboard() {
                   Cancel
                 </Button>
                 <Button
-                  onClick={() => updateProfileMutation.mutate(profileForm)}
+                  onClick={() => {
+                    const cleanedLinks = Object.fromEntries(
+                      Object.entries(profileForm.socialLinks).filter(([, v]) => v.trim())
+                    );
+                    updateProfileMutation.mutate({ ...profileForm, socialLinks: cleanedLinks });
+                  }}
                   disabled={updateProfileMutation.isPending || !profileForm.name.trim()}
                   data-testid="button-save-profile"
                 >
@@ -918,6 +942,22 @@ export default function ArtistDashboard() {
                       <p className="text-sm leading-relaxed" data-testid="text-profile-bio">{profileForm.bio}</p>
                     ) : (
                       <p className="text-sm text-muted-foreground italic">No bio added yet</p>
+                    )}
+                    {Object.values(profileForm.socialLinks).some(v => v) && (
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        {socialPlatformsList.map((platform) => {
+                          const url = profileForm.socialLinks[platform.key];
+                          if (!url) return null;
+                          const Icon = platform.icon;
+                          return (
+                            <a key={platform.key} href={url} target="_blank" rel="noopener noreferrer" data-testid={`link-dashboard-social-${platform.key}`}>
+                              <Button variant="outline" size="icon">
+                                <Icon className="h-4 w-4" />
+                              </Button>
+                            </a>
+                          );
+                        })}
+                      </div>
                     )}
                   </div>
                 ) : (
@@ -974,6 +1014,28 @@ export default function ArtistDashboard() {
                         className="min-h-[120px]"
                         data-testid="input-profile-bio"
                       />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Social Media Links</Label>
+                      <div className="space-y-3">
+                        {socialPlatformsList.map((platform) => {
+                          const Icon = platform.icon;
+                          return (
+                            <div key={platform.key} className="flex items-center gap-3">
+                              <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                              <Input
+                                value={profileForm.socialLinks[platform.key] || ""}
+                                onChange={(e) => setProfileForm({
+                                  ...profileForm,
+                                  socialLinks: { ...profileForm.socialLinks, [platform.key]: e.target.value }
+                                })}
+                                placeholder={platform.placeholder}
+                                data-testid={`input-social-${platform.key}`}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 )}

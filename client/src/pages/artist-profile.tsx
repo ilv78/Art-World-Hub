@@ -15,8 +15,11 @@ import {
   Calendar,
   ArrowLeft,
   ShoppingCart,
-  Box
+  Box,
+  Globe,
+  ExternalLink
 } from "lucide-react";
+import { SiInstagram, SiX, SiFacebook, SiYoutube, SiTiktok, SiLinkedin, SiBehance, SiDribbble, SiDeviantart, SiPinterest } from "react-icons/si";
 import { useCartStore } from "@/lib/cart-store";
 import { MazeGallery3D } from "@/components/maze-gallery-3d";
 import { ArtworkDetailDialog } from "@/components/artwork-detail-dialog";
@@ -26,6 +29,20 @@ interface GalleryData {
   layout: MazeLayout;
   artworks: ArtworkWithArtist[];
 }
+
+const socialPlatforms: Record<string, { label: string; icon: React.ComponentType<{ className?: string }> }> = {
+  website: { label: "Website", icon: Globe },
+  instagram: { label: "Instagram", icon: SiInstagram },
+  x: { label: "X", icon: SiX },
+  facebook: { label: "Facebook", icon: SiFacebook },
+  youtube: { label: "YouTube", icon: SiYoutube },
+  tiktok: { label: "TikTok", icon: SiTiktok },
+  linkedin: { label: "LinkedIn", icon: SiLinkedin },
+  behance: { label: "Behance", icon: SiBehance },
+  dribbble: { label: "Dribbble", icon: SiDribbble },
+  deviantart: { label: "DeviantArt", icon: SiDeviantart },
+  pinterest: { label: "Pinterest", icon: SiPinterest },
+};
 
 export default function ArtistProfile() {
   const params = useParams<{ id: string }>();
@@ -127,6 +144,29 @@ export default function ArtistProfile() {
                   )}
                 </div>
                 <p className="text-muted-foreground leading-relaxed">{artist.bio}</p>
+                {artist.socialLinks && Object.values(artist.socialLinks as Record<string, string>).some(Boolean) && (
+                  <div className="flex flex-wrap items-center gap-2 mt-3" data-testid="social-links">
+                    {Object.entries(artist.socialLinks as Record<string, string>).map(([key, url]) => {
+                      if (!url) return null;
+                      const platform = socialPlatforms[key];
+                      if (!platform) return null;
+                      const Icon = platform.icon;
+                      return (
+                        <a
+                          key={key}
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          data-testid={`link-social-${key}`}
+                        >
+                          <Button variant="outline" size="icon">
+                            <Icon className="h-4 w-4" />
+                          </Button>
+                        </a>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               <Link href="/artists">

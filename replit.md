@@ -87,7 +87,7 @@ ArtVerse is an immersive art platform featuring a virtual 3D-like gallery, art s
 
 ### Tables
 - `users` - User accounts
-- `artists` - Artist profiles with bio, specialization, and galleryLayout (jsonb)
+- `artists` - Artist profiles with bio, specialization, galleryLayout (jsonb), and socialLinks (jsonb)
 - `artworks` - Art pieces with pricing, metadata, isReadyForExhibition, and exhibitionOrder
 - `auctions` - Auction listings with timing and bids
 - `bids` - Individual bids on auctions
