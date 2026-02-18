@@ -9,40 +9,48 @@ import https from "https";
 import http from "http";
 import { Resend } from "resend";
 
-// Resend connector integration - credentials fetched dynamically
-async function getResendClient(): Promise<{ client: Resend; fromEmail: string } | null> {
-  try {
-    const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
-    const xReplitToken = process.env.REPL_IDENTITY
-      ? "repl " + process.env.REPL_IDENTITY
-      : process.env.WEB_REPL_RENEWAL
-        ? "depl " + process.env.WEB_REPL_RENEWAL
-        : null;
+// Resend connector integration (connection:conn_resend_01KHSG40NSKNW5CGQNH4DY6P8M)
+// WARNING: Never cache the Resend client - tokens expire, create fresh per use.
+let _connectionSettings: any;
 
-    if (!xReplitToken || !hostname) return null;
+async function getCredentials(): Promise<{ apiKey: string; fromEmail: string }> {
+  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
+  const xReplitToken = process.env.REPL_IDENTITY
+    ? "repl " + process.env.REPL_IDENTITY
+    : process.env.WEB_REPL_RENEWAL
+      ? "depl " + process.env.WEB_REPL_RENEWAL
+      : null;
 
-    const res = await fetch(
-      "https://" + hostname + "/api/v2/connection?include_secrets=true&connector_names=resend",
-      {
-        headers: {
-          Accept: "application/json",
-          X_REPLIT_TOKEN: xReplitToken,
-        },
-      },
-    );
-    const data = await res.json();
-    const connectionSettings = data.items?.[0];
-
-    if (!connectionSettings?.settings?.api_key) return null;
-
-    return {
-      client: new Resend(connectionSettings.settings.api_key),
-      fromEmail: connectionSettings.settings.from_email || "ArtVerse <onboarding@resend.dev>",
-    };
-  } catch (e) {
-    console.error("Failed to get Resend client:", e);
-    return null;
+  if (!xReplitToken || !hostname) {
+    throw new Error("Replit connector token not found");
   }
+
+  _connectionSettings = await fetch(
+    "https://" + hostname + "/api/v2/connection?include_secrets=true&connector_names=resend",
+    {
+      headers: {
+        Accept: "application/json",
+        X_REPLIT_TOKEN: xReplitToken,
+      },
+    },
+  ).then(res => res.json()).then(data => data.items?.[0]);
+
+  if (!_connectionSettings?.settings?.api_key) {
+    throw new Error("Resend not connected");
+  }
+
+  return {
+    apiKey: _connectionSettings.settings.api_key,
+    fromEmail: _connectionSettings.settings.from_email || "ArtVerse <onboarding@resend.dev>",
+  };
+}
+
+async function getUncachableResendClient(): Promise<{ client: Resend; fromEmail: string }> {
+  const { apiKey, fromEmail } = await getCredentials();
+  return {
+    client: new Resend(apiKey),
+    fromEmail,
+  };
 }
 
 async function sendOrderNotificationEmail(
@@ -53,9 +61,11 @@ async function sendOrderNotificationEmail(
 ) {
   if (!artist.email) return;
 
-  const resendClient = await getResendClient();
-  if (!resendClient) {
-    console.log("Resend not configured, skipping email notification");
+  let resendClient: { client: Resend; fromEmail: string };
+  try {
+    resendClient = await getUncachableResendClient();
+  } catch (e) {
+    console.log("Resend not configured, skipping email notification:", (e as Error).message);
     return;
   }
 
