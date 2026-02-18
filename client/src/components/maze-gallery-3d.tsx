@@ -115,6 +115,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
   const playerPosRef = useRef({ x: 0, z: 0, rotation: 0 });
   const isPointerLockedRef = useRef(false);
   const selectedArtworkRef = useRef<ArtworkWithArtist | null>(null);
+  const artworkCollisionZones = useRef<{ x: number; z: number; normalX: number; normalZ: number }[]>([]);
   
   const { addItem, items } = useCartStore();
   const { toast } = useToast();
@@ -513,12 +514,20 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
 
     const hasPoster = whiteRoom && artist;
     let artworkIndex = 0;
+    const zones: { x: number; z: number; normalX: number; normalZ: number }[] = [];
 
     for (let i = 0; i < allSlots.length; i++) {
       const slot = allSlots[i];
 
       if (i === 0 && hasPoster) {
         createArtistPoster(scene, slot.wallId);
+        const posterPos = computeSlotPosition(slot.wallId);
+        const dir = slot.wallId.split("-")[2];
+        zones.push({
+          x: posterPos.x, z: posterPos.z,
+          normalX: dir === "east" ? -1 : dir === "west" ? 1 : 0,
+          normalZ: dir === "north" ? -1 : dir === "south" ? 1 : 0,
+        });
         continue;
       }
 
@@ -530,6 +539,12 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
       const dims = artworkScale(artwork.dimensions, maxArtSize);
       const artworkGeometry = new THREE.PlaneGeometry(dims.w, dims.h);
       const pos = computeSlotPosition(slot.wallId);
+      const dir = slot.wallId.split("-")[2];
+      zones.push({
+        x: pos.x, z: pos.z,
+        normalX: dir === "east" ? -1 : dir === "west" ? 1 : 0,
+        normalZ: dir === "north" ? -1 : dir === "south" ? 1 : 0,
+      });
 
       const placeholderMaterial = new THREE.MeshStandardMaterial({ 
         color: 0xcccccc,
@@ -563,6 +578,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
         img.src = imgUrl;
       }
     }
+    artworkCollisionZones.current = zones;
   }, [layout, artworks, CELL_SIZE, whiteRoom, artist, computeSlotPosition, createArtistPoster]);
 
   // Setup lighting - minimal to avoid shader limits
@@ -593,6 +609,18 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
   // Collision detection
   const checkCollision = useCallback((position: THREE.Vector3): boolean => {
     const margin = 0.3;
+    const artworkMinDist = 0.2;
+    
+    for (const zone of artworkCollisionZones.current) {
+      const dx = position.x - zone.x;
+      const dz = position.z - zone.z;
+      const dotNormal = dx * zone.normalX + dz * zone.normalZ;
+      const keepOut = 0.06 + artworkMinDist;
+      if (dotNormal > 0 && dotNormal < keepOut) {
+        const tangentDist = Math.abs(dx * zone.normalZ - dz * zone.normalX);
+        if (tangentDist < CELL_SIZE / 2) return true;
+      }
+    }
     
     for (const cell of layout.cells) {
       const baseX = cell.x * CELL_SIZE;
