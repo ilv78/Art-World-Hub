@@ -31,6 +31,7 @@ export default function ArtistProfile() {
   const params = useParams<{ id: string }>();
   const addItem = useCartStore((state) => state.addItem);
   const [selectedArtwork, setSelectedArtwork] = useState<ArtworkWithArtist | null>(null);
+  const [activeTab, setActiveTab] = useState("gallery");
 
   const { data: artist, isLoading: artistLoading } = useQuery<Artist>({
     queryKey: ["/api/artists", params.id],
@@ -136,7 +137,7 @@ export default function ArtistProfile() {
           </CardContent>
         </Card>
 
-        <Tabs defaultValue="gallery" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList>
             <TabsTrigger value="gallery" data-testid="tab-profile-gallery">
               <Box className="h-4 w-4 mr-2" />
@@ -162,6 +163,7 @@ export default function ArtistProfile() {
                   layout={galleryLayout}
                   whiteRoom={true}
                   artist={artist}
+                  onExitGallery={() => setActiveTab("portfolio")}
                 />
               </div>
             ) : (

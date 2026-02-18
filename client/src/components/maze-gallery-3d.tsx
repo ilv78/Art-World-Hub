@@ -18,6 +18,7 @@ interface MazeGallery3DProps {
   layout?: MazeLayout;
   whiteRoom?: boolean;
   artist?: Artist;
+  onExitGallery?: () => void;
 }
 
 // Default maze layout - a simple gallery with multiple rooms
@@ -88,7 +89,7 @@ function artworkScale(dimensions: string | null | undefined, maxSize: number): {
   return { w: finalW, h: finalH };
 }
 
-export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = false, artist }: MazeGallery3DProps) {
+export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = false, artist, onExitGallery }: MazeGallery3DProps) {
   const CELL_SIZE = whiteRoom ? CELL_SIZE_WHITE : CELL_SIZE_DEFAULT;
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -97,6 +98,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
   const animationIdRef = useRef<number | null>(null);
   const artworkMeshesRef = useRef<Map<string, { mesh: THREE.Mesh; artwork: ArtworkWithArtist }>>(new Map());
   const posterMeshRef = useRef<THREE.Mesh | null>(null);
+  const doorMeshRef = useRef<THREE.Mesh | null>(null);
   
   const [selectedArtwork, setSelectedArtwork] = useState<ArtworkWithArtist | null>(null);
   const [showArtistDialog, setShowArtistDialog] = useState(false);
@@ -149,18 +151,19 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
       const fctx = floorCanvas.getContext("2d")!;
       fctx.fillStyle = "#c8a882";
       fctx.fillRect(0, 0, 512, 512);
-      const plankColors = ["#c8a882", "#bfa078", "#d4b896", "#b8956e", "#cbb08a"];
-      const plankHeight = 64;
-      for (let row = 0; row < 8; row++) {
-        const offset = row % 2 === 0 ? 0 : 128;
-        for (let col = -1; col < 5; col++) {
-          const px = col * 128 + offset;
+      const plankColors = ["#c8a882", "#bfa078", "#d4b896", "#b8956e", "#cbb08a", "#c2a07a", "#d0b090"];
+      const plankHeight = 32;
+      const plankWidth = 64;
+      for (let row = 0; row < 16; row++) {
+        const offset = row % 2 === 0 ? 0 : plankWidth / 2;
+        for (let col = -1; col < 9; col++) {
+          const px = col * plankWidth + offset;
           const py = row * plankHeight;
-          fctx.fillStyle = plankColors[(row * 3 + col) % plankColors.length];
-          fctx.fillRect(px, py, 126, plankHeight - 2);
+          fctx.fillStyle = plankColors[(row * 5 + col) % plankColors.length];
+          fctx.fillRect(px, py, plankWidth - 1, plankHeight - 1);
           fctx.strokeStyle = "#a08060";
-          fctx.lineWidth = 1;
-          fctx.strokeRect(px, py, 126, plankHeight - 2);
+          fctx.lineWidth = 0.5;
+          fctx.strokeRect(px, py, plankWidth - 1, plankHeight - 1);
         }
       }
       const floorTexture = new THREE.CanvasTexture(floorCanvas);
@@ -186,34 +189,8 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
     }
 
     if (whiteRoom) {
-      const skyCanvas = document.createElement("canvas");
-      skyCanvas.width = 512;
-      skyCanvas.height = 512;
-      const sctx = skyCanvas.getContext("2d")!;
-      const grad = sctx.createLinearGradient(0, 0, 0, 512);
-      grad.addColorStop(0, "#87ceeb");
-      grad.addColorStop(0.5, "#b0d4f1");
-      grad.addColorStop(1, "#dceefb");
-      sctx.fillStyle = grad;
-      sctx.fillRect(0, 0, 512, 512);
-      sctx.fillStyle = "rgba(255,255,255,0.8)";
-      const drawCloud = (cx: number, cy: number, r: number) => {
-        sctx.beginPath();
-        sctx.arc(cx, cy, r, 0, Math.PI * 2);
-        sctx.arc(cx + r * 0.8, cy - r * 0.3, r * 0.7, 0, Math.PI * 2);
-        sctx.arc(cx - r * 0.6, cy - r * 0.1, r * 0.6, 0, Math.PI * 2);
-        sctx.arc(cx + r * 0.3, cy + r * 0.2, r * 0.5, 0, Math.PI * 2);
-        sctx.fill();
-      };
-      drawCloud(120, 150, 40);
-      drawCloud(350, 100, 50);
-      drawCloud(250, 300, 35);
-      drawCloud(80, 380, 30);
-      drawCloud(420, 350, 45);
-      const skyTexture = new THREE.CanvasTexture(skyCanvas);
-      skyTexture.colorSpace = THREE.SRGBColorSpace;
       const ceilGeo = new THREE.PlaneGeometry(floorW, floorH);
-      const ceilMat = new THREE.MeshStandardMaterial({ map: skyTexture, roughness: 0.95 });
+      const ceilMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 });
       const ceiling = new THREE.Mesh(ceilGeo, ceilMat);
       ceiling.rotation.x = Math.PI / 2;
       ceiling.position.set(layout.width * CELL_SIZE / 2, WALL_HEIGHT, layout.height * CELL_SIZE / 2);
@@ -297,6 +274,15 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
           );
           lintelFrame.position.set(baseX + CELL_SIZE / 2, doorHeight, baseZ);
           scene.add(lintelFrame);
+
+          const doorPanelMat = new THREE.MeshStandardMaterial({ color: 0x6b4226, roughness: 0.5 });
+          const doorPanel = new THREE.Mesh(
+            new THREE.BoxGeometry(doorWidth - 0.04, doorHeight - 0.04, 0.06),
+            doorPanelMat
+          );
+          doorPanel.position.set(baseX + CELL_SIZE / 2, (doorHeight - 0.04) / 2, baseZ);
+          scene.add(doorPanel);
+          doorMeshRef.current = doorPanel;
         } else {
           const wall = new THREE.Mesh(
             new THREE.BoxGeometry(CELL_SIZE, WALL_HEIGHT, WALL_THICKNESS),
@@ -609,18 +595,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
           if (position.x > baseX && position.x < baseX + CELL_SIZE) return true;
         }
         if (cell.walls.south && position.z < baseZ + margin) {
-          const isDoorCell = whiteRoom && cell.z === 0 && cell.x === Math.floor(layout.width / 2);
-          if (isDoorCell) {
-            const doorWidth = CELL_SIZE * 0.5;
-            const sideWidth = (CELL_SIZE - doorWidth) / 2;
-            const doorLeft = baseX + sideWidth;
-            const doorRight = baseX + CELL_SIZE - sideWidth;
-            if (position.x < doorLeft || position.x > doorRight) {
-              if (position.x > baseX && position.x < baseX + CELL_SIZE) return true;
-            }
-          } else {
-            if (position.x > baseX && position.x < baseX + CELL_SIZE) return true;
-          }
+          if (position.x > baseX && position.x < baseX + CELL_SIZE) return true;
         }
         if (cell.walls.east && position.x > baseX + CELL_SIZE - margin) {
           if (position.z > baseZ && position.z < baseZ + CELL_SIZE) return true;
@@ -642,6 +617,8 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
 
   const showArtistDialogRef = useRef(false);
   showArtistDialogRef.current = showArtistDialog;
+  const onExitGalleryRef = useRef(onExitGallery);
+  onExitGalleryRef.current = onExitGallery;
 
   const handleClick = useCallback((event: MouseEvent) => {
     if (!cameraRef.current || !sceneRef.current || !isPointerLockedRef.current) return;
@@ -649,6 +626,17 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
     const raycaster = new THREE.Raycaster();
     const center = new THREE.Vector2(0, 0);
     raycaster.setFromCamera(center, cameraRef.current);
+
+    if (doorMeshRef.current) {
+      const doorIntersects = raycaster.intersectObject(doorMeshRef.current);
+      if (doorIntersects.length > 0 && doorIntersects[0].distance < 3) {
+        document.exitPointerLock();
+        if (onExitGalleryRef.current) {
+          onExitGalleryRef.current();
+        }
+        return;
+      }
+    }
 
     if (posterMeshRef.current) {
       const posterIntersects = raycaster.intersectObject(posterMeshRef.current);

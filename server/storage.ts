@@ -398,7 +398,9 @@ function generateWhiteRoomLayout(artworkCount: number): MazeLayout {
   for (let z = roomHeight - 2; z >= 1; z--) {
     orderedSlots.push({ x: roomWidth - 1, z, wall: "east" });
   }
+  const doorCenterX = Math.floor(roomWidth / 2);
   for (let x = roomWidth - 2; x >= 1; x--) {
+    if (x === doorCenterX) continue;
     orderedSlots.push({ x, z: 0, wall: "south" });
   }
 
