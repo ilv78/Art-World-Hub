@@ -328,6 +328,47 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
         scene.add(wall);
       }
     });
+
+    if (whiteRoom) {
+      const benchColor = 0x2c1a0e;
+      const benchMat = new THREE.MeshStandardMaterial({ color: benchColor, roughness: 0.6 });
+      const roomCenterX = layout.width * CELL_SIZE / 2;
+      const roomCenterZ = layout.height * CELL_SIZE / 2;
+      const benchLength = 1.6;
+      const benchDepth = 0.4;
+      const benchSeatH = 0.06;
+      const benchLegH = 0.42;
+      const benchLegW = 0.06;
+
+      const createBench = (bx: number, bz: number, rotY: number) => {
+        const benchGroup = new THREE.Group();
+
+        const seat = new THREE.Mesh(
+          new THREE.BoxGeometry(benchLength, benchSeatH, benchDepth),
+          benchMat
+        );
+        seat.position.set(0, benchLegH + benchSeatH / 2, 0);
+        seat.castShadow = true;
+        benchGroup.add(seat);
+
+        const legGeo = new THREE.BoxGeometry(benchLegW, benchLegH, benchDepth - 0.04);
+        const offsets = [-(benchLength / 2 - 0.08), (benchLength / 2 - 0.08)];
+        for (const ox of offsets) {
+          const leg = new THREE.Mesh(legGeo, benchMat);
+          leg.position.set(ox, benchLegH / 2, 0);
+          leg.castShadow = true;
+          benchGroup.add(leg);
+        }
+
+        benchGroup.position.set(bx, 0, bz);
+        benchGroup.rotation.y = rotY;
+        scene.add(benchGroup);
+      };
+
+      createBench(roomCenterX, roomCenterZ + roomCenterZ * 0.45, Math.PI);
+      createBench(roomCenterX + roomCenterX * 0.45, roomCenterZ, Math.PI / 2);
+      createBench(roomCenterX - roomCenterX * 0.45, roomCenterZ, -Math.PI / 2);
+    }
   }, [layout, whiteRoom, CELL_SIZE]);
 
   const computeSlotPosition = useCallback((wallId: string) => {
