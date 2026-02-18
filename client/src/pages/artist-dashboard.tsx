@@ -39,7 +39,8 @@ import {
   Globe
 } from "lucide-react";
 import { SiInstagram, SiX, SiFacebook, SiYoutube, SiTiktok, SiLinkedin, SiBehance, SiDribbble, SiDeviantart, SiPinterest } from "react-icons/si";
-import type { Artist, ArtworkWithArtist, BlogPost, InsertArtwork, InsertBlogPost } from "@shared/schema";
+import type { Artist, ArtworkWithArtist, BlogPost, InsertArtwork, InsertBlogPost, OrderWithArtwork } from "@shared/schema";
+import { ShoppingBag, Package, Mail } from "lucide-react";
 
 const socialPlatformsList = [
   { key: "website", label: "Website", icon: Globe, placeholder: "https://yourwebsite.com" },
@@ -70,6 +71,7 @@ export default function ArtistDashboard() {
     bio: "",
     country: "",
     specialization: "",
+    email: "",
     socialLinks: {} as Record<string, string>,
   });
   const [profileEditing, setProfileEditing] = useState(false);
@@ -122,6 +124,11 @@ export default function ArtistDashboard() {
     enabled: !!selectedArtistId,
   });
 
+  const { data: artistOrders, isLoading: ordersLoading } = useQuery<OrderWithArtwork[]>({
+    queryKey: ["/api/artists", selectedArtistId, "orders"],
+    enabled: !!selectedArtistId,
+  });
+
   useEffect(() => {
     if (myArtist && !profileEditing) {
       setProfileForm({
@@ -130,13 +137,14 @@ export default function ArtistDashboard() {
         bio: myArtist.bio || "",
         country: myArtist.country || "",
         specialization: myArtist.specialization || "",
+        email: myArtist.email || "",
         socialLinks: (myArtist.socialLinks as Record<string, string>) || {},
       });
     }
   }, [myArtist, profileEditing]);
 
   const updateProfileMutation = useMutation({
-    mutationFn: async (data: { name: string; avatarUrl: string; bio: string; country: string; specialization: string; socialLinks: Record<string, string> }) => {
+    mutationFn: async (data: { name: string; avatarUrl: string; bio: string; country: string; specialization: string; email: string; socialLinks: Record<string, string> }) => {
       return apiRequest("PATCH", `/api/artists/${selectedArtistId}`, data);
     },
     onSuccess: () => {
@@ -482,6 +490,10 @@ export default function ArtistDashboard() {
           <TabsTrigger value="blog" data-testid="tab-blog">
             <FileText className="h-4 w-4 mr-2" />
             Blog Posts
+          </TabsTrigger>
+          <TabsTrigger value="orders" data-testid="tab-orders">
+            <ShoppingBag className="h-4 w-4 mr-2" />
+            Orders
           </TabsTrigger>
           <TabsTrigger value="profile" data-testid="tab-profile">
             <User className="h-4 w-4 mr-2" />
@@ -869,6 +881,97 @@ export default function ArtistDashboard() {
           )}
         </TabsContent>
 
+        <TabsContent value="orders" className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="font-semibold text-lg">Order Register</h2>
+            <Badge variant="secondary" data-testid="text-order-count">
+              {artistOrders?.length || 0} orders
+            </Badge>
+          </div>
+
+          {ordersLoading ? (
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Card key={i}>
+                  <CardContent className="p-4">
+                    <Skeleton className="h-20 w-full" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : artistOrders && artistOrders.length > 0 ? (
+            <div className="space-y-3">
+              {artistOrders.map((order) => (
+                <Card key={order.id} data-testid={`card-order-${order.id}`}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-4">
+                      <div className="w-16 h-16 rounded-md overflow-hidden shrink-0">
+                        <img
+                          src={order.artwork.imageUrl}
+                          alt={order.artwork.title}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <div className="flex items-start justify-between gap-4 flex-wrap">
+                          <div>
+                            <h3 className="font-serif font-semibold" data-testid={`text-order-artwork-${order.id}`}>{order.artwork.title}</h3>
+                            <p className="text-sm text-muted-foreground">{order.artwork.medium}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-primary" data-testid={`text-order-price-${order.id}`}>
+                              ${parseFloat(order.totalAmount).toLocaleString()}
+                            </p>
+                            <Badge
+                              variant={order.status === "completed" ? "default" : order.status === "pending" ? "secondary" : "outline"}
+                              data-testid={`badge-order-status-${order.id}`}
+                            >
+                              {order.status}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4 flex-wrap text-sm text-muted-foreground pt-1">
+                          <span data-testid={`text-order-buyer-${order.id}`}>
+                            <User className="h-3 w-3 inline mr-1" />
+                            {order.buyerName}
+                          </span>
+                          <span data-testid={`text-order-email-${order.id}`}>
+                            <Mail className="h-3 w-3 inline mr-1" />
+                            {order.buyerEmail}
+                          </span>
+                          <span>
+                            <Package className="h-3 w-3 inline mr-1" />
+                            {order.shippingAddress}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(order.createdAt).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <ShoppingBag className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="font-serif text-lg font-semibold mb-1">No orders yet</h3>
+                <p className="text-sm text-muted-foreground">
+                  When someone purchases your artwork, the order details will appear here.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
         <TabsContent value="profile" className="space-y-4">
           <div className="flex items-center justify-between gap-4">
             <h2 className="font-semibold text-lg">My Profile</h2>
@@ -890,6 +993,7 @@ export default function ArtistDashboard() {
                         bio: myArtist.bio || "",
                         country: myArtist.country || "",
                         specialization: myArtist.specialization || "",
+                        email: myArtist.email || "",
                         socialLinks: (myArtist.socialLinks as Record<string, string>) || {},
                       });
                     }
@@ -937,6 +1041,12 @@ export default function ArtistDashboard() {
                     )}
                     {profileForm.country && (
                       <p className="text-sm text-muted-foreground" data-testid="text-profile-country">{profileForm.country}</p>
+                    )}
+                    {profileForm.email && (
+                      <p className="text-sm text-muted-foreground" data-testid="text-profile-email">
+                        <Mail className="h-3 w-3 inline mr-1" />
+                        {profileForm.email}
+                      </p>
                     )}
                     {profileForm.bio ? (
                       <p className="text-sm leading-relaxed" data-testid="text-profile-bio">{profileForm.bio}</p>
@@ -1003,6 +1113,18 @@ export default function ArtistDashboard() {
                           data-testid="input-profile-country"
                         />
                       </div>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="profile-email">Notification Email</Label>
+                      <Input
+                        id="profile-email"
+                        type="email"
+                        value={profileForm.email}
+                        onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                        placeholder="your@email.com"
+                        data-testid="input-profile-email"
+                      />
+                      <p className="text-xs text-muted-foreground">Order notifications will be sent to this email address.</p>
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="profile-bio">Bio / Description</Label>

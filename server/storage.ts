@@ -3,7 +3,7 @@ import {
   type Artwork, type InsertArtwork,
   type Auction, type InsertAuction,
   type Bid, type InsertBid,
-  type Order, type InsertOrder,
+  type Order, type InsertOrder, type OrderWithArtwork,
   type Exhibition, type InsertExhibition,
   type ExhibitionArtwork, type InsertExhibitionArtwork,
   type BlogPost, type InsertBlogPost,
@@ -44,6 +44,7 @@ export interface IStorage {
   
   // Orders
   getOrders(): Promise<Order[]>;
+  getOrdersByArtist(artistId: string): Promise<OrderWithArtwork[]>;
   createOrder(order: InsertOrder): Promise<Order>;
   
   // Exhibitions
@@ -203,6 +204,21 @@ export class DatabaseStorage implements IStorage {
   // Orders
   async getOrders(): Promise<Order[]> {
     return db.select().from(orders).orderBy(desc(orders.createdAt));
+  }
+
+  async getOrdersByArtist(artistId: string): Promise<OrderWithArtwork[]> {
+    const rows = await db
+      .select()
+      .from(orders)
+      .innerJoin(artworks, eq(orders.artworkId, artworks.id))
+      .innerJoin(artists, eq(artworks.artistId, artists.id))
+      .where(eq(artworks.artistId, artistId))
+      .orderBy(desc(orders.createdAt));
+
+    return rows.map(row => ({
+      ...row.orders,
+      artwork: { ...row.artworks, artist: row.artists },
+    }));
   }
 
   async createOrder(insertOrder: InsertOrder): Promise<Order> {

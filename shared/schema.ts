@@ -15,6 +15,7 @@ export const artists = pgTable("artists", {
   avatarUrl: text("avatar_url"),
   country: text("country"),
   specialization: text("specialization"),
+  email: text("email"),
   galleryLayout: jsonb("gallery_layout"),
   socialLinks: jsonb("social_links").$type<Record<string, string>>(),
 });
@@ -134,6 +135,7 @@ export const orders = pgTable("orders", {
 export const insertOrderSchema = createInsertSchema(orders).omit({ id: true, createdAt: true });
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 export type Order = typeof orders.$inferSelect;
+export type OrderWithArtwork = Order & { artwork: ArtworkWithArtist };
 
 // Extended types for frontend
 export type ArtworkWithArtist = Artwork & { artist: Artist };

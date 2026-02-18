@@ -2,10 +2,64 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertArtworkSchema, insertArtistSchema, insertBidSchema, insertOrderSchema, insertBlogPostSchema } from "@shared/schema";
+import type { Artist, ArtworkWithArtist, Order, InsertOrder } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import https from "https";
 import http from "http";
+import { Resend } from "resend";
+
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+
+async function sendOrderNotificationEmail(
+  artist: Artist,
+  artwork: ArtworkWithArtist,
+  order: Order,
+  orderData: InsertOrder,
+) {
+  if (!resend || !artist.email) return;
+
+  const subject = `New Order: "${artwork.title}" has been purchased`;
+  const html = `
+    <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <h1 style="color: #1a1a2e; border-bottom: 2px solid #F97316; padding-bottom: 10px;">New Artwork Order</h1>
+      <p>Dear ${artist.name},</p>
+      <p>Great news! One of your artworks has been purchased.</p>
+      
+      <div style="background: #faf8f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h2 style="color: #1a1a2e; margin-top: 0;">Order Details</h2>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr><td style="padding: 8px 0; color: #666;">Order ID:</td><td style="padding: 8px 0; font-weight: bold;">${order.id}</td></tr>
+          <tr><td style="padding: 8px 0; color: #666;">Artwork:</td><td style="padding: 8px 0; font-weight: bold;">${artwork.title}</td></tr>
+          <tr><td style="padding: 8px 0; color: #666;">Medium:</td><td style="padding: 8px 0;">${artwork.medium}</td></tr>
+          ${artwork.dimensions ? `<tr><td style="padding: 8px 0; color: #666;">Dimensions:</td><td style="padding: 8px 0;">${artwork.dimensions}</td></tr>` : ""}
+          <tr><td style="padding: 8px 0; color: #666;">Price:</td><td style="padding: 8px 0; font-weight: bold; color: #F97316;">$${parseFloat(order.totalAmount).toLocaleString()}</td></tr>
+        </table>
+      </div>
+      
+      <div style="background: #f0f0f0; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h2 style="color: #1a1a2e; margin-top: 0;">Buyer Information</h2>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr><td style="padding: 8px 0; color: #666;">Name:</td><td style="padding: 8px 0; font-weight: bold;">${orderData.buyerName}</td></tr>
+          <tr><td style="padding: 8px 0; color: #666;">Email:</td><td style="padding: 8px 0;">${orderData.buyerEmail}</td></tr>
+          <tr><td style="padding: 8px 0; color: #666;">Shipping Address:</td><td style="padding: 8px 0;">${orderData.shippingAddress}</td></tr>
+        </table>
+      </div>
+      
+      <p style="color: #666; font-size: 14px; margin-top: 30px;">
+        Please prepare the artwork for shipping. You can view all your orders in your artist dashboard.
+      </p>
+      <p style="color: #999; font-size: 12px;">This is an automated notification from ArtVerse.</p>
+    </div>
+  `;
+
+  await resend.emails.send({
+    from: "ArtVerse <onboarding@resend.dev>",
+    to: artist.email,
+    subject,
+    html,
+  });
+}
 
 export async function registerRoutes(
   httpServer: Server,
@@ -272,6 +326,15 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/artists/:id/orders", async (req, res) => {
+    try {
+      const artistOrders = await storage.getOrdersByArtist(req.params.id);
+      res.json(artistOrders);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch artist orders" });
+    }
+  });
+
   app.post("/api/orders", async (req, res) => {
     try {
       const orderData = insertOrderSchema.parse(req.body);
@@ -279,6 +342,19 @@ export async function registerRoutes(
       
       // Mark artwork as sold
       await storage.updateArtwork(orderData.artworkId, { isForSale: false });
+
+      // Send email notification to the artist
+      try {
+        const artwork = await storage.getArtwork(orderData.artworkId);
+        if (artwork) {
+          const artist = await storage.getArtist(artwork.artist.id);
+          if (artist?.email) {
+            await sendOrderNotificationEmail(artist, artwork, order, orderData);
+          }
+        }
+      } catch (emailError) {
+        console.error("Failed to send order notification email:", emailError);
+      }
       
       res.status(201).json(order);
     } catch (error) {
