@@ -161,6 +161,7 @@ export default function ArtistProfile() {
                   artworks={galleryArtworks} 
                   layout={galleryLayout}
                   whiteRoom={true}
+                  artist={artist}
                 />
               </div>
             ) : (

@@ -359,7 +359,8 @@ export class DatabaseStorage implements IStorage {
 }
 
 function generateWhiteRoomLayout(artworkCount: number): MazeLayout {
-  const wallsPerSide = Math.max(1, Math.ceil(artworkCount / 4));
+  const totalSlots = artworkCount > 0 ? artworkCount + 1 : 0;
+  const wallsPerSide = Math.max(1, Math.ceil(totalSlots / 4));
   const roomWidth = Math.max(3, wallsPerSide + 2);
   const roomHeight = Math.max(3, wallsPerSide + 2);
 
@@ -401,7 +402,7 @@ function generateWhiteRoomLayout(artworkCount: number): MazeLayout {
     orderedSlots.push({ x, z: 0, wall: "south" });
   }
 
-  for (let i = 0; i < Math.min(artworkCount, orderedSlots.length); i++) {
+  for (let i = 0; i < Math.min(totalSlots, orderedSlots.length); i++) {
     const slot = orderedSlots[i];
     const cell = getCell(slot.x, slot.z);
     cell.artworkSlots.push({ wallId: `${slot.x}-${slot.z}-${slot.wall}`, position: i });

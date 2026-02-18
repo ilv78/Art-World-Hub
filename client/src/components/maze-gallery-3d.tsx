@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { X, ShoppingCart, Info, Move, Mouse, Keyboard, Maximize2, Minimize2, ZoomIn, ZoomOut, Box, Map as MapIcon } from "lucide-react";
-import type { ArtworkWithArtist, MazeLayout, MazeCell } from "@shared/schema";
+import type { ArtworkWithArtist, Artist, MazeLayout, MazeCell } from "@shared/schema";
 import { useCartStore } from "@/lib/cart-store";
 import { useToast } from "@/hooks/use-toast";
 
@@ -12,6 +12,7 @@ interface MazeGallery3DProps {
   artworks: ArtworkWithArtist[];
   layout?: MazeLayout;
   whiteRoom?: boolean;
+  artist?: Artist;
 }
 
 // Default maze layout - a simple gallery with multiple rooms
@@ -82,7 +83,7 @@ function artworkScale(dimensions: string | null | undefined, maxSize: number): {
   return { w: finalW, h: finalH };
 }
 
-export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = false }: MazeGallery3DProps) {
+export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = false, artist }: MazeGallery3DProps) {
   const CELL_SIZE = whiteRoom ? CELL_SIZE_WHITE : CELL_SIZE_DEFAULT;
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -212,85 +213,237 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
     });
   }, [layout, whiteRoom, CELL_SIZE]);
 
+  const computeSlotPosition = useCallback((wallId: string) => {
+    const [cellX, cellZ, direction] = wallId.split("-");
+    const baseX = parseInt(cellX) * CELL_SIZE;
+    const baseZ = parseInt(cellZ) * CELL_SIZE;
+    let x = baseX + CELL_SIZE / 2;
+    let z = baseZ + CELL_SIZE / 2;
+    let rotY = 0;
+    switch (direction) {
+      case "north":
+        z = baseZ + CELL_SIZE - 0.3;
+        rotY = Math.PI;
+        break;
+      case "south":
+        z = baseZ + 0.3;
+        rotY = 0;
+        break;
+      case "east":
+        x = baseX + CELL_SIZE - 0.3;
+        rotY = -Math.PI / 2;
+        break;
+      case "west":
+        x = baseX + 0.3;
+        rotY = Math.PI / 2;
+        break;
+    }
+    return { x, z, rotY };
+  }, [CELL_SIZE]);
+
+  const createArtistPoster = useCallback((scene: THREE.Scene, wallId: string) => {
+    if (!artist) return;
+    const posterW = 0.8;
+    const posterH = 1.1;
+    const canvas = document.createElement("canvas");
+    const cw = 400;
+    const ch = 550;
+    canvas.width = cw;
+    canvas.height = ch;
+    const ctx = canvas.getContext("2d")!;
+
+    ctx.fillStyle = "#1a1a2e";
+    ctx.fillRect(0, 0, cw, ch);
+
+    ctx.strokeStyle = "#c9a84c";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(12, 12, cw - 24, ch - 24);
+
+    const drawText = () => {
+      let y = 200;
+
+      ctx.fillStyle = "#f0e6d3";
+      ctx.font = "bold 28px Georgia, serif";
+      ctx.textAlign = "center";
+      ctx.fillText(artist.name, cw / 2, y);
+      y += 36;
+
+      if (artist.country) {
+        ctx.fillStyle = "#a0a0b0";
+        ctx.font = "16px sans-serif";
+        ctx.fillText(artist.country, cw / 2, y);
+        y += 28;
+      }
+
+      if (artist.specialization) {
+        ctx.fillStyle = "#c9a84c";
+        ctx.font = "italic 16px Georgia, serif";
+        ctx.fillText(artist.specialization, cw / 2, y);
+        y += 32;
+      }
+
+      if (artist.bio) {
+        ctx.fillStyle = "#d0d0d8";
+        ctx.font = "13px sans-serif";
+        ctx.textAlign = "left";
+        const maxWidth = cw - 60;
+        const words = artist.bio.split(" ");
+        let line = "";
+        const lines: string[] = [];
+        for (const word of words) {
+          const test = line + (line ? " " : "") + word;
+          if (ctx.measureText(test).width > maxWidth && line) {
+            lines.push(line);
+            line = word;
+          } else {
+            line = test;
+          }
+        }
+        if (line) lines.push(line);
+        const maxLines = 8;
+        const displayLines = lines.slice(0, maxLines);
+        if (lines.length > maxLines) {
+          displayLines[maxLines - 1] = displayLines[maxLines - 1].replace(/\s*\S*$/, "...");
+        }
+        for (const l of displayLines) {
+          ctx.fillText(l, 30, y);
+          y += 18;
+        }
+      }
+    };
+
+    const avatarSize = 100;
+    const ax = (cw - avatarSize) / 2;
+    const ay = 40;
+
+    const drawFallbackAvatar = () => {
+      ctx.fillStyle = "#2a2a4e";
+      ctx.beginPath();
+      ctx.arc(ax + avatarSize / 2, ay + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#f0e6d3";
+      ctx.font = "bold 36px Georgia, serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      const initials = (artist.name || "?").split(" ").map(n => n[0]).join("");
+      ctx.fillText(initials, ax + avatarSize / 2, ay + avatarSize / 2);
+      ctx.textBaseline = "alphabetic";
+    };
+
+    drawFallbackAvatar();
+    drawText();
+
+    const posterTexture = new THREE.CanvasTexture(canvas);
+    posterTexture.colorSpace = THREE.SRGBColorSpace;
+    const posterGeo = new THREE.PlaneGeometry(posterW, posterH);
+    const posterMat = new THREE.MeshStandardMaterial({ map: posterTexture, roughness: 0.4 });
+    const posterMesh = new THREE.Mesh(posterGeo, posterMat);
+    const pos = computeSlotPosition(wallId);
+    posterMesh.position.set(pos.x, PLAYER_HEIGHT + 0.3, pos.z);
+    posterMesh.rotation.y = pos.rotY;
+    posterMesh.translateZ(0.06);
+    scene.add(posterMesh);
+
+    if (artist.avatarUrl) {
+      const avatarImg = new Image();
+      avatarImg.crossOrigin = "anonymous";
+      avatarImg.onload = () => {
+        ctx.fillStyle = "#1a1a2e";
+        ctx.fillRect(0, 0, cw, ch);
+        ctx.strokeStyle = "#c9a84c";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(12, 12, cw - 24, ch - 24);
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(ax + avatarSize / 2, ay + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.drawImage(avatarImg, ax, ay, avatarSize, avatarSize);
+        ctx.restore();
+
+        ctx.strokeStyle = "#c9a84c";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(ax + avatarSize / 2, ay + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+        ctx.stroke();
+
+        drawText();
+        posterTexture.needsUpdate = true;
+      };
+      try {
+        const u = new URL(artist.avatarUrl);
+        const host = u.hostname.toLowerCase();
+        const isCorsOk = host.includes("unsplash.com") || host === window.location.hostname;
+        avatarImg.src = isCorsOk ? artist.avatarUrl : `/api/image-proxy?url=${encodeURIComponent(artist.avatarUrl)}`;
+      } catch {
+        avatarImg.src = artist.avatarUrl;
+      }
+    }
+  }, [artist, computeSlotPosition]);
+
   // Place artworks on walls
   const placeArtworks = useCallback((scene: THREE.Scene) => {
-    const textureLoader = new THREE.TextureLoader();
-    let artworkIndex = 0;
-
+    const allSlots: { wallId: string; position: number }[] = [];
     layout.cells.forEach((cell) => {
       cell.artworkSlots.forEach((slot) => {
-        if (artworkIndex >= artworks.length) return;
-        
-        const artwork = artworks[artworkIndex];
-        artworkIndex++;
-
-        const [cellX, cellZ, direction] = slot.wallId.split("-");
-        const baseX = parseInt(cellX) * CELL_SIZE;
-        const baseZ = parseInt(cellZ) * CELL_SIZE;
-
-        const maxArtSize = 1.8;
-        const dims = artworkScale(artwork.dimensions, maxArtSize);
-
-        const artworkGeometry = new THREE.PlaneGeometry(dims.w, dims.h);
-
-        // Position based on wall direction
-        let x = baseX + CELL_SIZE / 2;
-        let z = baseZ + CELL_SIZE / 2;
-        let rotY = 0;
-
-        switch (direction) {
-          case "north":
-            z = baseZ + CELL_SIZE - 0.3;
-            rotY = Math.PI;
-            break;
-          case "south":
-            z = baseZ + 0.3;
-            rotY = 0;
-            break;
-          case "east":
-            x = baseX + CELL_SIZE - 0.3;
-            rotY = -Math.PI / 2;
-            break;
-          case "west":
-            x = baseX + 0.3;
-            rotY = Math.PI / 2;
-            break;
-        }
-
-        const placeholderMaterial = new THREE.MeshStandardMaterial({ 
-          color: 0xcccccc,
-          roughness: 0.5,
-        });
-        const artworkMesh = new THREE.Mesh(artworkGeometry, placeholderMaterial);
-        artworkMesh.position.set(x, PLAYER_HEIGHT + 0.3, z);
-        artworkMesh.rotation.y = rotY;
-        artworkMesh.translateZ(0.06);
-        scene.add(artworkMesh);
-        artworkMeshesRef.current.set(artwork.id, { mesh: artworkMesh, artwork });
-
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = () => {
-          const texture = new THREE.Texture(img);
-          texture.needsUpdate = true;
-          texture.colorSpace = THREE.SRGBColorSpace;
-          artworkMesh.material = new THREE.MeshStandardMaterial({
-            map: texture,
-            roughness: 0.3,
-          });
-        };
-        const imgUrl = artwork.imageUrl;
-        try {
-          const u = new URL(imgUrl);
-          const host = u.hostname.toLowerCase();
-          const isCorsOk = host.includes("unsplash.com") || host === window.location.hostname;
-          img.src = isCorsOk ? imgUrl : `/api/image-proxy?url=${encodeURIComponent(imgUrl)}`;
-        } catch {
-          img.src = imgUrl;
-        }
+        allSlots.push(slot);
       });
     });
-  }, [layout, artworks, CELL_SIZE]);
+    allSlots.sort((a, b) => a.position - b.position);
+
+    const hasPoster = whiteRoom && artist;
+    let artworkIndex = 0;
+
+    for (let i = 0; i < allSlots.length; i++) {
+      const slot = allSlots[i];
+
+      if (i === 0 && hasPoster) {
+        createArtistPoster(scene, slot.wallId);
+        continue;
+      }
+
+      if (artworkIndex >= artworks.length) continue;
+      const artwork = artworks[artworkIndex];
+      artworkIndex++;
+
+      const maxArtSize = 1.8;
+      const dims = artworkScale(artwork.dimensions, maxArtSize);
+      const artworkGeometry = new THREE.PlaneGeometry(dims.w, dims.h);
+      const pos = computeSlotPosition(slot.wallId);
+
+      const placeholderMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xcccccc,
+        roughness: 0.5,
+      });
+      const artworkMesh = new THREE.Mesh(artworkGeometry, placeholderMaterial);
+      artworkMesh.position.set(pos.x, PLAYER_HEIGHT + 0.3, pos.z);
+      artworkMesh.rotation.y = pos.rotY;
+      artworkMesh.translateZ(0.06);
+      scene.add(artworkMesh);
+      artworkMeshesRef.current.set(artwork.id, { mesh: artworkMesh, artwork });
+
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        const texture = new THREE.Texture(img);
+        texture.needsUpdate = true;
+        texture.colorSpace = THREE.SRGBColorSpace;
+        artworkMesh.material = new THREE.MeshStandardMaterial({
+          map: texture,
+          roughness: 0.3,
+        });
+      };
+      const imgUrl = artwork.imageUrl;
+      try {
+        const u = new URL(imgUrl);
+        const host = u.hostname.toLowerCase();
+        const isCorsOk = host.includes("unsplash.com") || host === window.location.hostname;
+        img.src = isCorsOk ? imgUrl : `/api/image-proxy?url=${encodeURIComponent(imgUrl)}`;
+      } catch {
+        img.src = imgUrl;
+      }
+    }
+  }, [layout, artworks, CELL_SIZE, whiteRoom, artist, computeSlotPosition, createArtistPoster]);
 
   // Setup lighting - minimal to avoid shader limits
   const setupLighting = useCallback((scene: THREE.Scene) => {
