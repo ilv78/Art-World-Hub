@@ -535,7 +535,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
         roughness: 0.5,
       });
       const artworkMesh = new THREE.Mesh(artworkGeometry, placeholderMaterial);
-      artworkMesh.position.set(pos.x, PLAYER_HEIGHT + 0.3, pos.z);
+      artworkMesh.position.set(pos.x, WALL_HEIGHT / 2, pos.z);
       artworkMesh.rotation.y = pos.rotY;
       artworkMesh.translateZ(0.06);
       scene.add(artworkMesh);
