@@ -105,7 +105,7 @@ export function ArtworkDetailDialog({
                 {artwork.dimensions && (
                   <div className="flex items-center gap-2 text-sm">
                     <Ruler className="h-4 w-4 text-muted-foreground" />
-                    <span>{artwork.dimensions}</span>
+                    <span>{artwork.dimensions}{!/cm/i.test(artwork.dimensions) ? ' cm' : ''}</span>
                   </div>
                 )}
                 {artwork.year && (

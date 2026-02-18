@@ -28,6 +28,27 @@ const ROOM_W = 7;
 const ROOM_D = 6;
 const DOOR_W = 3.2;
 
+function parseDimensionsCm(dimensions: string | null | undefined): { w: number; h: number } | null {
+  if (!dimensions) return null;
+  const match = dimensions.match(/(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)/);
+  if (!match) return null;
+  const w = parseFloat(match[1]);
+  const h = parseFloat(match[2]);
+  if (w > 0 && h > 0) return { w, h };
+  return null;
+}
+
+function artworkScale(dimensions: string | null | undefined, maxSize: number): { w: number; h: number } {
+  const parsed = parseDimensionsCm(dimensions);
+  if (!parsed) return { w: maxSize, h: maxSize };
+  const cmW = parsed.w / 100;
+  const cmH = parsed.h / 100;
+  const scale = Math.min(maxSize / cmW, maxSize / cmH, 1);
+  const finalW = Math.max(0.3, cmW * scale);
+  const finalH = Math.max(0.3, cmH * scale);
+  return { w: finalW, h: finalH };
+}
+
 const textureCache = new Map<string, THREE.Texture>();
 const loadingTextures = new Map<string, Promise<THREE.Texture>>();
 
@@ -387,14 +408,15 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
       const artwork = artworks[ai];
       const slot = slots[ai];
 
-      const frameGeo = new THREE.BoxGeometry(frameSize + 0.2, frameSize + 0.2, frameDepth);
+      const dims = artworkScale(artwork.dimensions, frameSize);
+      const frameGeo = new THREE.BoxGeometry(dims.w + 0.2, dims.h + 0.2, frameDepth);
       const frameMat = new THREE.MeshStandardMaterial({ color: 0x2c2418, roughness: 0.5, metalness: 0.3 });
       const frame = new THREE.Mesh(frameGeo, frameMat);
       frame.position.set(slot.x, PLAYER_H + 0.5, slot.z);
       frame.rotation.y = slot.rotY;
       scene.add(frame);
 
-      const artGeo = new THREE.PlaneGeometry(frameSize, frameSize);
+      const artGeo = new THREE.PlaneGeometry(dims.w, dims.h);
       const placeholderMat = new THREE.MeshStandardMaterial({ color: 0xddd8d0, roughness: 0.5 });
       const artMesh = new THREE.Mesh(artGeo, placeholderMat);
       artMesh.position.set(slot.x, PLAYER_H + 0.5, slot.z);

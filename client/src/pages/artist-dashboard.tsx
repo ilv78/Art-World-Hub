@@ -549,12 +549,12 @@ export default function ArtistDashboard() {
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="dimensions">Dimensions</Label>
+                      <Label htmlFor="dimensions">Dimensions (cm)</Label>
                       <Input
                         id="dimensions"
                         value={artworkForm.dimensions}
                         onChange={(e) => setArtworkForm({ ...artworkForm, dimensions: e.target.value })}
-                        placeholder="24 x 36 inches"
+                        placeholder="60 x 80"
                         data-testid="input-artwork-dimensions"
                       />
                     </div>

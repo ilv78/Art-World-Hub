@@ -60,6 +60,27 @@ const PLAYER_HEIGHT = 1.7;
 const MOVE_SPEED = 0.08;
 const LOOK_SPEED = 0.002;
 
+function parseDimensionsCm(dimensions: string | null | undefined): { w: number; h: number } | null {
+  if (!dimensions) return null;
+  const match = dimensions.match(/(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)/);
+  if (!match) return null;
+  const w = parseFloat(match[1]);
+  const h = parseFloat(match[2]);
+  if (w > 0 && h > 0) return { w, h };
+  return null;
+}
+
+function artworkScale(dimensions: string | null | undefined, maxSize: number): { w: number; h: number } {
+  const parsed = parseDimensionsCm(dimensions);
+  if (!parsed) return { w: maxSize, h: maxSize };
+  const cmW = parsed.w / 100;
+  const cmH = parsed.h / 100;
+  const scale = Math.min(maxSize / cmW, maxSize / cmH, 1);
+  const finalW = Math.max(0.3, cmW * scale);
+  const finalH = Math.max(0.3, cmH * scale);
+  return { w: finalW, h: finalH };
+}
+
 export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = false }: MazeGallery3DProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -205,10 +226,10 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
         const baseX = parseInt(cellX) * CELL_SIZE;
         const baseZ = parseInt(cellZ) * CELL_SIZE;
 
-        // Create frame
-        const frameSize = 2.5;
+        const maxFrameSize = 2.5;
         const frameDepth = 0.1;
-        const frameGeometry = new THREE.BoxGeometry(frameSize + 0.2, frameSize + 0.2, frameDepth);
+        const dims = artworkScale(artwork.dimensions, maxFrameSize);
+        const frameGeometry = new THREE.BoxGeometry(dims.w + 0.2, dims.h + 0.2, frameDepth);
         const frameMaterial = new THREE.MeshStandardMaterial({ 
           color: 0x8b4513,
           roughness: 0.5,
@@ -216,8 +237,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
         });
         const frame = new THREE.Mesh(frameGeometry, frameMaterial);
 
-        // Create artwork plane
-        const artworkGeometry = new THREE.PlaneGeometry(frameSize, frameSize);
+        const artworkGeometry = new THREE.PlaneGeometry(dims.w, dims.h);
 
         // Position based on wall direction
         let x = baseX + CELL_SIZE / 2;

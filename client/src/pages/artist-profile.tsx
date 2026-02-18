@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -18,6 +19,7 @@ import {
 } from "lucide-react";
 import { useCartStore } from "@/lib/cart-store";
 import { MazeGallery3D } from "@/components/maze-gallery-3d";
+import { ArtworkDetailDialog } from "@/components/artwork-detail-dialog";
 import type { Artist, ArtworkWithArtist, BlogPostWithArtist, MazeLayout } from "@shared/schema";
 
 interface GalleryData {
@@ -28,6 +30,7 @@ interface GalleryData {
 export default function ArtistProfile() {
   const params = useParams<{ id: string }>();
   const addItem = useCartStore((state) => state.addItem);
+  const [selectedArtwork, setSelectedArtwork] = useState<ArtworkWithArtist | null>(null);
 
   const { data: artist, isLoading: artistLoading } = useQuery<Artist>({
     queryKey: ["/api/artists", params.id],
@@ -179,54 +182,66 @@ export default function ArtistProfile() {
                 ))}
               </div>
             ) : artworks && artworks.length > 0 ? (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {artworks.map((artwork) => (
-                  <Card 
-                    key={artwork.id} 
-                    className="overflow-hidden group"
-                    data-testid={`card-profile-artwork-${artwork.id}`}
-                  >
-                    <div className="aspect-[4/3] relative overflow-hidden">
-                      <img 
-                        src={artwork.imageUrl} 
-                        alt={artwork.title}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                      <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
-                        {!artwork.isForSale && (
-                          <Badge variant="secondary">Sold</Badge>
-                        )}
-                        {artwork.isReadyForExhibition && (
-                          <Badge variant="default">In Gallery</Badge>
-                        )}
+              <>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {artworks.map((artwork) => (
+                    <Card 
+                      key={artwork.id} 
+                      className="group cursor-pointer hover-elevate"
+                      onClick={() => setSelectedArtwork(artwork)}
+                      data-testid={`card-profile-artwork-${artwork.id}`}
+                    >
+                      <div className="aspect-[4/3] relative overflow-visible">
+                        <img 
+                          src={artwork.imageUrl} 
+                          alt={artwork.title}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+                          {!artwork.isForSale && (
+                            <Badge variant="secondary">Sold</Badge>
+                          )}
+                          {artwork.isReadyForExhibition && (
+                            <Badge variant="default">In Gallery</Badge>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold">{artwork.title}</h3>
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="text-lg font-bold text-primary">{artwork.price}</span>
-                        {artwork.year && (
-                          <span className="text-sm text-muted-foreground">{artwork.year}</span>
+                      <CardContent className="p-4">
+                        <h3 className="font-semibold">{artwork.title}</h3>
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="text-lg font-bold text-primary">${parseFloat(artwork.price).toLocaleString()}</span>
+                          {artwork.year && (
+                            <span className="text-sm text-muted-foreground">{artwork.year}</span>
+                          )}
+                        </div>
+                        {artwork.medium && (
+                          <p className="text-sm text-muted-foreground mt-1">{artwork.medium}</p>
                         )}
-                      </div>
-                      {artwork.medium && (
-                        <p className="text-sm text-muted-foreground mt-1">{artwork.medium}</p>
-                      )}
-                      {artwork.isForSale && (
-                        <Button 
-                          className="w-full mt-4" 
-                          size="sm"
-                          onClick={() => addItem(artwork)}
-                          data-testid={`button-add-to-cart-${artwork.id}`}
-                        >
-                          <ShoppingCart className="h-4 w-4 mr-2" />
-                          Add to Cart
-                        </Button>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                        {artwork.dimensions && (
+                          <p className="text-sm text-muted-foreground">{artwork.dimensions}{!/cm/i.test(artwork.dimensions) ? ' cm' : ''}</p>
+                        )}
+                        {artwork.isForSale && (
+                          <Button 
+                            className="w-full mt-4" 
+                            size="sm"
+                            onClick={(e) => { e.stopPropagation(); addItem(artwork); }}
+                            data-testid={`button-add-to-cart-${artwork.id}`}
+                          >
+                            <ShoppingCart className="h-4 w-4 mr-2" />
+                            Add to Cart
+                          </Button>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                <ArtworkDetailDialog
+                  artwork={selectedArtwork}
+                  open={!!selectedArtwork}
+                  onOpenChange={(open) => !open && setSelectedArtwork(null)}
+                />
+              </>
             ) : (
               <div className="text-center py-16">
                 <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
