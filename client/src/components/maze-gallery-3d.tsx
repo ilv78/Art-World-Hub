@@ -64,7 +64,7 @@ const CELL_SIZE_DEFAULT = 2.5;
 const CELL_SIZE_WHITE = 2.5;
 const WALL_HEIGHT = 3;
 const WALL_THICKNESS = 0.15;
-const PLAYER_HEIGHT = 1.7;
+const PLAYER_HEIGHT = 1.5;
 const MOVE_SPEED = 0.08;
 const LOOK_SPEED = 0.002;
 
