@@ -16,6 +16,7 @@ export const artists = pgTable("artists", {
   country: text("country"),
   specialization: text("specialization"),
   galleryLayout: jsonb("gallery_layout"),
+  socialLinks: jsonb("social_links").$type<Record<string, string>>(),
 });
 
 export const insertArtistSchema = createInsertSchema(artists).omit({ id: true });
