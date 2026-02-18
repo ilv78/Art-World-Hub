@@ -144,7 +144,7 @@ export async function registerRoutes(
         artists.map(async (artist) => {
           const readyArtworks = await storage.getExhibitionReadyArtworks(artist.id);
           return {
-            artist: { id: artist.id, name: artist.name, avatarUrl: artist.avatarUrl, specialization: artist.specialization },
+            artist: { id: artist.id, name: artist.name, avatarUrl: artist.avatarUrl, specialization: artist.specialization, bio: artist.bio, country: artist.country, galleryLayout: artist.galleryLayout },
             artworks: readyArtworks,
           };
         })
