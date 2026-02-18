@@ -3,7 +3,12 @@ import * as THREE from "three";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { X, ShoppingCart, Info, Move, Mouse, Keyboard, Maximize2, Minimize2, ZoomIn, ZoomOut, Box, Map as MapIcon } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { X, ShoppingCart, Info, Move, Mouse, Keyboard, Maximize2, Minimize2, ZoomIn, ZoomOut, Box, Map as MapIcon, MapPin, Palette, Image as ImageIcon, ExternalLink } from "lucide-react";
+import { Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import type { ArtworkWithArtist, Artist, MazeLayout, MazeCell } from "@shared/schema";
 import { useCartStore } from "@/lib/cart-store";
 import { useToast } from "@/hooks/use-toast";
@@ -91,8 +96,10 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const animationIdRef = useRef<number | null>(null);
   const artworkMeshesRef = useRef<Map<string, { mesh: THREE.Mesh; artwork: ArtworkWithArtist }>>(new Map());
+  const posterMeshRef = useRef<THREE.Mesh | null>(null);
   
   const [selectedArtwork, setSelectedArtwork] = useState<ArtworkWithArtist | null>(null);
+  const [showArtistDialog, setShowArtistDialog] = useState(false);
   const [isPointerLocked, setIsPointerLocked] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
@@ -110,6 +117,11 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
   const { addItem, items } = useCartStore();
   const { toast } = useToast();
 
+  const { data: artistArtworks, isLoading: artworksLoading } = useQuery<ArtworkWithArtist[]>({
+    queryKey: [`/api/artists/${artist?.id}/artworks`],
+    enabled: !!artist && showArtistDialog,
+  });
+
   const isInCart = selectedArtwork ? items.some(item => item.artwork.id === selectedArtwork.id) : false;
 
   selectedArtworkRef.current = selectedArtwork;
@@ -124,46 +136,109 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
     }
   }, [selectedArtwork, isInCart, addItem, toast]);
 
-  // Create maze geometry
   const createMaze = useCallback((scene: THREE.Scene) => {
-    const floorColor = whiteRoom ? 0xe8e0d8 : 0x2a2a2a;
-    const ceilingColor = whiteRoom ? 0xffffff : 0x1a1a1a;
     const wallColor = whiteRoom ? 0xf5f0eb : 0x3d3d3d;
 
-    const floorGeometry = new THREE.PlaneGeometry(layout.width * CELL_SIZE + 4, layout.height * CELL_SIZE + 4);
-    const floorMaterial = new THREE.MeshStandardMaterial({ 
-      color: floorColor,
-      roughness: 0.8,
-    });
-    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.set(layout.width * CELL_SIZE / 2, 0, layout.height * CELL_SIZE / 2);
-    floor.receiveShadow = true;
-    scene.add(floor);
+    const floorW = layout.width * CELL_SIZE + 4;
+    const floorH = layout.height * CELL_SIZE + 4;
 
-    // Ceiling
-    const ceilingGeometry = new THREE.PlaneGeometry(layout.width * CELL_SIZE + 4, layout.height * CELL_SIZE + 4);
-    const ceilingMaterial = new THREE.MeshStandardMaterial({ 
-      color: ceilingColor,
-      roughness: 0.9,
-    });
-    const ceiling = new THREE.Mesh(ceilingGeometry, ceilingMaterial);
-    ceiling.rotation.x = Math.PI / 2;
-    ceiling.position.set(layout.width * CELL_SIZE / 2, WALL_HEIGHT, layout.height * CELL_SIZE / 2);
-    scene.add(ceiling);
+    if (whiteRoom) {
+      const floorCanvas = document.createElement("canvas");
+      floorCanvas.width = 512;
+      floorCanvas.height = 512;
+      const fctx = floorCanvas.getContext("2d")!;
+      fctx.fillStyle = "#c8a882";
+      fctx.fillRect(0, 0, 512, 512);
+      const plankColors = ["#c8a882", "#bfa078", "#d4b896", "#b8956e", "#cbb08a"];
+      const plankHeight = 64;
+      for (let row = 0; row < 8; row++) {
+        const offset = row % 2 === 0 ? 0 : 128;
+        for (let col = -1; col < 5; col++) {
+          const px = col * 128 + offset;
+          const py = row * plankHeight;
+          fctx.fillStyle = plankColors[(row * 3 + col) % plankColors.length];
+          fctx.fillRect(px, py, 126, plankHeight - 2);
+          fctx.strokeStyle = "#a08060";
+          fctx.lineWidth = 1;
+          fctx.strokeRect(px, py, 126, plankHeight - 2);
+        }
+      }
+      const floorTexture = new THREE.CanvasTexture(floorCanvas);
+      floorTexture.wrapS = THREE.RepeatWrapping;
+      floorTexture.wrapT = THREE.RepeatWrapping;
+      floorTexture.repeat.set(layout.width, layout.height);
+      floorTexture.colorSpace = THREE.SRGBColorSpace;
+      const floorGeo = new THREE.PlaneGeometry(floorW, floorH);
+      const floorMat = new THREE.MeshStandardMaterial({ map: floorTexture, roughness: 0.7 });
+      const floor = new THREE.Mesh(floorGeo, floorMat);
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.set(layout.width * CELL_SIZE / 2, 0, layout.height * CELL_SIZE / 2);
+      floor.receiveShadow = true;
+      scene.add(floor);
+    } else {
+      const floorGeo = new THREE.PlaneGeometry(floorW, floorH);
+      const floorMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.8 });
+      const floor = new THREE.Mesh(floorGeo, floorMat);
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.set(layout.width * CELL_SIZE / 2, 0, layout.height * CELL_SIZE / 2);
+      floor.receiveShadow = true;
+      scene.add(floor);
+    }
 
-    // Wall material
+    if (whiteRoom) {
+      const skyCanvas = document.createElement("canvas");
+      skyCanvas.width = 512;
+      skyCanvas.height = 512;
+      const sctx = skyCanvas.getContext("2d")!;
+      const grad = sctx.createLinearGradient(0, 0, 0, 512);
+      grad.addColorStop(0, "#87ceeb");
+      grad.addColorStop(0.5, "#b0d4f1");
+      grad.addColorStop(1, "#dceefb");
+      sctx.fillStyle = grad;
+      sctx.fillRect(0, 0, 512, 512);
+      sctx.fillStyle = "rgba(255,255,255,0.8)";
+      const drawCloud = (cx: number, cy: number, r: number) => {
+        sctx.beginPath();
+        sctx.arc(cx, cy, r, 0, Math.PI * 2);
+        sctx.arc(cx + r * 0.8, cy - r * 0.3, r * 0.7, 0, Math.PI * 2);
+        sctx.arc(cx - r * 0.6, cy - r * 0.1, r * 0.6, 0, Math.PI * 2);
+        sctx.arc(cx + r * 0.3, cy + r * 0.2, r * 0.5, 0, Math.PI * 2);
+        sctx.fill();
+      };
+      drawCloud(120, 150, 40);
+      drawCloud(350, 100, 50);
+      drawCloud(250, 300, 35);
+      drawCloud(80, 380, 30);
+      drawCloud(420, 350, 45);
+      const skyTexture = new THREE.CanvasTexture(skyCanvas);
+      skyTexture.colorSpace = THREE.SRGBColorSpace;
+      const ceilGeo = new THREE.PlaneGeometry(floorW, floorH);
+      const ceilMat = new THREE.MeshStandardMaterial({ map: skyTexture, roughness: 0.95 });
+      const ceiling = new THREE.Mesh(ceilGeo, ceilMat);
+      ceiling.rotation.x = Math.PI / 2;
+      ceiling.position.set(layout.width * CELL_SIZE / 2, WALL_HEIGHT, layout.height * CELL_SIZE / 2);
+      scene.add(ceiling);
+    } else {
+      const ceilGeo = new THREE.PlaneGeometry(floorW, floorH);
+      const ceilMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9 });
+      const ceiling = new THREE.Mesh(ceilGeo, ceilMat);
+      ceiling.rotation.x = Math.PI / 2;
+      ceiling.position.set(layout.width * CELL_SIZE / 2, WALL_HEIGHT, layout.height * CELL_SIZE / 2);
+      scene.add(ceiling);
+    }
+
     const wallMaterial = new THREE.MeshStandardMaterial({ 
       color: wallColor,
       roughness: 0.7,
     });
 
-    // Create walls for each cell
+    const doorFrameMaterial = new THREE.MeshStandardMaterial({ color: 0x5c3a1e, roughness: 0.6 });
+    const doorCenterX = Math.floor(layout.width / 2);
+
     layout.cells.forEach((cell) => {
       const baseX = cell.x * CELL_SIZE;
       const baseZ = cell.z * CELL_SIZE;
 
-      // North wall
       if (cell.walls.north) {
         const wall = new THREE.Mesh(
           new THREE.BoxGeometry(CELL_SIZE, WALL_HEIGHT, WALL_THICKNESS),
@@ -175,19 +250,65 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
         scene.add(wall);
       }
 
-      // South wall
       if (cell.walls.south) {
-        const wall = new THREE.Mesh(
-          new THREE.BoxGeometry(CELL_SIZE, WALL_HEIGHT, WALL_THICKNESS),
-          wallMaterial
-        );
-        wall.position.set(baseX + CELL_SIZE / 2, WALL_HEIGHT / 2, baseZ);
-        wall.castShadow = true;
-        wall.receiveShadow = true;
-        scene.add(wall);
+        const isDoorCell = whiteRoom && cell.z === 0 && cell.x === doorCenterX;
+        if (isDoorCell) {
+          const doorWidth = CELL_SIZE * 0.5;
+          const sideWidth = (CELL_SIZE - doorWidth) / 2;
+          const doorHeight = WALL_HEIGHT * 0.85;
+
+          if (sideWidth > 0.01) {
+            const leftWall = new THREE.Mesh(
+              new THREE.BoxGeometry(sideWidth, WALL_HEIGHT, WALL_THICKNESS),
+              wallMaterial
+            );
+            leftWall.position.set(baseX + sideWidth / 2, WALL_HEIGHT / 2, baseZ);
+            leftWall.castShadow = true;
+            scene.add(leftWall);
+
+            const rightWall = new THREE.Mesh(
+              new THREE.BoxGeometry(sideWidth, WALL_HEIGHT, WALL_THICKNESS),
+              wallMaterial
+            );
+            rightWall.position.set(baseX + CELL_SIZE - sideWidth / 2, WALL_HEIGHT / 2, baseZ);
+            rightWall.castShadow = true;
+            scene.add(rightWall);
+          }
+
+          const lintel = new THREE.Mesh(
+            new THREE.BoxGeometry(doorWidth + 0.1, WALL_HEIGHT - doorHeight, WALL_THICKNESS + 0.02),
+            wallMaterial
+          );
+          lintel.position.set(baseX + CELL_SIZE / 2, doorHeight + (WALL_HEIGHT - doorHeight) / 2, baseZ);
+          scene.add(lintel);
+
+          const postGeo = new THREE.BoxGeometry(0.08, doorHeight, 0.08);
+          const leftPost = new THREE.Mesh(postGeo, doorFrameMaterial);
+          leftPost.position.set(baseX + sideWidth, doorHeight / 2, baseZ);
+          scene.add(leftPost);
+
+          const rightPost = new THREE.Mesh(postGeo, doorFrameMaterial);
+          rightPost.position.set(baseX + CELL_SIZE - sideWidth, doorHeight / 2, baseZ);
+          scene.add(rightPost);
+
+          const lintelFrame = new THREE.Mesh(
+            new THREE.BoxGeometry(doorWidth + 0.16, 0.08, 0.08),
+            doorFrameMaterial
+          );
+          lintelFrame.position.set(baseX + CELL_SIZE / 2, doorHeight, baseZ);
+          scene.add(lintelFrame);
+        } else {
+          const wall = new THREE.Mesh(
+            new THREE.BoxGeometry(CELL_SIZE, WALL_HEIGHT, WALL_THICKNESS),
+            wallMaterial
+          );
+          wall.position.set(baseX + CELL_SIZE / 2, WALL_HEIGHT / 2, baseZ);
+          wall.castShadow = true;
+          wall.receiveShadow = true;
+          scene.add(wall);
+        }
       }
 
-      // East wall
       if (cell.walls.east) {
         const wall = new THREE.Mesh(
           new THREE.BoxGeometry(WALL_THICKNESS, WALL_HEIGHT, CELL_SIZE),
@@ -199,7 +320,6 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
         scene.add(wall);
       }
 
-      // West wall
       if (cell.walls.west) {
         const wall = new THREE.Mesh(
           new THREE.BoxGeometry(WALL_THICKNESS, WALL_HEIGHT, CELL_SIZE),
@@ -252,38 +372,38 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
     canvas.height = ch;
     const ctx = canvas.getContext("2d")!;
 
-    ctx.fillStyle = "#1a1a2e";
+    ctx.fillStyle = "#faf8f5";
     ctx.fillRect(0, 0, cw, ch);
 
-    ctx.strokeStyle = "#c9a84c";
+    ctx.strokeStyle = "#d4a854";
     ctx.lineWidth = 3;
     ctx.strokeRect(12, 12, cw - 24, ch - 24);
 
     const drawText = () => {
       let y = 200;
 
-      ctx.fillStyle = "#f0e6d3";
+      ctx.fillStyle = "#1a1a2e";
       ctx.font = "bold 28px Georgia, serif";
       ctx.textAlign = "center";
       ctx.fillText(artist.name, cw / 2, y);
       y += 36;
 
       if (artist.country) {
-        ctx.fillStyle = "#a0a0b0";
+        ctx.fillStyle = "#666666";
         ctx.font = "16px sans-serif";
         ctx.fillText(artist.country, cw / 2, y);
         y += 28;
       }
 
       if (artist.specialization) {
-        ctx.fillStyle = "#c9a84c";
+        ctx.fillStyle = "#b8860b";
         ctx.font = "italic 16px Georgia, serif";
         ctx.fillText(artist.specialization, cw / 2, y);
         y += 32;
       }
 
       if (artist.bio) {
-        ctx.fillStyle = "#d0d0d8";
+        ctx.fillStyle = "#444444";
         ctx.font = "13px sans-serif";
         ctx.textAlign = "left";
         const maxWidth = cw - 60;
@@ -317,11 +437,11 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
     const ay = 40;
 
     const drawFallbackAvatar = () => {
-      ctx.fillStyle = "#2a2a4e";
+      ctx.fillStyle = "#e8e0d8";
       ctx.beginPath();
       ctx.arc(ax + avatarSize / 2, ay + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = "#f0e6d3";
+      ctx.fillStyle = "#1a1a2e";
       ctx.font = "bold 36px Georgia, serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -344,13 +464,15 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
     posterMesh.translateZ(0.06);
     scene.add(posterMesh);
 
+    posterMeshRef.current = posterMesh;
+
     if (artist.avatarUrl) {
       const avatarImg = new Image();
       avatarImg.crossOrigin = "anonymous";
       avatarImg.onload = () => {
-        ctx.fillStyle = "#1a1a2e";
+        ctx.fillStyle = "#faf8f5";
         ctx.fillRect(0, 0, cw, ch);
-        ctx.strokeStyle = "#c9a84c";
+        ctx.strokeStyle = "#d4a854";
         ctx.lineWidth = 3;
         ctx.strokeRect(12, 12, cw - 24, ch - 24);
 
@@ -361,7 +483,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
         ctx.drawImage(avatarImg, ax, ay, avatarSize, avatarSize);
         ctx.restore();
 
-        ctx.strokeStyle = "#c9a84c";
+        ctx.strokeStyle = "#d4a854";
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(ax + avatarSize / 2, ay + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
@@ -487,7 +609,18 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
           if (position.x > baseX && position.x < baseX + CELL_SIZE) return true;
         }
         if (cell.walls.south && position.z < baseZ + margin) {
-          if (position.x > baseX && position.x < baseX + CELL_SIZE) return true;
+          const isDoorCell = whiteRoom && cell.z === 0 && cell.x === Math.floor(layout.width / 2);
+          if (isDoorCell) {
+            const doorWidth = CELL_SIZE * 0.5;
+            const sideWidth = (CELL_SIZE - doorWidth) / 2;
+            const doorLeft = baseX + sideWidth;
+            const doorRight = baseX + CELL_SIZE - sideWidth;
+            if (position.x < doorLeft || position.x > doorRight) {
+              if (position.x > baseX && position.x < baseX + CELL_SIZE) return true;
+            }
+          } else {
+            if (position.x > baseX && position.x < baseX + CELL_SIZE) return true;
+          }
         }
         if (cell.walls.east && position.x > baseX + CELL_SIZE - margin) {
           if (position.z > baseZ && position.z < baseZ + CELL_SIZE) return true;
@@ -507,13 +640,24 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
     return false;
   }, [layout, CELL_SIZE]);
 
-  // Handle artwork click
+  const showArtistDialogRef = useRef(false);
+  showArtistDialogRef.current = showArtistDialog;
+
   const handleClick = useCallback((event: MouseEvent) => {
     if (!cameraRef.current || !sceneRef.current || !isPointerLockedRef.current) return;
 
     const raycaster = new THREE.Raycaster();
     const center = new THREE.Vector2(0, 0);
     raycaster.setFromCamera(center, cameraRef.current);
+
+    if (posterMeshRef.current) {
+      const posterIntersects = raycaster.intersectObject(posterMeshRef.current);
+      if (posterIntersects.length > 0) {
+        setShowArtistDialog(true);
+        document.exitPointerLock();
+        return;
+      }
+    }
 
     const meshes = Array.from(artworkMeshesRef.current.values()).map(v => v.mesh);
     const intersects = raycaster.intersectObjects(meshes);
@@ -554,13 +698,16 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
     scene.fog = new THREE.Fog(bgColor, whiteRoom ? 5 : 5, whiteRoom ? 30 : 40);
     sceneRef.current = scene;
 
-    // Camera
     const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 100);
     camera.position.set(
       layout.spawnPoint.x * CELL_SIZE + CELL_SIZE / 2,
       PLAYER_HEIGHT,
       layout.spawnPoint.z * CELL_SIZE + CELL_SIZE / 2
     );
+    if (whiteRoom) {
+      euler.current.y = Math.PI;
+      camera.rotation.set(euler.current.x, euler.current.y, 0);
+    }
     cameraRef.current = camera;
 
     // Renderer
@@ -768,7 +915,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
       <div ref={containerRef} className="absolute inset-0 cursor-crosshair" style={{ zIndex: 0 }} />
 
       {/* Controls overlay */}
-      {!isPointerLocked && !selectedArtwork && (
+      {!isPointerLocked && !selectedArtwork && !showArtistDialog && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm" style={{ zIndex: 10 }}>
           <Card className="p-8 max-w-md text-center space-y-6">
             <h2 className="font-serif text-2xl font-bold">Virtual Gallery</h2>
@@ -1006,6 +1153,107 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
             </div>
           </div>
         </div>
+      )}
+
+      {artist && (
+        <Dialog
+          open={showArtistDialog}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowArtistDialog(false);
+              requestPointerLock();
+            }
+          }}
+        >
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col">
+            <DialogHeader>
+              <div className="flex items-center gap-4">
+                <Avatar className="w-16 h-16 ring-2 ring-primary/20">
+                  <AvatarImage src={artist.avatarUrl || undefined} />
+                  <AvatarFallback className="text-xl font-serif">
+                    {artist.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <DialogTitle className="font-serif text-2xl">
+                    {artist.name}
+                  </DialogTitle>
+                  <DialogDescription className="flex items-center gap-2">
+                    {artist.country && (
+                      <span className="flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        {artist.country}
+                      </span>
+                    )}
+                    {artist.specialization && (
+                      <>
+                        <span>|</span>
+                        <span className="flex items-center gap-1">
+                          <Palette className="h-3 w-3" />
+                          {artist.specialization}
+                        </span>
+                      </>
+                    )}
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+
+            <ScrollArea className="flex-1 -mx-6 px-6">
+              <div className="space-y-6 py-4">
+                <div>
+                  <h4 className="font-semibold mb-2">About</h4>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {artist.bio}
+                  </p>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+                    <h4 className="font-semibold">Artworks</h4>
+                    <Link href={`/artists/${artist.id}`}>
+                      <Button variant="ghost" size="sm">
+                        View Profile
+                        <ExternalLink className="h-3 w-3 ml-2" />
+                      </Button>
+                    </Link>
+                  </div>
+
+                  {artworksLoading ? (
+                    <div className="grid grid-cols-3 gap-3">
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} className="aspect-square rounded-md bg-muted animate-pulse" />
+                      ))}
+                    </div>
+                  ) : artistArtworks && artistArtworks.length > 0 ? (
+                    <div className="grid grid-cols-3 gap-3">
+                      {artistArtworks.slice(0, 6).map((artwork) => (
+                        <div
+                          key={artwork.id}
+                          className="aspect-square rounded-md overflow-hidden group/artwork"
+                        >
+                          <img
+                            src={artwork.imageUrl}
+                            alt={artwork.title}
+                            className="w-full h-full object-cover transition-transform duration-300 group-hover/artwork:scale-110"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <ImageIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No artworks available yet</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
