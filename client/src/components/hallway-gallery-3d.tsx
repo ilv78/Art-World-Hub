@@ -17,16 +17,14 @@ interface HallwayGallery3DProps {
   artistRooms: ArtistRoom[];
 }
 
-const WALL_H = 5.5;
-const WALL_T = 0.18;
+const WALL_H = 3;
+const WALL_T = 0.15;
 const PLAYER_H = 1.7;
-const MOVE_SPEED = 0.12;
+const MOVE_SPEED = 0.08;
 const LOOK_SPEED = 0.002;
 
-const HALLWAY_W = 5;
-const ROOM_W = 7;
-const ROOM_D = 6;
-const DOOR_W = 3.2;
+const HALLWAY_W = 3;
+const DOOR_W = 2.2;
 
 function parseDimensionsCm(dimensions: string | null | undefined): { w: number; h: number } | null {
   if (!dimensions) return null;
@@ -109,8 +107,67 @@ function loadTextureWithCache(url: string, retries = 3): Promise<THREE.Texture> 
   return promise;
 }
 
-function Minimap({ artistRooms, hallLeft, hallRight, totalW, totalD, mapScale, playerPosition }: {
+interface RoomInfo {
+  roomW: number;
+  roomD: number;
+  centerZ: number;
+  centerX: number;
+  farX: number;
+  isLeft: boolean;
+}
+
+const ART_SPACING = 2.8;
+
+function computeRoomSize(artworkCount: number): { roomW: number; roomD: number } {
+  if (artworkCount <= 0) return { roomW: 3.5, roomD: 3.5 };
+  const farCount = Math.ceil(artworkCount / 3);
+  const remaining = artworkCount - farCount;
+  const sideCount = Math.ceil(remaining / 2);
+  const roomW = Math.max(3.5, farCount * ART_SPACING + 1);
+  const roomD = Math.max(3.5, sideCount * ART_SPACING + 1);
+  return { roomW, roomD };
+}
+
+function computeAllRooms(artistRooms: ArtistRoom[]): { rooms: RoomInfo[]; hallwayLen: number; maxRoomD: number } {
+  const hallLeft = -HALLWAY_W / 2;
+  const hallRight = HALLWAY_W / 2;
+  const roomInfos: RoomInfo[] = [];
+  const pairZStarts: number[] = [];
+  let cursor = 1;
+  const numPairs = Math.ceil(artistRooms.length / 2);
+
+  for (let p = 0; p < numPairs; p++) {
+    const leftIdx = p * 2;
+    const rightIdx = p * 2 + 1;
+    const leftSize = computeRoomSize(artistRooms[leftIdx]?.artworks.length ?? 0);
+    const rightSize = rightIdx < artistRooms.length ? computeRoomSize(artistRooms[rightIdx].artworks.length) : { roomW: 0, roomD: 0 };
+    const pairW = Math.max(leftSize.roomW, rightSize.roomW);
+    pairZStarts.push(cursor);
+    cursor += pairW + 0.5;
+  }
+
+  let maxRoomD = 3.5;
+  for (let i = 0; i < artistRooms.length; i++) {
+    const pairIdx = Math.floor(i / 2);
+    const isLeft = i % 2 === 0;
+    const { roomD: myD } = computeRoomSize(artistRooms[i].artworks.length);
+    const pairW = (pairZStarts[pairIdx + 1] ?? cursor) - pairZStarts[pairIdx] - 0.5;
+    const roomW = pairW;
+    const roomD = myD;
+    if (roomD > maxRoomD) maxRoomD = roomD;
+    const centerZ = pairZStarts[pairIdx] + roomW / 2;
+    const centerX = isLeft ? hallLeft - roomD / 2 : hallRight + roomD / 2;
+    const farX = isLeft ? hallLeft - roomD : hallRight + roomD;
+    roomInfos.push({ roomW, roomD, centerZ, centerX, farX, isLeft });
+  }
+
+  const hallwayLen = Math.max(cursor, 4);
+  return { rooms: roomInfos, hallwayLen, maxRoomD };
+}
+
+function Minimap({ artistRooms, roomInfos, hallLeft, hallRight, totalW, totalD, mapScale, playerPosition }: {
   artistRooms: ArtistRoom[];
+  roomInfos: RoomInfo[];
   hallLeft: number;
   hallRight: number;
   totalW: number;
@@ -128,31 +185,29 @@ function Minimap({ artistRooms, hallLeft, hallRight, totalW, totalD, mapScale, p
       <svg width={Math.min(mapW, 180)} height={Math.min(mapH, 200)} viewBox={`0 0 ${mapW} ${mapH}`} className="block">
         <rect x={0} y={0} width={mapW} height={mapH} fill="rgba(30,30,30,0.8)" rx={4} />
         <rect x={ox + hallLeft * mapScale} y={oz} width={HALLWAY_W * mapScale} height={totalD * mapScale} fill="rgba(200,195,185,0.4)" />
-        {artistRooms.map((room, i) => {
-          const pairIdx = Math.floor(i / 2);
-          const isLeft = i % 2 === 0;
-          const rZ = pairIdx * ROOM_W + 1;
-          const rX = isLeft ? hallLeft - ROOM_D : hallRight;
+        {roomInfos.map((ri, i) => {
+          const rZ = ri.centerZ - ri.roomW / 2;
+          const rX = ri.isLeft ? hallLeft - ri.roomD : hallRight;
           return (
-            <g key={room.artist.id}>
+            <g key={artistRooms[i]?.artist.id ?? i}>
               <rect
                 x={ox + rX * mapScale}
                 y={oz + rZ * mapScale}
-                width={ROOM_D * mapScale}
-                height={ROOM_W * mapScale}
+                width={ri.roomD * mapScale}
+                height={ri.roomW * mapScale}
                 fill="rgba(249, 115, 22, 0.3)"
                 stroke="rgba(249, 115, 22, 0.5)"
                 strokeWidth={0.5}
               />
               <text
-                x={ox + (rX + ROOM_D / 2) * mapScale}
-                y={oz + (rZ + ROOM_W / 2) * mapScale}
+                x={ox + (rX + ri.roomD / 2) * mapScale}
+                y={oz + (rZ + ri.roomW / 2) * mapScale}
                 fill="rgba(255,255,255,0.7)"
                 fontSize={6}
                 textAnchor="middle"
                 dominantBaseline="middle"
               >
-                {room.artist.name.split(" ").pop()}
+                {artistRooms[i]?.artist.name.split(" ").pop()}
               </text>
             </g>
           );
@@ -203,9 +258,8 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
     }
   }, [selectedArtwork, isInCart, addItem, toast]);
 
-  const numPairs = Math.ceil(artistRooms.length / 2);
-  const hallwayLen = Math.max(numPairs * ROOM_W + 2, 6);
-  const totalW = HALLWAY_W + ROOM_D * 2;
+  const { rooms: roomInfos, hallwayLen, maxRoomD } = computeAllRooms(artistRooms);
+  const totalW = HALLWAY_W + maxRoomD * 2;
   const totalD = hallwayLen;
 
   const buildScene = useCallback((scene: THREE.Scene) => {
@@ -258,39 +312,31 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
     addWall(totalW + 2, WALL_H, WALL_T, 0, WALL_H / 2, 0);
     addWall(totalW + 2, WALL_H, WALL_T, 0, WALL_H / 2, hallEnd);
 
-    // Compute door positions for each side
     type DoorInfo = { centerZ: number; halfGap: number };
     const leftDoors: DoorInfo[] = [];
     const rightDoors: DoorInfo[] = [];
 
-    for (let i = 0; i < artistRooms.length; i++) {
-      const pairIdx = Math.floor(i / 2);
-      const isLeft = i % 2 === 0;
-      const roomCenterZ = pairIdx * ROOM_W + ROOM_W / 2 + 1;
-      (isLeft ? leftDoors : rightDoors).push({ centerZ: roomCenterZ, halfGap: DOOR_W / 2 });
+    for (let i = 0; i < roomInfos.length; i++) {
+      const ri = roomInfos[i];
+      (ri.isLeft ? leftDoors : rightDoors).push({ centerZ: ri.centerZ, halfGap: DOOR_W / 2 });
     }
 
-    // Build hallway walls with gaps for doorways
     const buildSideWall = (wallX: number, doors: DoorInfo[]) => {
       const sortedDoors = [...doors].sort((a, b) => a.centerZ - b.centerZ);
       let cursor = 0;
       for (const door of sortedDoors) {
         const doorStart = door.centerZ - door.halfGap;
         const doorEnd = door.centerZ + door.halfGap;
-        // Wall segment before this door
         const segLen = doorStart - cursor;
         if (segLen > 0.1) {
           addWall(WALL_T, WALL_H, segLen, wallX, WALL_H / 2, cursor + segLen / 2);
         }
-        // Lintel above door
-        const lintelGeo = new THREE.BoxGeometry(WALL_T, WALL_H * 0.25, DOOR_W);
+        const lintelGeo = new THREE.BoxGeometry(WALL_T, WALL_H * 0.2, DOOR_W);
         const lintelMesh = new THREE.Mesh(lintelGeo, accentMat);
-        lintelMesh.position.set(wallX, WALL_H * 0.88, door.centerZ);
+        lintelMesh.position.set(wallX, WALL_H * 0.9, door.centerZ);
         scene.add(lintelMesh);
-
         cursor = doorEnd;
       }
-      // Final segment after last door
       const remaining = hallEnd - cursor;
       if (remaining > 0.1) {
         addWall(WALL_T, WALL_H, remaining, wallX, WALL_H / 2, cursor + remaining / 2);
@@ -300,107 +346,89 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
     buildSideWall(hallLeft, leftDoors);
     buildSideWall(hallRight, rightDoors);
 
-    // Build artist rooms
     for (let i = 0; i < artistRooms.length; i++) {
-      const pairIdx = Math.floor(i / 2);
-      const isLeft = i % 2 === 0;
-      const roomCenterZ = pairIdx * ROOM_W + ROOM_W / 2 + 1;
-      const roomCenterX = isLeft ? hallLeft - ROOM_D / 2 : hallRight + ROOM_D / 2;
-      const roomFarX = isLeft ? hallLeft - ROOM_D : hallRight + ROOM_D;
+      const ri = roomInfos[i];
+      const room = artistRooms[i];
 
-      // Room floor
-      const roomFloorGeo = new THREE.PlaneGeometry(ROOM_D, ROOM_W);
+      const roomFloorGeo = new THREE.PlaneGeometry(ri.roomD, ri.roomW);
       const roomFloor = new THREE.Mesh(roomFloorGeo, floorMat);
       roomFloor.rotation.x = -Math.PI / 2;
-      roomFloor.position.set(roomCenterX, 0.005, roomCenterZ);
+      roomFloor.position.set(ri.centerX, 0.005, ri.centerZ);
       roomFloor.receiveShadow = true;
       scene.add(roomFloor);
 
-      // Room side walls (perpendicular to hallway)
-      addWall(ROOM_D, WALL_H, WALL_T, roomCenterX, WALL_H / 2, roomCenterZ - ROOM_W / 2);
-      addWall(ROOM_D, WALL_H, WALL_T, roomCenterX, WALL_H / 2, roomCenterZ + ROOM_W / 2);
-      // Room far wall (parallel to hallway)
-      addWall(WALL_T, WALL_H, ROOM_W, roomFarX, WALL_H / 2, roomCenterZ);
+      addWall(ri.roomD, WALL_H, WALL_T, ri.centerX, WALL_H / 2, ri.centerZ - ri.roomW / 2);
+      addWall(ri.roomD, WALL_H, WALL_T, ri.centerX, WALL_H / 2, ri.centerZ + ri.roomW / 2);
+      addWall(WALL_T, WALL_H, ri.roomW, ri.farX, WALL_H / 2, ri.centerZ);
 
-      // Place artworks
-      const room = artistRooms[i];
-      this_placeArtworks(scene, room, roomCenterX, roomCenterZ, roomFarX, isLeft);
+      this_placeArtworks(scene, room, ri);
 
-      // Name plaque inside hallway facing inward
-      addNamePlaque(scene, room.artist.name, isLeft ? hallLeft + 0.3 : hallRight - 0.3, roomCenterZ, isLeft);
+      addNamePlaque(scene, room.artist.name, ri.isLeft ? hallLeft + 0.2 : hallRight - 0.2, ri.centerZ, ri.isLeft);
     }
 
-    // Lighting
     const ambientLight = new THREE.AmbientLight(0xfff8f0, 0.8);
     scene.add(ambientLight);
     const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
     dirLight.position.set(0, WALL_H * 2, hallEnd / 2);
     scene.add(dirLight);
 
-    // Hallway ceiling lights
-    for (let z = 2; z < hallEnd; z += 4) {
-      const pl = new THREE.PointLight(0xfff5e6, 0.8, 18);
-      pl.position.set(0, WALL_H - 0.3, z);
+    for (let z = 2; z < hallEnd; z += 3) {
+      const pl = new THREE.PointLight(0xfff5e6, 0.8, 12);
+      pl.position.set(0, WALL_H - 0.2, z);
       scene.add(pl);
     }
 
-    // Room lights
-    for (let i = 0; i < artistRooms.length; i++) {
-      const pairIdx = Math.floor(i / 2);
-      const isLeft = i % 2 === 0;
-      const roomCenterZ = pairIdx * ROOM_W + ROOM_W / 2 + 1;
-      const roomCenterX = isLeft ? hallLeft - ROOM_D / 2 : hallRight + ROOM_D / 2;
-      const roomLight = new THREE.PointLight(0xffffff, 1.0, 15);
-      roomLight.position.set(roomCenterX, WALL_H - 0.3, roomCenterZ);
+    for (let i = 0; i < roomInfos.length; i++) {
+      const ri = roomInfos[i];
+      const roomLight = new THREE.PointLight(0xffffff, 1.0, 12);
+      roomLight.position.set(ri.centerX, WALL_H - 0.2, ri.centerZ);
       scene.add(roomLight);
     }
-  }, [artistRooms, hallwayLen, totalW, totalD]);
+  }, [artistRooms, roomInfos, hallwayLen, totalW, totalD]);
 
   function this_placeArtworks(
     scene: THREE.Scene,
     room: ArtistRoom,
-    roomCenterX: number,
-    roomCenterZ: number,
-    roomFarX: number,
-    isLeft: boolean,
+    ri: RoomInfo,
   ) {
     const artworks = room.artworks;
     if (!artworks.length) return;
 
     const maxArtSize = 2.4;
-    const spacing = 3.0;
+    const { roomW, roomD, centerZ: roomCenterZ, centerX: roomCenterX, farX: roomFarX, isLeft } = ri;
 
     type WallSlot = { x: number; z: number; rotY: number };
     const slots: WallSlot[] = [];
 
-    const farWallZ1 = roomCenterZ - ROOM_W / 2 + 0.5;
-    const farWallZ2 = roomCenterZ + ROOM_W / 2 - 0.5;
+    const farWallZ1 = roomCenterZ - roomW / 2 + 0.5;
+    const farWallZ2 = roomCenterZ + roomW / 2 - 0.5;
+    const farLen = farWallZ2 - farWallZ1;
 
-    const farCount = Math.max(1, Math.floor(ROOM_W / spacing));
+    const farCount = Math.max(1, Math.floor(farLen / ART_SPACING) + 1);
     for (let j = 0; j < farCount; j++) {
       const t = (j + 0.5) / farCount;
-      const z = farWallZ1 + t * (farWallZ2 - farWallZ1);
+      const z = farWallZ1 + t * farLen;
       slots.push({
-        x: roomFarX + (isLeft ? 0.35 : -0.35),
+        x: roomFarX + (isLeft ? 0.25 : -0.25),
         z,
         rotY: isLeft ? Math.PI / 2 : -Math.PI / 2,
       });
     }
 
-    const sideWallX1 = isLeft ? roomFarX + 0.35 : roomFarX - 0.35;
-    const sideWallX2 = isLeft ? roomCenterX + ROOM_D / 2 - 0.35 : roomCenterX - ROOM_D / 2 + 0.35;
+    const sideWallX1 = isLeft ? roomFarX + 0.25 : roomFarX - 0.25;
+    const sideWallX2 = isLeft ? roomCenterX + roomD / 2 - 0.25 : roomCenterX - roomD / 2 + 0.25;
 
     const sideLen = Math.abs(sideWallX2 - sideWallX1);
-    const sideCount = Math.max(1, Math.floor(sideLen / spacing));
+    const sideCount = Math.max(1, Math.floor(sideLen / ART_SPACING) + 1);
     for (let j = 0; j < sideCount; j++) {
       const t = (j + 0.5) / sideCount;
       const x = sideWallX1 + t * (sideWallX2 - sideWallX1);
-      slots.push({ x, z: roomCenterZ - ROOM_W / 2 + 0.35, rotY: 0 });
+      slots.push({ x, z: roomCenterZ - roomW / 2 + 0.25, rotY: 0 });
     }
     for (let j = 0; j < sideCount; j++) {
       const t = (j + 0.5) / sideCount;
       const x = sideWallX1 + t * (sideWallX2 - sideWallX1);
-      slots.push({ x, z: roomCenterZ + ROOM_W / 2 - 0.35, rotY: Math.PI });
+      slots.push({ x, z: roomCenterZ + roomW / 2 - 0.25, rotY: Math.PI });
     }
 
     for (let ai = 0; ai < artworks.length && ai < slots.length; ai++) {
@@ -674,7 +702,7 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
 
   const hallLeft = -HALLWAY_W / 2;
   const hallRight = HALLWAY_W / 2;
-  const mapScale = 8;
+  const mapScale = 12;
 
   return (
     <div className="relative w-full rounded-lg overflow-hidden" style={{ height: "600px" }}>
@@ -798,6 +826,7 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
 
       {showMinimap && <Minimap
         artistRooms={artistRooms}
+        roomInfos={roomInfos}
         hallLeft={hallLeft}
         hallRight={hallRight}
         totalW={totalW}

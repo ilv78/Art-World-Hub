@@ -53,10 +53,10 @@ const defaultLayout: MazeLayout = {
   ],
 };
 
-const CELL_SIZE_DEFAULT = 8;
-const CELL_SIZE_WHITE = 4;
-const WALL_HEIGHT = 4;
-const WALL_THICKNESS = 0.2;
+const CELL_SIZE_DEFAULT = 2.5;
+const CELL_SIZE_WHITE = 2.5;
+const WALL_HEIGHT = 3;
+const WALL_THICKNESS = 0.15;
 const PLAYER_HEIGHT = 1.7;
 const MOVE_SPEED = 0.08;
 const LOOK_SPEED = 0.002;
@@ -228,7 +228,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
         const baseX = parseInt(cellX) * CELL_SIZE;
         const baseZ = parseInt(cellZ) * CELL_SIZE;
 
-        const maxArtSize = 2.5;
+        const maxArtSize = 1.8;
         const dims = artworkScale(artwork.dimensions, maxArtSize);
 
         const artworkGeometry = new THREE.PlaneGeometry(dims.w, dims.h);
@@ -319,7 +319,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
 
   // Collision detection
   const checkCollision = useCallback((position: THREE.Vector3): boolean => {
-    const margin = 0.5;
+    const margin = 0.3;
     
     for (const cell of layout.cells) {
       const baseX = cell.x * CELL_SIZE;
@@ -346,8 +346,8 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
     }
     
     // Boundary collision
-    if (position.x < 0.5 || position.x > layout.width * CELL_SIZE - 0.5 ||
-        position.z < 0.5 || position.z > layout.height * CELL_SIZE - 0.5) {
+    if (position.x < 0.3 || position.x > layout.width * CELL_SIZE - 0.3 ||
+        position.z < 0.3 || position.z > layout.height * CELL_SIZE - 0.3) {
       return true;
     }
     
