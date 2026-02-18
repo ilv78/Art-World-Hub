@@ -53,7 +53,8 @@ const defaultLayout: MazeLayout = {
   ],
 };
 
-const CELL_SIZE = 8;
+const CELL_SIZE_DEFAULT = 8;
+const CELL_SIZE_WHITE = 4;
 const WALL_HEIGHT = 4;
 const WALL_THICKNESS = 0.2;
 const PLAYER_HEIGHT = 1.7;
@@ -82,6 +83,7 @@ function artworkScale(dimensions: string | null | undefined, maxSize: number): {
 }
 
 export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = false }: MazeGallery3DProps) {
+  const CELL_SIZE = whiteRoom ? CELL_SIZE_WHITE : CELL_SIZE_DEFAULT;
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -208,7 +210,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
         scene.add(wall);
       }
     });
-  }, [layout, whiteRoom]);
+  }, [layout, whiteRoom, CELL_SIZE]);
 
   // Place artworks on walls
   const placeArtworks = useCallback((scene: THREE.Scene) => {
@@ -288,7 +290,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
         }
       });
     });
-  }, [layout, artworks]);
+  }, [layout, artworks, CELL_SIZE]);
 
   // Setup lighting - minimal to avoid shader limits
   const setupLighting = useCallback((scene: THREE.Scene) => {
@@ -313,7 +315,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
       const hemiLight = new THREE.HemisphereLight(0xfff5e6, 0x444444, 0.3);
       scene.add(hemiLight);
     }
-  }, [layout, whiteRoom]);
+  }, [layout, whiteRoom, CELL_SIZE]);
 
   // Collision detection
   const checkCollision = useCallback((position: THREE.Vector3): boolean => {
@@ -350,7 +352,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
     }
     
     return false;
-  }, [layout]);
+  }, [layout, CELL_SIZE]);
 
   // Handle artwork click
   const handleClick = useCallback((event: MouseEvent) => {
@@ -396,7 +398,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
     const scene = new THREE.Scene();
     const bgColor = whiteRoom ? 0xf5f0eb : 0x0a0a0a;
     scene.background = new THREE.Color(bgColor);
-    scene.fog = new THREE.Fog(bgColor, whiteRoom ? 10 : 5, whiteRoom ? 60 : 40);
+    scene.fog = new THREE.Fog(bgColor, whiteRoom ? 5 : 5, whiteRoom ? 30 : 40);
     sceneRef.current = scene;
 
     // Camera
@@ -501,7 +503,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
       renderer.dispose();
       container.removeChild(renderer.domElement);
     };
-  }, [layout, artworks, whiteRoom, createMaze, placeArtworks, setupLighting, checkCollision]);
+  }, [layout, artworks, whiteRoom, CELL_SIZE, createMaze, placeArtworks, setupLighting, checkCollision]);
 
   // Pointer lock and controls
   useEffect(() => {
