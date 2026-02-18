@@ -243,6 +243,9 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
   const euler = useRef(new THREE.Euler(0, 0, 0, "YXZ"));
   const playerPosRef = useRef({ x: 0, z: 0, rotation: 0 });
   const isPointerLockedRef = useRef(false);
+  const isFocusedRef = useRef(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const isDraggingRef = useRef(false);
   const selectedArtworkRef = useRef<ArtworkWithArtist | null>(null);
   const [showArrowControls, setShowArrowControls] = useState(true);
 
@@ -497,7 +500,7 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
   }, []);
 
   const handleClick = useCallback((event: MouseEvent) => {
-    if (!cameraRef.current || !sceneRef.current || !isPointerLockedRef.current) return;
+    if (!cameraRef.current || !sceneRef.current || (!isPointerLockedRef.current && !isFocusedRef.current)) return;
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(new THREE.Vector2(0, 0), cameraRef.current);
     const meshes = Array.from(artworkMeshesRef.current.values()).map(v => v.mesh);
@@ -560,7 +563,7 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
       if (!cam) { renderer.render(scene, camera); return; }
 
       const allKeys = new Set(Array.from(keysPressed.current).concat(Array.from(virtualKeysPressed.current)));
-      const isActive = isPointerLockedRef.current || virtualKeysPressed.current.size > 0;
+      const isActive = isPointerLockedRef.current || isFocusedRef.current || virtualKeysPressed.current.size > 0;
 
       if (isActive) {
         if (allKeys.has("RotateLeft")) {
@@ -624,7 +627,7 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
     const movementKeys = new Set(["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]);
     const handleKeyDown = (e: KeyboardEvent) => {
       if (selectedArtworkRef.current) return;
-      if (movementKeys.has(e.code) && isPointerLockedRef.current) e.preventDefault();
+      if (movementKeys.has(e.code) && (isPointerLockedRef.current || isFocusedRef.current)) e.preventDefault();
       keysPressed.current.add(e.code);
     };
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -632,23 +635,58 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
       keysPressed.current.delete(e.code);
     };
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isPointerLockedRef.current || !cameraRef.current) return;
-      euler.current.setFromQuaternion(cameraRef.current.quaternion);
-      euler.current.y -= e.movementX * LOOK_SPEED;
-      euler.current.x -= e.movementY * LOOK_SPEED;
-      euler.current.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.current.x));
-      cameraRef.current.quaternion.setFromEuler(euler.current);
+      if (!cameraRef.current) return;
+      if (isPointerLockedRef.current) {
+        euler.current.setFromQuaternion(cameraRef.current.quaternion);
+        euler.current.y -= e.movementX * LOOK_SPEED;
+        euler.current.x -= e.movementY * LOOK_SPEED;
+        euler.current.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.current.x));
+        cameraRef.current.quaternion.setFromEuler(euler.current);
+      } else if (isDraggingRef.current && isFocusedRef.current) {
+        euler.current.setFromQuaternion(cameraRef.current.quaternion);
+        euler.current.y -= e.movementX * LOOK_SPEED;
+        euler.current.x -= e.movementY * LOOK_SPEED;
+        euler.current.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.current.x));
+        cameraRef.current.quaternion.setFromEuler(euler.current);
+      }
     };
     const handlePointerLockChange = () => {
       const locked = document.pointerLockElement === containerRef.current;
       isPointerLockedRef.current = locked;
       setIsPointerLocked(locked);
     };
+    const handleMouseDown = (e: MouseEvent) => {
+      const container = containerRef.current;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      const inside = e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+      if (inside) {
+        isDraggingRef.current = true;
+        if (!isFocusedRef.current) {
+          isFocusedRef.current = true;
+          setIsFocused(true);
+        }
+      } else if (isFocusedRef.current) {
+        isFocusedRef.current = false;
+        setIsFocused(false);
+        keysPressed.current.clear();
+      }
+    };
+    const handleMouseUp = () => {
+      isDraggingRef.current = false;
+    };
+    const handleBlur = () => {
+      isFocusedRef.current = false;
+      setIsFocused(false);
+      keysPressed.current.clear();
+    };
 
     document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("keyup", handleKeyUp);
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("pointerlockchange", handlePointerLockChange);
+    document.addEventListener("mousedown", handleMouseDown);
+    document.addEventListener("mouseup", handleMouseUp);
     document.addEventListener("click", handleClick);
 
     return () => {
@@ -656,6 +694,8 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
       document.removeEventListener("keyup", handleKeyUp);
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("pointerlockchange", handlePointerLockChange);
+      document.removeEventListener("mousedown", handleMouseDown);
+      document.removeEventListener("mouseup", handleMouseUp);
       document.removeEventListener("click", handleClick);
     };
   }, [handleClick]);
@@ -708,7 +748,7 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
     <div className="relative w-full rounded-lg overflow-hidden" style={{ height: "600px" }}>
       <div ref={containerRef} className="absolute inset-0 cursor-crosshair" style={{ zIndex: 0 }} />
 
-      {!isPointerLocked && !selectedArtwork && (
+      {!isPointerLocked && !isFocused && !selectedArtwork && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm" style={{ zIndex: 10 }}>
           <Card className="p-8 max-w-md text-center space-y-6">
             <h2 className="font-serif text-2xl font-bold">Museum Hallway</h2>
@@ -723,7 +763,7 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
               </div>
               <div className="flex flex-col items-center gap-2">
                 <Mouse className="w-8 h-8 text-primary" />
-                <span>Mouse</span>
+                <span>Click + Drag</span>
                 <span className="text-muted-foreground text-xs">Look around</span>
               </div>
               <div className="flex flex-col items-center gap-2">
@@ -732,23 +772,25 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
                 <span className="text-muted-foreground text-xs">View artwork</span>
               </div>
             </div>
-            <Button size="lg" onClick={requestPointerLock} className="w-full" data-testid="button-enter-gallery">
+            <Button size="lg" onClick={() => { isFocusedRef.current = true; setIsFocused(true); try { containerRef.current?.requestPointerLock(); } catch {} }} className="w-full" data-testid="button-enter-gallery">
               <Move className="w-4 h-4 mr-2" />
               Enter Museum
             </Button>
-            <p className="text-xs text-muted-foreground">Press ESC to exit walking mode</p>
+            <p className="text-xs text-muted-foreground">Click outside the gallery to exit</p>
           </Card>
         </div>
       )}
 
-      {isPointerLocked && (
+      {(isPointerLocked || isFocused) && !selectedArtwork && (
         <div style={{ zIndex: 5 }}>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-            <div className="w-4 h-4 border-2 border-white/50 rounded-full" />
-          </div>
+          {isPointerLocked && (
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+              <div className="w-4 h-4 border-2 border-white/50 rounded-full" />
+            </div>
+          )}
           <div className="absolute bottom-4 left-4 text-white/70 text-sm space-y-1">
-            <p>WASD to move | Mouse to look</p>
-            <p>Click artwork to view | ESC to pause</p>
+            <p>WASD to move | Click+Drag to look</p>
+            <p>Click artwork to view</p>
           </div>
         </div>
       )}
@@ -757,7 +799,7 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
         {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
       </Button>
 
-      {isPointerLocked && (
+      {(isPointerLocked || isFocused) && (
         <Button size="icon" variant="ghost" className="absolute top-4 right-16 text-white/70" onClick={() => setShowMinimap(!showMinimap)} data-testid="button-toggle-minimap" style={{ zIndex: 5 }}>
           <MapIcon className="w-5 h-5" />
         </Button>
