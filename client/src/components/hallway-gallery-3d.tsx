@@ -367,8 +367,7 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
     const artworks = room.artworks;
     if (!artworks.length) return;
 
-    const frameSize = 2.4;
-    const frameDepth = 0.1;
+    const maxArtSize = 2.4;
     const spacing = 3.0;
 
     type WallSlot = { x: number; z: number; rotY: number };
@@ -408,20 +407,14 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
       const artwork = artworks[ai];
       const slot = slots[ai];
 
-      const dims = artworkScale(artwork.dimensions, frameSize);
-      const frameGeo = new THREE.BoxGeometry(dims.w + 0.2, dims.h + 0.2, frameDepth);
-      const frameMat = new THREE.MeshStandardMaterial({ color: 0x2c2418, roughness: 0.5, metalness: 0.3 });
-      const frame = new THREE.Mesh(frameGeo, frameMat);
-      frame.position.set(slot.x, PLAYER_H + 0.5, slot.z);
-      frame.rotation.y = slot.rotY;
-      scene.add(frame);
+      const dims = artworkScale(artwork.dimensions, maxArtSize);
 
       const artGeo = new THREE.PlaneGeometry(dims.w, dims.h);
       const placeholderMat = new THREE.MeshStandardMaterial({ color: 0xddd8d0, roughness: 0.5 });
       const artMesh = new THREE.Mesh(artGeo, placeholderMat);
       artMesh.position.set(slot.x, PLAYER_H + 0.5, slot.z);
       artMesh.rotation.y = slot.rotY;
-      artMesh.translateZ(frameDepth / 2 + 0.01);
+      artMesh.translateZ(0.06);
       scene.add(artMesh);
       artworkMeshesRef.current.set(artwork.id, { mesh: artMesh, artwork });
 

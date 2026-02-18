@@ -226,16 +226,8 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
         const baseX = parseInt(cellX) * CELL_SIZE;
         const baseZ = parseInt(cellZ) * CELL_SIZE;
 
-        const maxFrameSize = 2.5;
-        const frameDepth = 0.1;
-        const dims = artworkScale(artwork.dimensions, maxFrameSize);
-        const frameGeometry = new THREE.BoxGeometry(dims.w + 0.2, dims.h + 0.2, frameDepth);
-        const frameMaterial = new THREE.MeshStandardMaterial({ 
-          color: 0x8b4513,
-          roughness: 0.5,
-          metalness: 0.3,
-        });
-        const frame = new THREE.Mesh(frameGeometry, frameMaterial);
+        const maxArtSize = 2.5;
+        const dims = artworkScale(artwork.dimensions, maxArtSize);
 
         const artworkGeometry = new THREE.PlaneGeometry(dims.w, dims.h);
 
@@ -263,11 +255,6 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
             break;
         }
 
-        // Place frame and placeholder immediately so artwork is always visible
-        frame.position.set(x, PLAYER_HEIGHT + 0.3, z);
-        frame.rotation.y = rotY;
-        scene.add(frame);
-
         const placeholderMaterial = new THREE.MeshStandardMaterial({ 
           color: 0xcccccc,
           roughness: 0.5,
@@ -275,7 +262,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
         const artworkMesh = new THREE.Mesh(artworkGeometry, placeholderMaterial);
         artworkMesh.position.set(x, PLAYER_HEIGHT + 0.3, z);
         artworkMesh.rotation.y = rotY;
-        artworkMesh.translateZ(frameDepth / 2 + 0.01);
+        artworkMesh.translateZ(0.06);
         scene.add(artworkMesh);
         artworkMeshesRef.current.set(artwork.id, { mesh: artworkMesh, artwork });
 
