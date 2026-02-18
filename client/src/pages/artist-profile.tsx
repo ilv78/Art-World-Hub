@@ -31,7 +31,8 @@ export default function ArtistProfile() {
   const params = useParams<{ id: string }>();
   const addItem = useCartStore((state) => state.addItem);
   const [selectedArtwork, setSelectedArtwork] = useState<ArtworkWithArtist | null>(null);
-  const [activeTab, setActiveTab] = useState("gallery");
+  const urlTab = new URLSearchParams(window.location.search).get("tab");
+  const [activeTab, setActiveTab] = useState(urlTab === "portfolio" || urlTab === "blog" ? urlTab : "gallery");
 
   const { data: artist, isLoading: artistLoading } = useQuery<Artist>({
     queryKey: ["/api/artists", params.id],
