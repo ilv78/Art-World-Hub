@@ -377,31 +377,31 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
     ctx.strokeRect(16, 16, cw - 32, ch - 32);
 
     const drawText = () => {
-      let y = 310;
+      let y = 320;
 
-      ctx.fillStyle = "#1a1a2e";
-      ctx.font = "bold 52px Georgia, serif";
+      ctx.fillStyle = "#000000";
+      ctx.font = "bold 72px Georgia, serif";
       ctx.textAlign = "center";
       ctx.fillText(artist.name, cw / 2, y);
-      y += 56;
+      y += 70;
 
       if (artist.country) {
-        ctx.fillStyle = "#666666";
-        ctx.font = "28px sans-serif";
+        ctx.fillStyle = "#111111";
+        ctx.font = "bold 34px sans-serif";
         ctx.fillText(artist.country, cw / 2, y);
-        y += 44;
-      }
-
-      if (artist.specialization) {
-        ctx.fillStyle = "#b8860b";
-        ctx.font = "italic 28px Georgia, serif";
-        ctx.fillText(artist.specialization, cw / 2, y);
         y += 50;
       }
 
+      if (artist.specialization) {
+        ctx.fillStyle = "#222222";
+        ctx.font = "bold italic 32px Georgia, serif";
+        ctx.fillText(artist.specialization, cw / 2, y);
+        y += 54;
+      }
+
       if (artist.bio) {
-        ctx.fillStyle = "#444444";
-        ctx.font = "22px sans-serif";
+        ctx.fillStyle = "#111111";
+        ctx.font = "bold 26px sans-serif";
         ctx.textAlign = "left";
         const maxWidth = cw - 100;
         const words = artist.bio.split(" ");
