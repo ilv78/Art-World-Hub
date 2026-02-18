@@ -382,7 +382,7 @@ function generateWhiteRoomLayout(artworkCount: number): MazeLayout {
   }
 
   if (artworkCount === 0) {
-    return { width: roomWidth, height: roomHeight, spawnPoint: { x: Math.floor(roomWidth / 2), z: 0 }, cells };
+    return { width: roomWidth, height: roomHeight, spawnPoint: { x: Math.floor(roomWidth / 2), z: Math.max(0, roomHeight - 3) }, cells };
   }
 
   const getCell = (cx: number, cz: number) => cells.find(c => c.x === cx && c.z === cz)!;
@@ -413,7 +413,7 @@ function generateWhiteRoomLayout(artworkCount: number): MazeLayout {
   return {
     width: roomWidth,
     height: roomHeight,
-    spawnPoint: { x: Math.floor(roomWidth / 2), z: 0 },
+    spawnPoint: { x: Math.floor(roomWidth / 2), z: Math.max(0, roomHeight - 3) },
     cells,
   };
 }

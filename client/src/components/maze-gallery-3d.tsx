@@ -25,7 +25,7 @@ interface MazeGallery3DProps {
 const defaultLayout: MazeLayout = {
   width: 5,
   height: 5,
-  spawnPoint: { x: 2, z: 0 },
+  spawnPoint: { x: 2, z: 2 },
   cells: [
     // Row 0 (entrance)
     { x: 0, z: 0, walls: { north: true, south: true, east: false, west: true }, artworkSlots: [{ wallId: "0-0-north", position: 0 }] },
