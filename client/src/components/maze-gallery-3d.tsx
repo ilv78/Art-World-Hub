@@ -151,19 +151,30 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
       const fctx = floorCanvas.getContext("2d")!;
       fctx.fillStyle = "#c8a882";
       fctx.fillRect(0, 0, 512, 512);
-      const plankColors = ["#c8a882", "#bfa078", "#d4b896", "#b8956e", "#cbb08a", "#c2a07a", "#d0b090"];
-      const plankHeight = 32;
-      const plankWidth = 64;
-      for (let row = 0; row < 16; row++) {
-        const offset = row % 2 === 0 ? 0 : plankWidth / 2;
-        for (let col = -1; col < 9; col++) {
-          const px = col * plankWidth + offset;
-          const py = row * plankHeight;
-          fctx.fillStyle = plankColors[(row * 5 + col) % plankColors.length];
-          fctx.fillRect(px, py, plankWidth - 1, plankHeight - 1);
-          fctx.strokeStyle = "#a08060";
-          fctx.lineWidth = 0.5;
-          fctx.strokeRect(px, py, plankWidth - 1, plankHeight - 1);
+      const plankColors = ["#c8a882", "#bfa078", "#d4b896", "#b8956e", "#cbb08a", "#c2a07a", "#d0b090", "#c5a47e"];
+      const plankHeight = 24;
+      const plankWidth = 512;
+      for (let row = 0; row < Math.ceil(512 / plankHeight); row++) {
+        const py = row * plankHeight;
+        const baseColor = plankColors[row % plankColors.length];
+        fctx.fillStyle = baseColor;
+        fctx.fillRect(0, py, plankWidth, plankHeight - 1);
+
+        fctx.strokeStyle = "rgba(120, 80, 40, 0.3)";
+        fctx.lineWidth = 1;
+        fctx.beginPath();
+        fctx.moveTo(0, py + plankHeight - 1);
+        fctx.lineTo(plankWidth, py + plankHeight - 1);
+        fctx.stroke();
+
+        fctx.strokeStyle = "rgba(90, 60, 30, 0.08)";
+        fctx.lineWidth = 0.5;
+        for (let g = 0; g < 6; g++) {
+          const gy = py + 3 + g * (plankHeight / 7);
+          fctx.beginPath();
+          fctx.moveTo(0, gy);
+          fctx.bezierCurveTo(128, gy + (g % 2 === 0 ? 1 : -1), 384, gy + (g % 2 === 0 ? -0.5 : 0.5), 512, gy);
+          fctx.stroke();
         }
       }
       const floorTexture = new THREE.CanvasTexture(floorCanvas);
@@ -349,11 +360,11 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
 
   const createArtistPoster = useCallback((scene: THREE.Scene, wallId: string) => {
     if (!artist) return;
-    const posterW = 0.8;
-    const posterH = 1.1;
+    const posterW = CELL_SIZE - 0.1;
+    const posterH = WALL_HEIGHT * 0.75;
     const canvas = document.createElement("canvas");
-    const cw = 400;
-    const ch = 550;
+    const cw = 1024;
+    const ch = Math.round(1024 * (posterH / posterW));
     canvas.width = cw;
     canvas.height = ch;
     const ctx = canvas.getContext("2d")!;
@@ -362,37 +373,37 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
     ctx.fillRect(0, 0, cw, ch);
 
     ctx.strokeStyle = "#d4a854";
-    ctx.lineWidth = 3;
-    ctx.strokeRect(12, 12, cw - 24, ch - 24);
+    ctx.lineWidth = 6;
+    ctx.strokeRect(16, 16, cw - 32, ch - 32);
 
     const drawText = () => {
-      let y = 200;
+      let y = 310;
 
       ctx.fillStyle = "#1a1a2e";
-      ctx.font = "bold 28px Georgia, serif";
+      ctx.font = "bold 52px Georgia, serif";
       ctx.textAlign = "center";
       ctx.fillText(artist.name, cw / 2, y);
-      y += 36;
+      y += 56;
 
       if (artist.country) {
         ctx.fillStyle = "#666666";
-        ctx.font = "16px sans-serif";
+        ctx.font = "28px sans-serif";
         ctx.fillText(artist.country, cw / 2, y);
-        y += 28;
+        y += 44;
       }
 
       if (artist.specialization) {
         ctx.fillStyle = "#b8860b";
-        ctx.font = "italic 16px Georgia, serif";
+        ctx.font = "italic 28px Georgia, serif";
         ctx.fillText(artist.specialization, cw / 2, y);
-        y += 32;
+        y += 50;
       }
 
       if (artist.bio) {
         ctx.fillStyle = "#444444";
-        ctx.font = "13px sans-serif";
+        ctx.font = "22px sans-serif";
         ctx.textAlign = "left";
-        const maxWidth = cw - 60;
+        const maxWidth = cw - 100;
         const words = artist.bio.split(" ");
         let line = "";
         const lines: string[] = [];
@@ -406,21 +417,21 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
           }
         }
         if (line) lines.push(line);
-        const maxLines = 8;
+        const maxLines = 10;
         const displayLines = lines.slice(0, maxLines);
         if (lines.length > maxLines) {
           displayLines[maxLines - 1] = displayLines[maxLines - 1].replace(/\s*\S*$/, "...");
         }
         for (const l of displayLines) {
-          ctx.fillText(l, 30, y);
-          y += 18;
+          ctx.fillText(l, 50, y);
+          y += 30;
         }
       }
     };
 
-    const avatarSize = 100;
+    const avatarSize = 180;
     const ax = (cw - avatarSize) / 2;
-    const ay = 40;
+    const ay = 50;
 
     const drawFallbackAvatar = () => {
       ctx.fillStyle = "#e8e0d8";
@@ -428,7 +439,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
       ctx.arc(ax + avatarSize / 2, ay + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = "#1a1a2e";
-      ctx.font = "bold 36px Georgia, serif";
+      ctx.font = "bold 64px Georgia, serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       const initials = (artist.name || "?").split(" ").map(n => n[0]).join("");
@@ -445,7 +456,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
     const posterMat = new THREE.MeshStandardMaterial({ map: posterTexture, roughness: 0.4 });
     const posterMesh = new THREE.Mesh(posterGeo, posterMat);
     const pos = computeSlotPosition(wallId);
-    posterMesh.position.set(pos.x, PLAYER_HEIGHT + 0.3, pos.z);
+    posterMesh.position.set(pos.x, WALL_HEIGHT / 2, pos.z);
     posterMesh.rotation.y = pos.rotY;
     posterMesh.translateZ(0.06);
     scene.add(posterMesh);
@@ -459,8 +470,8 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
         ctx.fillStyle = "#faf8f5";
         ctx.fillRect(0, 0, cw, ch);
         ctx.strokeStyle = "#d4a854";
-        ctx.lineWidth = 3;
-        ctx.strokeRect(12, 12, cw - 24, ch - 24);
+        ctx.lineWidth = 6;
+        ctx.strokeRect(16, 16, cw - 32, ch - 32);
 
         ctx.save();
         ctx.beginPath();
@@ -470,7 +481,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
         ctx.restore();
 
         ctx.strokeStyle = "#d4a854";
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.arc(ax + avatarSize / 2, ay + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
         ctx.stroke();
