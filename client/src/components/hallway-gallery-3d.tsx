@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import * as THREE from "three";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -261,7 +261,7 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
     }
   }, [selectedArtwork, isInCart, addItem, toast]);
 
-  const { rooms: roomInfos, hallwayLen, maxRoomD } = computeAllRooms(artistRooms);
+  const { rooms: roomInfos, hallwayLen, maxRoomD } = useMemo(() => computeAllRooms(artistRooms), [artistRooms]);
   const totalW = HALLWAY_W + maxRoomD * 2;
   const totalD = hallwayLen;
 
