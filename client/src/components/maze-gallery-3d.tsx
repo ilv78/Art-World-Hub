@@ -330,44 +330,95 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
     });
 
     if (whiteRoom) {
-      const benchColor = 0x2c1a0e;
-      const benchMat = new THREE.MeshStandardMaterial({ color: benchColor, roughness: 0.6 });
+      const sofaGreen = new THREE.MeshStandardMaterial({ color: 0x1a3a2a, roughness: 0.85 });
+      const sofaLegMat = new THREE.MeshStandardMaterial({ color: 0x2c1a0e, roughness: 0.5 });
+      const pillowColors = [
+        new THREE.MeshStandardMaterial({ color: 0x8b1a1a, roughness: 0.9 }),
+        new THREE.MeshStandardMaterial({ color: 0xc9a84c, roughness: 0.9 }),
+        new THREE.MeshStandardMaterial({ color: 0x4a2040, roughness: 0.9 }),
+      ];
       const roomCenterX = layout.width * CELL_SIZE / 2;
       const roomCenterZ = layout.height * CELL_SIZE / 2;
-      const benchLength = 1.6;
-      const benchDepth = 0.4;
-      const benchSeatH = 0.06;
-      const benchLegH = 0.42;
-      const benchLegW = 0.06;
+      const sofaLength = 1.8;
+      const sofaDepth = 0.55;
+      const seatH = 0.12;
+      const legH = 0.12;
+      const backH = 0.35;
+      const backThick = 0.1;
+      const armW = 0.1;
+      const armH = 0.22;
 
-      const createBench = (bx: number, bz: number, rotY: number) => {
-        const benchGroup = new THREE.Group();
+      const createSofa = (bx: number, bz: number, rotY: number, pillowIdx: number) => {
+        const sofaGroup = new THREE.Group();
+        const seatTop = legH + seatH;
 
         const seat = new THREE.Mesh(
-          new THREE.BoxGeometry(benchLength, benchSeatH, benchDepth),
-          benchMat
+          new THREE.BoxGeometry(sofaLength, seatH, sofaDepth),
+          sofaGreen
         );
-        seat.position.set(0, benchLegH + benchSeatH / 2, 0);
+        seat.position.set(0, legH + seatH / 2, 0);
         seat.castShadow = true;
-        benchGroup.add(seat);
+        sofaGroup.add(seat);
 
-        const legGeo = new THREE.BoxGeometry(benchLegW, benchLegH, benchDepth - 0.04);
-        const offsets = [-(benchLength / 2 - 0.08), (benchLength / 2 - 0.08)];
-        for (const ox of offsets) {
-          const leg = new THREE.Mesh(legGeo, benchMat);
-          leg.position.set(ox, benchLegH / 2, 0);
-          leg.castShadow = true;
-          benchGroup.add(leg);
+        const back = new THREE.Mesh(
+          new THREE.BoxGeometry(sofaLength, backH, backThick),
+          sofaGreen
+        );
+        back.position.set(0, seatTop + backH / 2, -sofaDepth / 2 + backThick / 2);
+        back.castShadow = true;
+        sofaGroup.add(back);
+
+        const armGeo = new THREE.BoxGeometry(armW, armH, sofaDepth);
+        const leftArm = new THREE.Mesh(armGeo, sofaGreen);
+        leftArm.position.set(-sofaLength / 2 + armW / 2, seatTop + armH / 2, 0);
+        leftArm.castShadow = true;
+        sofaGroup.add(leftArm);
+
+        const rightArm = new THREE.Mesh(armGeo, sofaGreen);
+        rightArm.position.set(sofaLength / 2 - armW / 2, seatTop + armH / 2, 0);
+        rightArm.castShadow = true;
+        sofaGroup.add(rightArm);
+
+        const legGeo = new THREE.BoxGeometry(0.06, legH, 0.06);
+        const legPositions = [
+          [-sofaLength / 2 + 0.08, legH / 2, -sofaDepth / 2 + 0.08],
+          [sofaLength / 2 - 0.08, legH / 2, -sofaDepth / 2 + 0.08],
+          [-sofaLength / 2 + 0.08, legH / 2, sofaDepth / 2 - 0.08],
+          [sofaLength / 2 - 0.08, legH / 2, sofaDepth / 2 - 0.08],
+        ];
+        for (const lp of legPositions) {
+          const leg = new THREE.Mesh(legGeo, sofaLegMat);
+          leg.position.set(lp[0], lp[1], lp[2]);
+          sofaGroup.add(leg);
         }
 
-        benchGroup.position.set(bx, 0, bz);
-        benchGroup.rotation.y = rotY;
-        scene.add(benchGroup);
+        const pillowW = 0.28;
+        const pillowH = 0.22;
+        const pillowD = 0.08;
+        const pillowOffsets = [-sofaLength / 3, 0, sofaLength / 3];
+        for (let p = 0; p < 3; p++) {
+          const pillow = new THREE.Mesh(
+            new THREE.BoxGeometry(pillowW, pillowH, pillowD),
+            pillowColors[(pillowIdx + p) % pillowColors.length]
+          );
+          pillow.position.set(
+            pillowOffsets[p],
+            seatTop + pillowH / 2 + 0.01,
+            -sofaDepth / 2 + backThick + pillowD / 2 + 0.02
+          );
+          pillow.rotation.x = 0.2;
+          pillow.castShadow = true;
+          sofaGroup.add(pillow);
+        }
+
+        sofaGroup.position.set(bx, 0, bz);
+        sofaGroup.rotation.y = rotY;
+        scene.add(sofaGroup);
       };
 
-      createBench(roomCenterX, roomCenterZ + roomCenterZ * 0.45, Math.PI);
-      createBench(roomCenterX + roomCenterX * 0.45, roomCenterZ, Math.PI / 2);
-      createBench(roomCenterX - roomCenterX * 0.45, roomCenterZ, -Math.PI / 2);
+      createSofa(roomCenterX, roomCenterZ + roomCenterZ * 0.45, Math.PI, 0);
+      createSofa(roomCenterX + roomCenterX * 0.45, roomCenterZ, Math.PI / 2, 1);
+      createSofa(roomCenterX - roomCenterX * 0.45, roomCenterZ, -Math.PI / 2, 2);
     }
   }, [layout, whiteRoom, CELL_SIZE]);
 
