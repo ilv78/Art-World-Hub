@@ -9,7 +9,41 @@ import https from "https";
 import http from "http";
 import { Resend } from "resend";
 
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+// Resend connector integration - credentials fetched dynamically
+async function getResendClient(): Promise<{ client: Resend; fromEmail: string } | null> {
+  try {
+    const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
+    const xReplitToken = process.env.REPL_IDENTITY
+      ? "repl " + process.env.REPL_IDENTITY
+      : process.env.WEB_REPL_RENEWAL
+        ? "depl " + process.env.WEB_REPL_RENEWAL
+        : null;
+
+    if (!xReplitToken || !hostname) return null;
+
+    const res = await fetch(
+      "https://" + hostname + "/api/v2/connection?include_secrets=true&connector_names=resend",
+      {
+        headers: {
+          Accept: "application/json",
+          X_REPLIT_TOKEN: xReplitToken,
+        },
+      },
+    );
+    const data = await res.json();
+    const connectionSettings = data.items?.[0];
+
+    if (!connectionSettings?.settings?.api_key) return null;
+
+    return {
+      client: new Resend(connectionSettings.settings.api_key),
+      fromEmail: connectionSettings.settings.from_email || "ArtVerse <onboarding@resend.dev>",
+    };
+  } catch (e) {
+    console.error("Failed to get Resend client:", e);
+    return null;
+  }
+}
 
 async function sendOrderNotificationEmail(
   artist: Artist,
@@ -17,7 +51,13 @@ async function sendOrderNotificationEmail(
   order: Order,
   orderData: InsertOrder,
 ) {
-  if (!resend || !artist.email) return;
+  if (!artist.email) return;
+
+  const resendClient = await getResendClient();
+  if (!resendClient) {
+    console.log("Resend not configured, skipping email notification");
+    return;
+  }
 
   const subject = `New Order: "${artwork.title}" has been purchased`;
   const html = `
@@ -53,8 +93,8 @@ async function sendOrderNotificationEmail(
     </div>
   `;
 
-  await resend.emails.send({
-    from: "ArtVerse <onboarding@resend.dev>",
+  await resendClient.client.emails.send({
+    from: resendClient.fromEmail,
     to: artist.email,
     subject,
     html,
