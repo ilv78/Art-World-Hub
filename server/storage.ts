@@ -388,23 +388,21 @@ function generateWhiteRoomLayout(artworkCount: number): MazeLayout {
   const getCell = (cx: number, cz: number) => cells.find(c => c.x === cx && c.z === cz)!;
 
   const orderedSlots: { x: number; z: number; wall: string }[] = [];
+  const doorCenterX = Math.floor(roomWidth / 2);
 
-  for (let z = 1; z < roomHeight - 1; z++) {
-    orderedSlots.push({ x: 0, z, wall: "west" });
-  }
   for (let x = 1; x < roomWidth - 1; x++) {
     orderedSlots.push({ x, z: roomHeight - 1, wall: "north" });
   }
   for (let z = roomHeight - 2; z >= 1; z--) {
     orderedSlots.push({ x: roomWidth - 1, z, wall: "east" });
   }
-  const doorCenterX = Math.floor(roomWidth / 2);
   for (let x = roomWidth - 2; x >= 1; x--) {
     if (x === doorCenterX) continue;
     orderedSlots.push({ x, z: 0, wall: "south" });
   }
-
-  orderedSlots.reverse();
+  for (let z = 1; z < roomHeight - 1; z++) {
+    orderedSlots.push({ x: 0, z, wall: "west" });
+  }
 
   for (let i = 0; i < Math.min(totalSlots, orderedSlots.length); i++) {
     const slot = orderedSlots[i];
