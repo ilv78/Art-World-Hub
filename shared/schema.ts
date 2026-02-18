@@ -132,6 +132,17 @@ export const orders = pgTable("orders", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const ORDER_STATUSES = ["pending", "communicating", "sending", "closed", "canceled"] as const;
+export type OrderStatus = typeof ORDER_STATUSES[number];
+
+export const ORDER_TRANSITIONS: Record<string, string[]> = {
+  pending: ["communicating", "canceled"],
+  communicating: ["sending", "canceled"],
+  sending: ["closed", "canceled"],
+  closed: ["canceled"],
+  canceled: [],
+};
+
 export const insertOrderSchema = createInsertSchema(orders).omit({ id: true, createdAt: true });
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 export type Order = typeof orders.$inferSelect;

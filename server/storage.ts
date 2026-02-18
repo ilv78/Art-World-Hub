@@ -45,7 +45,9 @@ export interface IStorage {
   // Orders
   getOrders(): Promise<Order[]>;
   getOrdersByArtist(artistId: string): Promise<OrderWithArtwork[]>;
+  getOrder(id: string): Promise<Order | undefined>;
   createOrder(order: InsertOrder): Promise<Order>;
+  updateOrderStatus(id: string, status: string): Promise<Order | undefined>;
   
   // Exhibitions
   getExhibitions(): Promise<Exhibition[]>;
@@ -221,8 +223,18 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
+  async getOrder(id: string): Promise<Order | undefined> {
+    const [order] = await db.select().from(orders).where(eq(orders.id, id));
+    return order;
+  }
+
   async createOrder(insertOrder: InsertOrder): Promise<Order> {
     const [order] = await db.insert(orders).values(insertOrder).returning();
+    return order;
+  }
+
+  async updateOrderStatus(id: string, status: string): Promise<Order | undefined> {
+    const [order] = await db.update(orders).set({ status }).where(eq(orders.id, id)).returning();
     return order;
   }
 

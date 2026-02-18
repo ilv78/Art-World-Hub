@@ -125,6 +125,11 @@ ArtVerse is an immersive art platform featuring a virtual 3D-like gallery, art s
 ### Orders
 - `GET /api/orders` - List all orders
 - `POST /api/orders` - Create new order
+- `GET /api/artists/:id/orders` - Get artist's order registry with artwork details
+- `PATCH /api/orders/:id/status` - Update order status (authenticated, artist-owned only)
+  - Flow: pending → communicating → sending → closed
+  - Any status (except canceled) can transition to canceled
+  - Statuses: pending, communicating, sending, closed, canceled
 
 ### Exhibitions
 - `GET /api/exhibitions` - List all exhibitions

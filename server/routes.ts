@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertArtworkSchema, insertArtistSchema, insertBidSchema, insertOrderSchema, insertBlogPostSchema } from "@shared/schema";
+import { insertArtworkSchema, insertArtistSchema, insertBidSchema, insertOrderSchema, insertBlogPostSchema, ORDER_TRANSITIONS, ORDER_STATUSES } from "@shared/schema";
 import type { Artist, ArtworkWithArtist, Order, InsertOrder } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
@@ -412,6 +412,44 @@ export async function registerRoutes(
         return res.status(400).json({ error: error.errors[0].message });
       }
       res.status(500).json({ error: "Failed to create order" });
+    }
+  });
+
+  app.patch("/api/orders/:id/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const artist = await storage.getArtistByUserId(userId);
+      if (!artist) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+
+      const status = req.body.status as string;
+      if (!status || !(ORDER_STATUSES as readonly string[]).includes(status)) {
+        return res.status(400).json({ error: "Invalid status" });
+      }
+
+      const orderId = req.params.id as string;
+      const order = await storage.getOrder(orderId);
+      if (!order) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+
+      const artwork = await storage.getArtwork(order.artworkId);
+      if (!artwork || artwork.artist.id !== artist.id) {
+        return res.status(403).json({ error: "Not authorized to update this order" });
+      }
+
+      const allowedTransitions = ORDER_TRANSITIONS[order.status] || [];
+      if (!allowedTransitions.includes(status)) {
+        return res.status(400).json({
+          error: `Cannot change status from "${order.status}" to "${status}"`,
+        });
+      }
+
+      const updated = await storage.updateOrderStatus(orderId, status);
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update order status" });
     }
   });
 

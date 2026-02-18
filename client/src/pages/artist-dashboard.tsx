@@ -40,7 +40,8 @@ import {
 } from "lucide-react";
 import { SiInstagram, SiX, SiFacebook, SiYoutube, SiTiktok, SiLinkedin, SiBehance, SiDribbble, SiDeviantart, SiPinterest } from "react-icons/si";
 import type { Artist, ArtworkWithArtist, BlogPost, InsertArtwork, InsertBlogPost, OrderWithArtwork } from "@shared/schema";
-import { ShoppingBag, Package, Mail } from "lucide-react";
+import { ORDER_STATUSES, ORDER_TRANSITIONS } from "@shared/schema";
+import { ShoppingBag, Package, Mail, Search, Filter, ChevronRight, Ban, ArrowRight } from "lucide-react";
 
 const socialPlatformsList = [
   { key: "website", label: "Website", icon: Globe, placeholder: "https://yourwebsite.com" },
@@ -127,6 +128,30 @@ export default function ArtistDashboard() {
   const { data: artistOrders, isLoading: ordersLoading } = useQuery<OrderWithArtwork[]>({
     queryKey: ["/api/artists", selectedArtistId, "orders"],
     enabled: !!selectedArtistId,
+  });
+
+  const [orderStatusFilter, setOrderStatusFilter] = useState<string>("all");
+  const [orderBuyerSearch, setOrderBuyerSearch] = useState("");
+
+  const filteredOrders = (artistOrders || []).filter((order) => {
+    const matchesStatus = orderStatusFilter === "all" || order.status === orderStatusFilter;
+    const matchesBuyer = !orderBuyerSearch || 
+      order.buyerName.toLowerCase().includes(orderBuyerSearch.toLowerCase()) ||
+      order.buyerEmail.toLowerCase().includes(orderBuyerSearch.toLowerCase());
+    return matchesStatus && matchesBuyer;
+  });
+
+  const updateOrderStatusMutation = useMutation({
+    mutationFn: async ({ orderId, status }: { orderId: string; status: string }) => {
+      return apiRequest("PATCH", `/api/orders/${orderId}/status`, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/artists", selectedArtistId, "orders"] });
+      toast({ title: "Order status updated" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to update status", description: error.message, variant: "destructive" });
+    },
   });
 
   useEffect(() => {
@@ -882,11 +907,46 @@ export default function ArtistDashboard() {
         </TabsContent>
 
         <TabsContent value="orders" className="space-y-4">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
             <h2 className="font-semibold text-lg">Order Register</h2>
             <Badge variant="secondary" data-testid="text-order-count">
-              {artistOrders?.length || 0} orders
+              {filteredOrders.length} of {artistOrders?.length || 0} orders
             </Badge>
+          </div>
+
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by buyer name or email..."
+                value={orderBuyerSearch}
+                onChange={(e) => setOrderBuyerSearch(e.target.value)}
+                className="pl-9"
+                data-testid="input-order-search"
+              />
+            </div>
+            <div className="flex items-center gap-1 flex-wrap">
+              <Button
+                variant={orderStatusFilter === "all" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setOrderStatusFilter("all")}
+                data-testid="button-filter-all"
+              >
+                All
+              </Button>
+              {ORDER_STATUSES.map((s) => (
+                <Button
+                  key={s}
+                  variant={orderStatusFilter === s ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setOrderStatusFilter(s)}
+                  className="capitalize"
+                  data-testid={`button-filter-${s}`}
+                >
+                  {s}
+                </Button>
+              ))}
+            </div>
           </div>
 
           {ordersLoading ? (
@@ -899,66 +959,119 @@ export default function ArtistDashboard() {
                 </Card>
               ))}
             </div>
-          ) : artistOrders && artistOrders.length > 0 ? (
+          ) : filteredOrders.length > 0 ? (
             <div className="space-y-3">
-              {artistOrders.map((order) => (
-                <Card key={order.id} data-testid={`card-order-${order.id}`}>
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-4">
-                      <div className="w-16 h-16 rounded-md overflow-hidden shrink-0">
-                        <img
-                          src={order.artwork.imageUrl}
-                          alt={order.artwork.title}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0 space-y-1">
-                        <div className="flex items-start justify-between gap-4 flex-wrap">
-                          <div>
-                            <h3 className="font-serif font-semibold" data-testid={`text-order-artwork-${order.id}`}>{order.artwork.title}</h3>
-                            <p className="text-sm text-muted-foreground">{order.artwork.medium}</p>
+              {filteredOrders.map((order) => {
+                const transitions = ORDER_TRANSITIONS[order.status] || [];
+                const nextStep = transitions.find((t) => t !== "canceled");
+                const canCancel = transitions.includes("canceled");
+
+                return (
+                  <Card key={order.id} data-testid={`card-order-${order.id}`}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-4">
+                        <div className="w-16 h-16 rounded-md overflow-hidden shrink-0">
+                          <img
+                            src={order.artwork.imageUrl}
+                            alt={order.artwork.title}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0 space-y-2">
+                          <div className="flex items-start justify-between gap-4 flex-wrap">
+                            <div>
+                              <h3 className="font-serif font-semibold" data-testid={`text-order-artwork-${order.id}`}>{order.artwork.title}</h3>
+                              <p className="text-sm text-muted-foreground">{order.artwork.medium}</p>
+                            </div>
+                            <div className="text-right space-y-1">
+                              <p className="font-bold text-primary" data-testid={`text-order-price-${order.id}`}>
+                                ${parseFloat(order.totalAmount).toLocaleString()}
+                              </p>
+                              <Badge
+                                variant={
+                                  order.status === "closed" ? "default" :
+                                  order.status === "canceled" ? "destructive" :
+                                  order.status === "pending" ? "secondary" : "outline"
+                                }
+                                className="capitalize"
+                                data-testid={`badge-order-status-${order.id}`}
+                              >
+                                {order.status}
+                              </Badge>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <p className="font-bold text-primary" data-testid={`text-order-price-${order.id}`}>
-                              ${parseFloat(order.totalAmount).toLocaleString()}
+                          <div className="flex items-center gap-4 flex-wrap text-sm text-muted-foreground">
+                            <span data-testid={`text-order-buyer-${order.id}`}>
+                              <User className="h-3 w-3 inline mr-1" />
+                              {order.buyerName}
+                            </span>
+                            <span data-testid={`text-order-email-${order.id}`}>
+                              <Mail className="h-3 w-3 inline mr-1" />
+                              {order.buyerEmail}
+                            </span>
+                            <span>
+                              <Package className="h-3 w-3 inline mr-1" />
+                              {order.shippingAddress}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between gap-4 flex-wrap pt-1">
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(order.createdAt).toLocaleDateString("en-US", {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
                             </p>
-                            <Badge
-                              variant={order.status === "completed" ? "default" : order.status === "pending" ? "secondary" : "outline"}
-                              data-testid={`badge-order-status-${order.id}`}
-                            >
-                              {order.status}
-                            </Badge>
+                            {transitions.length > 0 && (
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {nextStep && (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => updateOrderStatusMutation.mutate({ orderId: order.id, status: nextStep })}
+                                    disabled={updateOrderStatusMutation.isPending}
+                                    data-testid={`button-order-next-${order.id}`}
+                                  >
+                                    <ArrowRight className="h-3 w-3 mr-1" />
+                                    <span className="capitalize">{nextStep}</span>
+                                  </Button>
+                                )}
+                                {canCancel && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => updateOrderStatusMutation.mutate({ orderId: order.id, status: "canceled" })}
+                                    disabled={updateOrderStatusMutation.isPending}
+                                    data-testid={`button-order-cancel-${order.id}`}
+                                  >
+                                    <Ban className="h-3 w-3 mr-1" />
+                                    Cancel
+                                  </Button>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-4 flex-wrap text-sm text-muted-foreground pt-1">
-                          <span data-testid={`text-order-buyer-${order.id}`}>
-                            <User className="h-3 w-3 inline mr-1" />
-                            {order.buyerName}
-                          </span>
-                          <span data-testid={`text-order-email-${order.id}`}>
-                            <Mail className="h-3 w-3 inline mr-1" />
-                            {order.buyerEmail}
-                          </span>
-                          <span>
-                            <Package className="h-3 w-3 inline mr-1" />
-                            {order.shippingAddress}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(order.createdAt).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
+          ) : artistOrders && artistOrders.length > 0 ? (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <Filter className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="font-serif text-lg font-semibold mb-1">No matching orders</h3>
+                <p className="text-sm text-muted-foreground">
+                  Try adjusting your filters to see more orders.
+                </p>
+                <Button variant="outline" className="mt-4" onClick={() => { setOrderStatusFilter("all"); setOrderBuyerSearch(""); }} data-testid="button-clear-filters">
+                  Clear Filters
+                </Button>
+              </CardContent>
+            </Card>
           ) : (
             <Card>
               <CardContent className="p-12 text-center">
