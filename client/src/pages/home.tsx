@@ -4,17 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowRight, Image, ShoppingBag, Gavel, Sparkles } from "lucide-react";
-import type { ArtworkWithArtist, AuctionWithArtwork } from "@shared/schema";
+import { ArrowRight, Image, ShoppingBag, Sparkles } from "lucide-react";
+import type { ArtworkWithArtist } from "@shared/schema";
 
 export default function Home() {
   const { data: featuredArtworks, isLoading: artworksLoading } = useQuery<ArtworkWithArtist[]>({
     queryKey: ["/api/artworks"],
   });
 
-  const { data: activeAuctions, isLoading: auctionsLoading } = useQuery<AuctionWithArtwork[]>({
-    queryKey: ["/api/auctions"],
-  });
 
   return (
     <div className="min-h-screen">
@@ -93,24 +90,6 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            <Card className="hover-elevate">
-              <CardContent className="pt-6 text-center space-y-4">
-                <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                  <Gavel className="h-7 w-7 text-primary" />
-                </div>
-                <h3 className="font-serif text-xl font-semibold">Live Auctions</h3>
-                <p className="text-sm text-muted-foreground">
-                  Participate in exciting live auctions for exclusive artworks. Bid on rare
-                  pieces and add them to your collection.
-                </p>
-                <Link href="/auctions">
-                  <Button variant="ghost" className="mt-2" data-testid="button-feature-auctions">
-                    Join Auctions
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </section>
@@ -173,75 +152,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Active Auctions */}
-      <section className="py-16 px-6 bg-card/50">
-        <div className="max-w-6xl mx-auto space-y-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="font-serif text-3xl font-bold">Live Auctions</h2>
-              <p className="text-muted-foreground mt-1">Don't miss these exciting opportunities</p>
-            </div>
-            <Link href="/auctions">
-              <Button variant="ghost" data-testid="button-view-all-auctions">
-                View All
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            </Link>
-          </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {auctionsLoading ? (
-              Array.from({ length: 3 }).map((_, i) => (
-                <Card key={i} className="overflow-hidden">
-                  <Skeleton className="aspect-[4/3]" />
-                  <CardContent className="p-4 space-y-2">
-                    <Skeleton className="h-5 w-3/4" />
-                    <Skeleton className="h-4 w-1/2" />
-                    <Skeleton className="h-8 w-full mt-4" />
-                  </CardContent>
-                </Card>
-              ))
-            ) : activeAuctions && activeAuctions.length > 0 ? (
-              activeAuctions.slice(0, 3).map((auction) => (
-                <Link href="/auctions" key={auction.id}>
-                  <Card className="overflow-hidden hover-elevate cursor-pointer group" data-testid={`card-auction-${auction.id}`}>
-                    <div className="aspect-[4/3] overflow-hidden relative">
-                      <img
-                        src={auction.artwork.imageUrl}
-                        alt={auction.artwork.title}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                      <Badge className="absolute top-3 right-3 bg-green-500">
-                        Live
-                      </Badge>
-                    </div>
-                    <CardContent className="p-4 space-y-2">
-                      <h3 className="font-serif font-semibold truncate">{auction.artwork.title}</h3>
-                      <p className="text-sm text-muted-foreground">{auction.artwork.artist.name}</p>
-                      <div className="flex justify-between items-center pt-2">
-                        <div>
-                          <p className="text-xs text-muted-foreground">Current Bid</p>
-                          <p className="font-bold text-primary">
-                            ${parseFloat(auction.currentBid || auction.startingPrice).toLocaleString()}
-                          </p>
-                        </div>
-                        <Button size="sm">
-                          <Gavel className="h-4 w-4 mr-2" />
-                          Bid Now
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))
-            ) : (
-              <div className="col-span-full text-center py-12 text-muted-foreground">
-                No active auctions at the moment
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
 
       {/* CTA Section */}
       <section className="py-20 px-6">
