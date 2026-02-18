@@ -111,6 +111,62 @@ async function sendOrderNotificationEmail(
   });
 }
 
+async function sendBuyerConfirmationEmail(
+  artist: Artist,
+  artwork: ArtworkWithArtist,
+  order: Order,
+  orderData: InsertOrder,
+) {
+  let resendClient: { client: Resend; fromEmail: string };
+  try {
+    resendClient = await getUncachableResendClient();
+  } catch (e) {
+    console.log("Resend not configured, skipping buyer confirmation:", (e as Error).message);
+    return;
+  }
+
+  const subject = `Order Confirmation: "${artwork.title}"`;
+  const html = `
+    <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <h1 style="color: #1a1a2e; border-bottom: 2px solid #F97316; padding-bottom: 10px;">Order Confirmation</h1>
+      <p>Dear ${orderData.buyerName},</p>
+      <p>Thank you for your purchase! Your order has been received and the artist has been notified.</p>
+      
+      <div style="background: #faf8f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h2 style="color: #1a1a2e; margin-top: 0;">Order Summary</h2>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr><td style="padding: 8px 0; color: #666;">Order ID:</td><td style="padding: 8px 0; font-weight: bold;">${order.id}</td></tr>
+          <tr><td style="padding: 8px 0; color: #666;">Artwork:</td><td style="padding: 8px 0; font-weight: bold;">${artwork.title}</td></tr>
+          <tr><td style="padding: 8px 0; color: #666;">Artist:</td><td style="padding: 8px 0;">${artist.name}</td></tr>
+          <tr><td style="padding: 8px 0; color: #666;">Medium:</td><td style="padding: 8px 0;">${artwork.medium}</td></tr>
+          ${artwork.dimensions ? `<tr><td style="padding: 8px 0; color: #666;">Dimensions:</td><td style="padding: 8px 0;">${artwork.dimensions}</td></tr>` : ""}
+          <tr><td style="padding: 8px 0; color: #666;">Total:</td><td style="padding: 8px 0; font-weight: bold; color: #F97316;">$${parseFloat(order.totalAmount).toLocaleString()}</td></tr>
+        </table>
+      </div>
+      
+      <div style="background: #f0f0f0; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h2 style="color: #1a1a2e; margin-top: 0;">Shipping Details</h2>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr><td style="padding: 8px 0; color: #666;">Name:</td><td style="padding: 8px 0; font-weight: bold;">${orderData.buyerName}</td></tr>
+          <tr><td style="padding: 8px 0; color: #666;">Address:</td><td style="padding: 8px 0;">${orderData.shippingAddress}</td></tr>
+        </table>
+      </div>
+      
+      <p style="color: #666; font-size: 14px; margin-top: 30px;">
+        The artist will prepare your artwork for shipping. You will be contacted if any additional information is needed.
+      </p>
+      <p style="color: #999; font-size: 12px;">This is an automated confirmation from ArtVerse.</p>
+    </div>
+  `;
+
+  await resendClient.client.emails.send({
+    from: resendClient.fromEmail,
+    to: orderData.buyerEmail,
+    subject,
+    html,
+  });
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -393,17 +449,20 @@ export async function registerRoutes(
       // Mark artwork as sold
       await storage.updateArtwork(orderData.artworkId, { isForSale: false });
 
-      // Send email notification to the artist
+      // Send email notifications
       try {
         const artwork = await storage.getArtwork(orderData.artworkId);
         if (artwork) {
           const artist = await storage.getArtist(artwork.artist.id);
-          if (artist?.email) {
-            await sendOrderNotificationEmail(artist, artwork, order, orderData);
+          if (artist) {
+            await sendBuyerConfirmationEmail(artist, artwork, order, orderData);
+            if (artist.email) {
+              await sendOrderNotificationEmail(artist, artwork, order, orderData);
+            }
           }
         }
       } catch (emailError) {
-        console.error("Failed to send order notification email:", emailError);
+        console.error("Failed to send order emails:", emailError);
       }
       
       res.status(201).json(order);
