@@ -95,7 +95,7 @@ export function ArtworkCard({ artwork, onViewDetails, showAddToCart = true }: Ar
               {artwork.medium}
             </Badge>
             <span className="font-semibold text-primary" data-testid={`text-price-${artwork.id}`}>
-              ${parseFloat(artwork.price).toLocaleString()}
+              {parseInt(artwork.price).toLocaleString()}
             </span>
           </div>
         </div>

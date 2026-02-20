@@ -1160,7 +1160,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
             <div className="pt-2 border-t space-y-2">
               <div>
                 <p className="text-lg font-bold text-primary">
-                  ${parseFloat(selectedArtwork.price).toLocaleString()}
+                  {parseInt(selectedArtwork.price).toLocaleString()}
                 </p>
                 {selectedArtwork.dimensions && (
                   <p className="text-xs text-muted-foreground">{selectedArtwork.dimensions}</p>

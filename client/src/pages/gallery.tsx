@@ -321,7 +321,7 @@ export default function Gallery() {
                         <div className="flex items-center justify-between gap-2 mb-4">
                           <span className="text-sm text-muted-foreground">Price</span>
                           <span className="text-2xl font-bold text-primary">
-                            ${parseFloat(currentArtwork.price).toLocaleString()}
+                            {parseInt(currentArtwork.price).toLocaleString()}
                           </span>
                         </div>
                         {currentArtwork.isForSale ? (

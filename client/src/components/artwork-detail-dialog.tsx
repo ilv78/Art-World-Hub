@@ -126,7 +126,7 @@ export function ArtworkDetailDialog({
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Price</span>
                 <span className="text-2xl font-bold text-primary" data-testid="text-detail-price">
-                  ${parseFloat(artwork.price).toLocaleString()}
+                  {parseInt(artwork.price).toLocaleString()}
                 </span>
               </div>
 

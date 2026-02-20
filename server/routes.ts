@@ -83,7 +83,7 @@ async function sendOrderNotificationEmail(
           <tr><td style="padding: 8px 0; color: #666;">Artwork:</td><td style="padding: 8px 0; font-weight: bold;">${artwork.title}</td></tr>
           <tr><td style="padding: 8px 0; color: #666;">Medium:</td><td style="padding: 8px 0;">${artwork.medium}</td></tr>
           ${artwork.dimensions ? `<tr><td style="padding: 8px 0; color: #666;">Dimensions:</td><td style="padding: 8px 0;">${artwork.dimensions}</td></tr>` : ""}
-          <tr><td style="padding: 8px 0; color: #666;">Price:</td><td style="padding: 8px 0; font-weight: bold; color: #F97316;">$${parseFloat(order.totalAmount).toLocaleString()}</td></tr>
+          <tr><td style="padding: 8px 0; color: #666;">Price:</td><td style="padding: 8px 0; font-weight: bold; color: #F97316;">${parseInt(order.totalAmount).toLocaleString()}</td></tr>
         </table>
       </div>
       
@@ -140,7 +140,7 @@ async function sendBuyerConfirmationEmail(
           <tr><td style="padding: 8px 0; color: #666;">Artist:</td><td style="padding: 8px 0;">${artist.name}</td></tr>
           <tr><td style="padding: 8px 0; color: #666;">Medium:</td><td style="padding: 8px 0;">${artwork.medium}</td></tr>
           ${artwork.dimensions ? `<tr><td style="padding: 8px 0; color: #666;">Dimensions:</td><td style="padding: 8px 0;">${artwork.dimensions}</td></tr>` : ""}
-          <tr><td style="padding: 8px 0; color: #666;">Total:</td><td style="padding: 8px 0; font-weight: bold; color: #F97316;">$${parseFloat(order.totalAmount).toLocaleString()}</td></tr>
+          <tr><td style="padding: 8px 0; color: #666;">Total:</td><td style="padding: 8px 0; font-weight: bold; color: #F97316;">${parseInt(order.totalAmount).toLocaleString()}</td></tr>
         </table>
       </div>
       

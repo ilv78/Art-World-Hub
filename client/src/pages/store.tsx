@@ -248,7 +248,7 @@ export default function Store() {
               </div>
               <div className="text-right flex-shrink-0">
                 <p className="font-bold text-primary text-lg">
-                  ${parseFloat(artwork.price).toLocaleString()}
+                  {parseInt(artwork.price).toLocaleString()}
                 </p>
                 <Badge variant="outline" className="mt-2">
                   {artwork.medium}
