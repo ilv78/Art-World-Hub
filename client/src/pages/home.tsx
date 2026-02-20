@@ -141,9 +141,7 @@ export default function Home() {
                     <CardContent className="p-4 space-y-1">
                       <h3 className="font-serif font-semibold truncate">{artwork.title}</h3>
                       <p className="text-sm text-muted-foreground">{artwork.artist.name}</p>
-                      <p className="font-semibold text-primary">
-                        ${parseFloat(artwork.price).toLocaleString()}
-                      </p>
+                      
                     </CardContent>
                   </Card>
                 </Link>
