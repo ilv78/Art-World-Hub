@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { seedDatabase } from "./seed";
+import { registerMcpRoutes } from "./mcp";
 
 const app = express();
 const httpServer = createServer(app);
@@ -65,6 +66,9 @@ app.use((req, res, next) => {
   await seedDatabase();
   
   await registerRoutes(httpServer, app);
+
+  registerMcpRoutes(app);
+  log("MCP server registered at /mcp", "mcp");
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

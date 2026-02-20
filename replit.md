@@ -143,6 +143,32 @@ ArtVerse is an immersive art platform featuring a virtual 3D-like gallery, art s
 - `PATCH /api/blog/:id` - Update blog post
 - `DELETE /api/blog/:id` - Delete blog post
 
+### MCP Server (Model Context Protocol)
+- **File**: `server/mcp.ts` - Full MCP server implementation
+- **Endpoint**: `POST/GET/DELETE /mcp` - Streamable HTTP transport
+- **Protocol**: MCP 2025-03-26 spec via `@modelcontextprotocol/sdk`
+- **Session Management**: Stateful sessions with per-session McpServer instances
+- **Architecture**: Each MCP session creates its own McpServer + StreamableHTTPServerTransport pair, all reusing the shared DatabaseStorage layer
+- **Resources** (read-only data):
+  - `artverse://artists` - All artists
+  - `artverse://artworks` - All artworks with artist info
+  - `artverse://auctions` - All auctions
+  - `artverse://blog` - Published blog posts
+  - `artverse://exhibitions` - All exhibitions
+  - Template URIs: `artverse://artists/{id}`, `artverse://artists/{id}/artworks`, `artverse://artists/{id}/orders`, `artverse://artists/{id}/blog`, `artverse://artists/{id}/gallery`, `artverse://artworks/{id}`, `artverse://auctions/{id}`, `artverse://auctions/{id}/bids`
+- **Tools** (12 actions):
+  - `create_artwork`, `update_artwork`, `delete_artwork`
+  - `place_bid`, `create_order`, `update_order_status`
+  - `update_artist_profile`
+  - `create_blog_post`, `update_blog_post`, `delete_blog_post`
+  - `search_artworks` (with query, category, medium, artist filters)
+  - `regenerate_gallery`
+- **Prompts** (4 templates):
+  - `artwork_description` - Generate artwork descriptions
+  - `blog_draft` - Draft blog posts for artists
+  - `order_summary` - Summarize artist sales data
+  - `artist_bio` - Write/improve artist biographies
+
 ## Development
 
 ### Commands
