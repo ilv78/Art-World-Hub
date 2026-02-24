@@ -34,7 +34,6 @@ import {
   Palette,
   X,
   LogIn,
-  Link as LinkIcon,
   User,
   Globe
 } from "lucide-react";
@@ -64,7 +63,6 @@ export default function ArtistDashboard() {
   const [blogDialogOpen, setBlogDialogOpen] = useState(false);
   const [editingArtwork, setEditingArtwork] = useState<ArtworkWithArtist | null>(null);
   const [editingBlogPost, setEditingBlogPost] = useState<BlogPost | null>(null);
-  const [linkingArtist, setLinkingArtist] = useState(false);
 
   const [profileForm, setProfileForm] = useState({
     name: "",
@@ -104,12 +102,6 @@ export default function ArtistDashboard() {
     queryKey: ["/api/artists/me"],
     enabled: isAuthenticated,
     retry: false,
-  });
-
-  // Get all artists for linking (when no artist is linked yet)
-  const { data: artists, isLoading: artistsLoading } = useQuery<Artist[]>({
-    queryKey: ["/api/artists"],
-    enabled: isAuthenticated && !myArtist && !myArtistLoading,
   });
 
   const selectedArtist = myArtist;
@@ -181,21 +173,6 @@ export default function ArtistDashboard() {
     },
     onError: () => {
       toast({ title: "Failed to update profile", variant: "destructive" });
-    },
-  });
-
-  // Link artist to user account
-  const linkArtistMutation = useMutation({
-    mutationFn: async (artistId: string) => {
-      return apiRequest("POST", `/api/artists/link/${artistId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/artists/me"] });
-      setLinkingArtist(false);
-      toast({ title: "Artist profile linked successfully!" });
-    },
-    onError: () => {
-      toast({ title: "Failed to link artist profile", variant: "destructive" });
     },
   });
 
@@ -426,62 +403,15 @@ export default function ArtistDashboard() {
     );
   }
 
-  // Logged in but no artist profile linked
+  // Loading artist profile (auto-creates if needed)
   if (!myArtist && !myArtistLoading) {
     return (
-      <div className="p-6 space-y-6">
-        <div className="space-y-1">
-          <h1 className="font-serif text-3xl font-bold">Welcome, {user?.firstName || 'Artist'}!</h1>
-          <p className="text-muted-foreground">
-            Link your account to an artist profile to start managing your portfolio
-          </p>
+      <div className="p-6 flex items-center justify-center min-h-[300px]">
+        <div className="text-center space-y-4">
+          <Palette className="h-12 w-12 text-primary mx-auto animate-pulse" />
+          <h2 className="font-serif text-xl font-semibold">Setting up your artist profile...</h2>
+          <p className="text-muted-foreground text-sm">This will only take a moment</p>
         </div>
-
-        {artistsLoading ? (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-24" />
-            ))}
-          </div>
-        ) : artists?.filter(a => !a.userId).length === 0 ? (
-          <Card className="p-8 text-center">
-            <Palette className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="font-semibold mb-2">No Available Artist Profiles</h3>
-            <p className="text-muted-foreground text-sm mb-4">
-              All artist profiles are already linked to accounts. Contact the gallery to create a new artist profile.
-            </p>
-            <Button variant="outline" asChild>
-              <a href="/api/logout">Log Out</a>
-            </Button>
-          </Card>
-        ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {artists?.filter(a => !a.userId).map((artist) => (
-              <Card 
-                key={artist.id} 
-                className={`hover-elevate cursor-pointer ${linkArtistMutation.isPending ? 'opacity-50 pointer-events-none' : ''}`}
-                onClick={() => linkArtistMutation.mutate(artist.id)}
-                data-testid={`card-link-artist-${artist.id}`}
-              >
-                <CardContent className="p-4 flex items-center gap-4">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={artist.avatarUrl || undefined} />
-                    <AvatarFallback className="font-serif">
-                      {artist.name.split(" ").map((n) => n[0]).join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold truncate">{artist.name}</h3>
-                    {artist.specialization && (
-                      <p className="text-sm text-muted-foreground truncate">{artist.specialization}</p>
-                    )}
-                  </div>
-                  <LinkIcon className="h-4 w-4 text-muted-foreground" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
       </div>
     );
   }

@@ -213,39 +213,27 @@ export async function registerRoutes(
     proxyReq.setTimeout(10000, () => { proxyReq.destroy(); res.status(504).json({ error: "Timeout" }); });
   });
 
-  // Get current artist for logged-in user
+  // Get current artist for logged-in user (auto-creates if none exists)
   app.get("/api/artists/me", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
-      const artist = await storage.getArtistByUserId(userId);
+      const claims = req.user?.claims;
+      let artist = await storage.getArtistByUserId(userId);
       if (!artist) {
-        return res.status(404).json({ error: "No artist profile linked to this account" });
+        const firstName = claims?.first_name || "";
+        const lastName = claims?.last_name || "";
+        const displayName = `${firstName} ${lastName}`.trim() || "New Artist";
+        const email = claims?.email || "";
+        artist = await storage.createArtist({
+          name: displayName,
+          bio: "Welcome to my gallery! I'm a new artist on ArtVerse.",
+          userId,
+          email: email || undefined,
+        });
       }
       res.json(artist);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch artist profile" });
-    }
-  });
-
-  // Link artist to user account
-  app.post("/api/artists/link/:artistId", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user?.claims?.sub;
-      const artistId = req.params.artistId;
-      
-      // Check if artist exists and is not already linked
-      const artist = await storage.getArtist(artistId);
-      if (!artist) {
-        return res.status(404).json({ error: "Artist not found" });
-      }
-      if (artist.userId && artist.userId !== userId) {
-        return res.status(403).json({ error: "Artist is already linked to another account" });
-      }
-      
-      const updatedArtist = await storage.updateArtist(artistId, { userId });
-      res.json(updatedArtist);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to link artist profile" });
     }
   });
 
