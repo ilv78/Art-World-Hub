@@ -62,8 +62,11 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Seed database with initial data
-  await seedDatabase();
+  // Seed database with initial data (disabled by default in production).
+  // Enable explicitly with SEED_DB=true.
+  if (process.env.SEED_DB === "true") {
+    await seedDatabase();
+  }
   
   await registerRoutes(httpServer, app);
 
