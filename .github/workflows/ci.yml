@@ -47,7 +47,7 @@ jobs:
       - name: Type check
         run: npm run check
         env:
-          NODE_OPTIONS: "--max-old-space-size=4096"
+          NODE_OPTIONS: "--max-old-space-size=6144"
 
       - name: Build
         run: npm run build
