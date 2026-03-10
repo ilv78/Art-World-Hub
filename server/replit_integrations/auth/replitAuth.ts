@@ -182,7 +182,7 @@ export async function setupAuth(app: Express) {
 
   app.get("/api/logout", (req, res) => {
     req.logout(() => {
-      // @ts-ignore
+      // @ts-expect-error session.destroy exists at runtime
       req.session?.destroy(() => {
         res.redirect("/");
       });

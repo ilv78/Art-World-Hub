@@ -1,0 +1,38 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to deploy (commit SHA or 'latest')"
+        required: true
+        default: "latest"
+
+jobs:
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: production
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd ~/app
+            docker pull ghcr.io/ilv78/art-world-hub:${{ github.event.inputs.image_tag }}
+            sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=${{ github.event.inputs.image_tag }}/' .env || echo 'IMAGE_TAG=${{ github.event.inputs.image_tag }}' >> .env
+            docker compose up -d --remove-orphans
+            echo "Waiting for app to be healthy..."
+            for i in $(seq 1 30); do
+              if docker compose exec -T app wget -q --spider http://localhost:5000/api/artists 2>/dev/null; then
+                echo "Production is healthy after ${i}s"
+                exit 0
+              fi
+              sleep 1
+            done
+            echo "Health check failed"
+            docker compose logs --tail=50 app
+            exit 1

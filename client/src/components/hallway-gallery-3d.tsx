@@ -522,11 +522,7 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
           const dx = c2.wx - c1.wx;
           const dz = c2.wz - c1.wz;
           const wallLen = Math.sqrt(dx * dx + dz * dz);
-          const angle = Math.atan2(dx, dz);
           addWallMesh(WALL_T, WALL_H, wallLen, cx, WALL_H / 2, cz);
-          const wallMesh = wallBoxesRef.current[wallBoxesRef.current.length - 1];
-          if (Math.abs(angle) > 0.01 && Math.abs(angle - Math.PI) > 0.01) {
-          }
         }
 
         if (cell.walls.south) {
