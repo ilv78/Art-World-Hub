@@ -116,12 +116,12 @@ jobs:
             sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=${{ github.sha }}/' .env || echo 'IMAGE_TAG=${{ github.sha }}' >> .env
             docker compose up -d --remove-orphans
             echo "Waiting for app to be healthy..."
-            for i in $(seq 1 30); do
-              if docker compose exec -T app wget -q --spider http://localhost:5000/api/artists 2>/dev/null; then
+            for i in $(seq 1 60); do
+              if docker compose exec -T app node -e "fetch('http://localhost:5000/api/artists').then(r => { if (!r.ok) process.exit(1) })" 2>/dev/null; then
                 echo "Staging is healthy after ${i}s"
                 exit 0
               fi
-              sleep 1
+              sleep 2
             done
             echo "Health check failed"
             docker compose logs --tail=50 app
