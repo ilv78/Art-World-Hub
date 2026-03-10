@@ -228,20 +228,19 @@ Configure GitHub branch protection on `main` to enforce quality gates.
 
 ### Step 6: Deploy to Staging (Auto on Merge)
 
-**Status: DONE (workflow created, pending VPS setup)**
+**Status: DONE — fully operational at https://staging.artverse.idata.ro**
 
-Added `deploy-staging` job to `.github/workflows/ci.yml`. Runs after `build-image` job, SSHes into VPS as `staging` user, pulls the new image, restarts containers, and runs a health check.
+Staging auto-deploys on every push to `main`. Pipeline: CI passes → Docker image pushed to GHCR → SSH to VPS as `staging` user → pull image → `docker compose up -d` → health check.
 
-**Flow:** CI passes → Docker image pushed to GHCR → SSH to VPS → pull image → `docker compose up -d` → health check `/api/artists`
+First successful deploy: run 22927189022 (CI 3m20s + Docker 1m53s + Deploy 12s = ~5.5min total).
 
-**Remaining VPS setup tasks (manual, one-time):**
-1. Run `deploy/server-setup.sh` on VPS as root
-2. Copy `deploy/staging/docker-compose.yml` to `/home/staging/app/`
-3. Create `/home/staging/app/.env` from `.env.example` with real secrets
-4. Log staging user into GHCR (`docker login ghcr.io`)
-5. Copy Nginx configs to `/etc/nginx/sites-enabled/`
-6. Set up DNS A records for both subdomains
-7. Run `certbot --nginx` for SSL
+**Issues fixed during implementation:**
+- `NODE_ENV=production` in CI caused `npm ci` to skip devDependencies (ESLint not found) → moved to build step only
+- `@ts-expect-error` unused in replitAuth.ts → removed
+- MCP SDK deep type instantiation errors in CI → suppressed with `@ts-expect-error`
+- Docker image tag uppercase (`Art-World-Hub`) → added lowercase step
+- `wget` not in Node slim image → replaced health check with `node -e fetch()`
+- Fresh DB had no tables → added `docker-entrypoint.sh` that runs `drizzle-kit push` on startup
 
 ---
 
@@ -255,9 +254,9 @@ Health checks are embedded in the deploy SSH scripts (both staging and productio
 
 ### Step 8: Deploy to Production (Manual Approval)
 
-**Status: DONE (workflow created, pending VPS setup)**
+**Status: DONE (workflow ready, Nginx swap pending)**
 
-Created `.github/workflows/deploy-production.yml` with `workflow_dispatch` trigger (Option C). You manually trigger it from the GitHub Actions UI, providing the image tag (commit SHA) to deploy.
+Created `.github/workflows/deploy-production.yml` with `workflow_dispatch` trigger (Option C). Docker-compose and .env already deployed to `/home/production/app/`. GHCR login done.
 
 **How to deploy to production:**
 1. Go to GitHub → Actions → "Deploy to Production"
@@ -265,10 +264,13 @@ Created `.github/workflows/deploy-production.yml` with `workflow_dispatch` trigg
 3. Enter the image tag (commit SHA from a successful staging deploy, or `latest`)
 4. The workflow SSHes as `production` user, pulls the image, restarts, and health checks
 
-**Remaining VPS setup tasks (manual, one-time):**
-1. Copy `deploy/production/docker-compose.yml` to `/home/production/app/`
-2. Create `/home/production/app/.env` from `.env.example` with real secrets
-3. Log production user into GHCR (`docker login ghcr.io`)
+**Status: DONE — fully operational at https://artverse.idata.ro**
+
+First production deploy completed. Nginx swapped from port 5000 (old deployment) to port 5002.
+
+**Issues fixed during implementation:**
+- Docker compose project name collision — both envs used `app` project name, causing shared containers. Fixed with `name: artverse-staging` / `name: artverse-production`.
+- DB password contained `/` and `+` which broke URL parsing in `DATABASE_URL`. Regenerated with hex-only passwords.
 
 ---
 
@@ -394,3 +396,5 @@ Developer pushes code
 | 2026-03-10 | Step 4 skipped — branch protection and rulesets both require GitHub Pro or public repo. Revisit when repo goes public or plan is upgraded. |
 | 2026-03-10 | Steps 5-8 done (config/workflow side) — chose VPS at Webdock (artverse.idata.ro), created deploy directory with docker-compose files for staging/production, Nginx configs, server setup script, deploy script. Added `deploy-staging` job to ci.yml, created `deploy-production.yml` (manual dispatch). Set `DEPLOY_HOST` and `DEPLOY_SSH_KEY` secrets. Health checks built into deploy scripts. |
 | 2026-03-10 | VPS setup completed — created staging/production users, SSH keys, Docker group. Ports adjusted to avoid conflicts with existing services (staging: 5003/5435, production: 5002/5434). Copied docker-compose and .env files to both users. Installed Nginx configs, SSL via certbot for staging.artverse.idata.ro. Production Nginx swap pending (existing config on port 5000 kept until new deployment is ready). |
+| 2026-03-10 | First successful end-to-end deploy to staging. Fixed: NODE_ENV in CI, unused @ts-expect-error, MCP SDK type errors, Docker tag casing, wget→node health check, added docker-entrypoint.sh for DB schema push. Staging live at https://staging.artverse.idata.ro |
+| 2026-03-10 | Production deployed. Swapped Nginx from port 5000→5002, added docker-compose project names (`artverse-staging`/`artverse-production`) to avoid container collisions, regenerated DB password (URL-safe hex). Both environments live: staging at https://staging.artverse.idata.ro, production at https://artverse.idata.ro |
