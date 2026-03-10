@@ -29,7 +29,6 @@ jobs:
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
       SESSION_SECRET: ci-secret-not-for-production
-      NODE_ENV: production
 
     steps:
       - name: Checkout
@@ -57,6 +56,8 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          NODE_ENV: production
 
   build-image:
     name: Build & Push Docker Image
