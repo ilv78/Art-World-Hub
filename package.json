@@ -11,7 +11,8 @@
     "check": "tsc",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

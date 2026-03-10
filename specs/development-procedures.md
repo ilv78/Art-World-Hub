@@ -158,22 +158,41 @@ curl -sf https://artverse.idata.ro/api/artists | head -c 200
 
 ### How schema changes work
 
-The database schema is defined in `shared/schema.ts` using Drizzle ORM. The Docker entrypoint runs `drizzle-kit push --force` on every container start, which applies schema changes automatically.
+The database schema is defined in `shared/schema.ts` using Drizzle ORM. Two modes are used:
+
+- **Staging:** Push mode (`drizzle-kit push --force`) — fast, auto-applies on container start. Staging data is disposable.
+- **Production:** Migration mode (`drizzle-kit migrate`) — applies versioned SQL migration files. Safe, predictable, tracked.
+
+The Docker entrypoint (`docker-entrypoint.sh`) checks the `DB_MIGRATION_MODE` env var:
+- `DB_MIGRATION_MODE=migrate` → runs migration files from `migrations/`
+- Unset or any other value → runs push mode
 
 ### Procedure for schema changes
 
 1. Edit `shared/schema.ts`
 2. Run locally: `npm run db:push` to apply to your local DB
 3. Test the changes locally
-4. Push to `main` — staging will auto-apply the schema change on deploy
-5. After verifying staging, deploy to production
+4. Generate a migration file: `npx drizzle-kit generate`
+5. Review the generated SQL in `migrations/`
+6. Commit both the schema change and the migration file
+7. Push to `main` — staging auto-applies via push mode, production will apply the migration file on next deploy
+
+### Migration files
+
+Migration files live in `migrations/` and are tracked in git. Drizzle uses `migrations/meta/_journal.json` to track which migrations have been applied. The `__drizzle_migrations` table in the database records applied migrations.
+
+```bash
+npx drizzle-kit generate     # Generate migration from schema diff
+npm run db:migrate            # Apply migrations locally
+npm run db:push               # Push schema directly (local dev only)
+```
 
 ### Caution
 
-`drizzle-kit push` can drop columns/tables if you remove them from the schema. For production:
+For production (which uses migration mode), the generated SQL is what gets executed — always review it before committing. Watch out for:
 - **Adding** columns/tables is safe
-- **Renaming** columns will drop the old and create the new (data loss)
-- **Removing** columns will drop them (data loss)
+- **Renaming** columns generates DROP + CREATE (data loss) — write a custom migration instead
+- **Removing** columns generates DROP (data loss) — back up first
 
 For destructive changes, back up the production database first:
 
@@ -226,13 +245,34 @@ ssh -i ~/.ssh/artverse-deploy staging@artverse.idata.ro \
 
 ### Rollback production to previous version
 
+**Option 1 — One-click rollback (recommended)**
+
 ```bash
-# Find the previous image tag (from GitHub Actions run history)
+# Rolls back to the version that was running before the current deploy
+gh workflow run rollback-production.yml
+```
+
+**Option 2 — Rollback to a specific version**
+
+```bash
+# Find a known-good image tag
 gh run list --workflow=ci.yml --status=success --limit 5
 
-# Deploy the older tag
-gh workflow run deploy-production.yml -f image_tag=<previous-commit-sha>
+# Roll back to that specific tag
+gh workflow run rollback-production.yml -f image_tag=<commit-sha>
 ```
+
+**Option 3 — Emergency SSH rollback**
+
+```bash
+ssh -i ~/.ssh/artverse-deploy production@artverse.idata.ro
+cd ~/app
+cat .previous_image_tag                     # See the previous tag
+sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=<tag>/' .env
+docker compose up -d --remove-orphans
+```
+
+**Note:** Rollback only affects the app image. If a database migration already ran, you may need to restore from a DB backup for destructive schema changes.
 
 ### Check what's deployed
 
@@ -290,12 +330,30 @@ ssh -i ~/.ssh/artverse-deploy root@artverse.idata.ro          # Root (for Nginx,
 | `DEPLOY_HOST` | `artverse.idata.ro` | VPS hostname |
 | `DEPLOY_SSH_KEY` | ed25519 private key | SSH access for both users |
 | `GITHUB_TOKEN` | Auto-provided | GHCR authentication |
+| `TELEGRAM_BOT_TOKEN` | Bot token from @BotFather | Deploy notifications via Telegram |
+| `TELEGRAM_CHAT_ID` | Numeric chat ID | Telegram chat for notifications |
 
 Database passwords and session secrets are stored in `.env` files on the VPS, not in GitHub Secrets.
 
 ---
 
-## 9. Adding a New npm Package
+## 9. Notifications
+
+Deploy notifications are sent to Telegram automatically. You'll receive a message for:
+
+- **Staging deploys** — after every push to `main` (success or failure)
+- **Production deploys** — after manual deploy (success or failure)
+- **Production rollbacks** — after rollback (success or failure)
+
+Each notification includes the status, image tag, who triggered it, and a link to the GitHub Actions run.
+
+**Setup:** Requires `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` GitHub secrets. If not set, notifications are silently skipped.
+
+**Changing the bot:** If you need to regenerate the bot token (via @BotFather → `/revoke`), update the `TELEGRAM_BOT_TOKEN` GitHub secret with the new token.
+
+---
+
+## 10. Adding a New npm Package
 
 ```bash
 npm install <package>                    # Runtime dependency
@@ -306,7 +364,7 @@ After installing, commit both `package.json` and `package-lock.json`. The CI and
 
 ---
 
-## 10. Useful Commands Reference
+## 11. Useful Commands Reference
 
 | Task | Command |
 |------|---------|
@@ -318,9 +376,13 @@ After installing, commit both `package.json` and `package-lock.json`. The CI and
 | Run single test file | `npx vitest run server/__tests__/storage.test.ts` |
 | Watch tests | `npm run test:watch` |
 | Push DB schema | `npm run db:push` |
+| Generate migration | `npx drizzle-kit generate` |
+| Apply migrations | `npm run db:migrate` |
 | Local Docker | `docker compose up` |
 | Check CI status | `gh run list --limit 5` |
 | Deploy to production | `gh workflow run deploy-production.yml -f image_tag=<sha>` |
+| Rollback production | `gh workflow run rollback-production.yml` |
+| Rollback to specific version | `gh workflow run rollback-production.yml -f image_tag=<sha>` |
 
 ---
 
@@ -329,3 +391,6 @@ After installing, commit both `package.json` and `package-lock.json`. The CI and
 | Date | Change |
 |------|--------|
 | 2026-03-10 | Initial version — documents current CI/CD pipeline with staging and production environments |
+| 2026-03-10 | Updated database section for dual-mode schema management (push for staging, migrate for production) |
+| 2026-03-11 | Added rollback procedures (one-click, specific version, emergency SSH) and commands |
+| 2026-03-11 | Added notifications section (Telegram) and updated GitHub secrets table |

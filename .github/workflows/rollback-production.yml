@@ -1,20 +1,20 @@
-name: Deploy to Production
+name: Rollback Production
 
 on:
   workflow_dispatch:
     inputs:
       image_tag:
-        description: "Image tag to deploy (commit SHA or 'latest')"
-        required: true
-        default: "latest"
+        description: "Image tag to roll back to (leave empty to use previous deploy)"
+        required: false
+        default: ""
 
 jobs:
-  deploy-production:
-    name: Deploy to Production
+  rollback-production:
+    name: Rollback Production
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy via SSH
+      - name: Rollback via SSH
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.DEPLOY_HOST }}
@@ -22,24 +22,40 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             cd ~/app
-            # Save current IMAGE_TAG for rollback
+
+            # Determine which tag to roll back to
+            ROLLBACK_TAG="${{ github.event.inputs.image_tag }}"
+            if [ -z "$ROLLBACK_TAG" ]; then
+              if [ ! -f .previous_image_tag ]; then
+                echo "ERROR: No previous image tag found and none specified"
+                exit 1
+              fi
+              ROLLBACK_TAG=$(cat .previous_image_tag)
+              echo "Rolling back to previous tag: $ROLLBACK_TAG"
+            else
+              echo "Rolling back to specified tag: $ROLLBACK_TAG"
+            fi
+
+            # Save current tag as the new "previous" (so you can undo the rollback)
             CURRENT_TAG=$(grep '^IMAGE_TAG=' .env | cut -d= -f2 || true)
-            if [ -n "$CURRENT_TAG" ] && [ "$CURRENT_TAG" != "${{ github.event.inputs.image_tag }}" ]; then
-              echo "Saving current tag for rollback: $CURRENT_TAG"
+            if [ -n "$CURRENT_TAG" ] && [ "$CURRENT_TAG" != "$ROLLBACK_TAG" ]; then
               echo "$CURRENT_TAG" > .previous_image_tag
             fi
-            docker pull ghcr.io/ilv78/art-world-hub:${{ github.event.inputs.image_tag }}
-            sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=${{ github.event.inputs.image_tag }}/' .env || echo 'IMAGE_TAG=${{ github.event.inputs.image_tag }}' >> .env
+
+            # Pull and deploy the rollback image
+            docker pull ghcr.io/ilv78/art-world-hub:$ROLLBACK_TAG
+            sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$ROLLBACK_TAG/" .env || echo "IMAGE_TAG=$ROLLBACK_TAG" >> .env
             docker compose up -d --remove-orphans
+
             echo "Waiting for app to be healthy..."
             for i in $(seq 1 60); do
               if docker compose exec -T app node -e "fetch('http://localhost:5000/api/artists').then(r => { if (!r.ok) process.exit(1) })" 2>/dev/null; then
-                echo "Production is healthy after ${i}s"
+                echo "Production rolled back successfully after ${i}s"
                 exit 0
               fi
               sleep 2
             done
-            echo "Health check failed"
+            echo "Health check failed after rollback"
             docker compose logs --tail=50 app
             exit 1
 
@@ -48,15 +64,15 @@ jobs:
         run: |
           STATUS="${{ job.status }}"
           if [ "$STATUS" = "success" ]; then
-            EMOJI="✅"
+            EMOJI="⏪"
           else
             EMOJI="❌"
           fi
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
             -d parse_mode="HTML" \
-            -d text="${EMOJI} <b>Production Deploy: ${STATUS}</b>
+            -d text="${EMOJI} <b>Production Rollback: ${STATUS}</b>
 
-          Tag: <code>${{ github.event.inputs.image_tag }}</code>
+          Tag: <code>${{ github.event.inputs.image_tag || 'previous' }}</code>
           By: ${{ github.actor }}
           <a href=\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\">View run</a>"

@@ -276,48 +276,77 @@ First production deploy completed. Nginx swapped from port 5000 (old deployment)
 
 ### Step 9: Database Migration Strategy
 
-**Status: NOT STARTED**
+**Status: DONE**
 
-Currently using Drizzle push mode (`npm run db:push`), which is fine for development but risky for production (it can drop columns/tables).
+Dual-mode database schema management: staging uses push mode (fast, disposable data), production uses migration files (safe, versioned).
 
-**Options:**
-- **Keep push mode** for staging (acceptable — staging data is disposable)
-- **Switch to Drizzle migrations** for production (`drizzle-kit generate` → `drizzle-kit migrate`)
-- Add migration step to deploy workflow, run before app starts
+**What was implemented:**
 
-**Tasks:**
-1. Generate initial migration from current schema: `npx drizzle-kit generate`
-2. Add `npm run db:migrate` script
-3. Add migration step in deploy workflow (runs before container restart)
-4. Test migration path: staging first, then production
+1. Generated initial baseline migration from current schema: `migrations/0000_sturdy_frightful_four.sql` (10 tables, all foreign keys and indexes)
+2. Added `npm run db:migrate` script to `package.json`
+3. Updated `docker-entrypoint.sh` to check `DB_MIGRATION_MODE` env var:
+   - `DB_MIGRATION_MODE=migrate` → runs `npx drizzle-kit migrate` (applies versioned SQL files)
+   - Default (unset or any other value) → runs `npx drizzle-kit push --force` (push mode)
+4. Updated `deploy/production/docker-compose.yml` to set `DB_MIGRATION_MODE=migrate`
+5. Updated `Dockerfile` to copy `migrations/` directory into the production image
+6. Staging docker-compose left unchanged — defaults to push mode (no `DB_MIGRATION_MODE` set)
+
+**Schema change workflow going forward:**
+- Edit `shared/schema.ts`
+- Run `npx drizzle-kit generate` to create a new migration file
+- Commit the migration file alongside the schema change
+- Staging: auto-applies via push mode on deploy
+- Production: applies the versioned migration file on deploy
 
 ---
 
 ### Step 10: Rollback Mechanism
 
-**Status: NOT STARTED**
+**Status: DONE**
 
-If a deploy breaks production, you need a fast recovery path.
+Fast recovery path when a production deploy breaks.
 
-**Approach:**
-- Every Docker image is tagged with its commit SHA (`ghcr.io/repo:abc123`)
-- Rollback = deploy the previous SHA tag
-- Add a manual `workflow_dispatch` workflow that accepts an image tag and deploys it
-- Keep last 5 images in GHCR (prune older ones)
+**What was implemented:**
+
+1. **Rollback state tracking:** `deploy-production.yml` now saves the current `IMAGE_TAG` to `.previous_image_tag` before deploying a new version. This gives a one-click undo.
+2. **Rollback workflow:** Created `.github/workflows/rollback-production.yml` with `workflow_dispatch` trigger:
+   - Leave `image_tag` input empty → automatically rolls back to the previous deploy (reads `.previous_image_tag`)
+   - Specify an `image_tag` → rolls back to that specific version
+   - Saves the current tag before rolling back (so you can undo the rollback too)
+   - Includes full health check after rollback
+3. **Three rollback options:**
+   - **One-click:** GitHub Actions → "Rollback Production" → Run workflow (empty input)
+   - **Specific version:** GitHub Actions → "Rollback Production" → enter a known-good SHA
+   - **Emergency SSH:** `ssh production@artverse.idata.ro`, edit `IMAGE_TAG` in `.env`, `docker compose up -d`
+
+**Limitation:** This rolls back the app image only. Database migrations are not reversed — for destructive schema changes, restore from a DB backup.
 
 ---
 
 ### Step 11: Monitoring & Notifications
 
-**Status: NOT STARTED**
+**Status: DONE**
 
-Know when things break before users tell you.
+Telegram notifications on every deploy, rollback, and failure.
 
-**Options:**
-- **Uptime monitoring:** UptimeRobot (free), Checkly, or simple cron curl
-- **Error tracking:** Sentry (free tier)
-- **Deploy notifications:** GitHub Actions → Slack/Discord webhook
-- **Log aggregation:** Docker logs → Loki/Grafana or simple `docker logs` on VPS
+**What was implemented:**
+
+1. **Telegram bot notifications** added to all three deploy workflows:
+   - `ci.yml` → `deploy-staging` job: notifies on staging deploy success/failure
+   - `deploy-production.yml`: notifies on production deploy success/failure
+   - `rollback-production.yml`: notifies on rollback success/failure
+2. Each notification includes: status emoji, environment, image tag, actor, and link to the GitHub Actions run
+3. Notifications use `if: always()` so they fire even on failure
+4. Gracefully skip if `TELEGRAM_BOT_TOKEN` secret is not set
+
+**GitHub Secrets required:**
+- `TELEGRAM_BOT_TOKEN` — Telegram bot token from @BotFather
+- `TELEGRAM_CHAT_ID` — personal or group chat ID for notifications
+
+**Optional future additions:**
+- UptimeRobot for external uptime monitoring (no code changes needed)
+- Sentry for error tracking
+- CI failure notifications (currently only deploy jobs notify)
 
 ---
 
@@ -328,6 +357,8 @@ Know when things break before users tell you.
 | `GITHUB_TOKEN` | Auto-provided | Build image | GHCR authentication |
 | `DEPLOY_HOST` | Set | Staging + Production deploy | VPS hostname (`artverse.idata.ro`) |
 | `DEPLOY_SSH_KEY` | Set | Staging + Production deploy | Shared ed25519 SSH key |
+| `TELEGRAM_BOT_TOKEN` | Needs setting | Deploy notifications | Telegram bot token from @BotFather |
+| `TELEGRAM_CHAT_ID` | Needs setting | Deploy notifications | Telegram chat ID for notifications |
 
 DB passwords and session secrets are stored in `.env` files on the VPS (not in GitHub Secrets), since the docker-compose files read them locally.
 
@@ -398,3 +429,6 @@ Developer pushes code
 | 2026-03-10 | VPS setup completed — created staging/production users, SSH keys, Docker group. Ports adjusted to avoid conflicts with existing services (staging: 5003/5435, production: 5002/5434). Copied docker-compose and .env files to both users. Installed Nginx configs, SSL via certbot for staging.artverse.idata.ro. Production Nginx swap pending (existing config on port 5000 kept until new deployment is ready). |
 | 2026-03-10 | First successful end-to-end deploy to staging. Fixed: NODE_ENV in CI, unused @ts-expect-error, MCP SDK type errors, Docker tag casing, wget→node health check, added docker-entrypoint.sh for DB schema push. Staging live at https://staging.artverse.idata.ro |
 | 2026-03-10 | Production deployed. Swapped Nginx from port 5000→5002, added docker-compose project names (`artverse-staging`/`artverse-production`) to avoid container collisions, regenerated DB password (URL-safe hex). Both environments live: staging at https://staging.artverse.idata.ro, production at https://artverse.idata.ro |
+| 2026-03-10 | Step 9 done — dual-mode DB schema management. Generated baseline migration (`migrations/0000_sturdy_frightful_four.sql`). Updated `docker-entrypoint.sh` to check `DB_MIGRATION_MODE` env var (push vs migrate). Production docker-compose sets `DB_MIGRATION_MODE=migrate`. Dockerfile copies `migrations/` directory. Added `npm run db:migrate` script. |
+| 2026-03-11 | Step 10 done — rollback mechanism. `deploy-production.yml` saves current tag to `.previous_image_tag` before deploying. Created `rollback-production.yml` workflow (auto-rollback to previous or specified tag). |
+| 2026-03-11 | Step 11 done — Telegram notifications on all deploy/rollback workflows. Requires `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` secrets. |
