@@ -250,6 +250,7 @@ export function createMcpServer(): McpServer {
 
   // ─── TOOLS ───────────────────────────────────────────────────
 
+  // @ts-expect-error MCP SDK type instantiation too deep with complex Zod schemas
   mcp.tool(
     "create_artwork",
     "Create a new artwork listing for an artist",
@@ -405,6 +406,7 @@ export function createMcpServer(): McpServer {
     }
   );
 
+  // @ts-expect-error MCP SDK type instantiation too deep with complex Zod schemas
   mcp.tool(
     "update_order_status",
     "Update an order's status through the workflow (pending → communicating → sending → closed, or cancel)",
@@ -471,6 +473,7 @@ export function createMcpServer(): McpServer {
     }
   );
 
+  // @ts-expect-error MCP SDK type instantiation too deep with complex Zod schemas
   mcp.tool(
     "update_artist_profile",
     "Update an artist's profile information",
