@@ -30,6 +30,9 @@ services:
       DATABASE_URL: postgresql://artverse:${POSTGRES_PASSWORD}@db:5432/artverse_staging
       SESSION_SECRET: ${SESSION_SECRET}
       SEED_DB: ${SEED_DB:-false}
+      OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-https://accounts.google.com}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
     ports:
       - 127.0.0.1:5003:5000
     volumes:
