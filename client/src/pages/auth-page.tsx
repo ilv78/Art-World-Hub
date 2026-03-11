@@ -32,12 +32,6 @@ export default function AuthPage() {
   });
   const googleEnabled = authConfig?.googleEnabled ?? false;
 
-  // Redirect if already authenticated
-  if (!authLoading && isAuthenticated) {
-    navigate("/", { replace: true });
-    return null;
-  }
-
   const signupMutation = useMutation({
     mutationFn: async (email: string) => {
       const res = await fetch("/api/auth/signup", {
@@ -74,6 +68,12 @@ export default function AuthPage() {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     },
   });
+
+  // Redirect if already authenticated
+  if (!authLoading && isAuthenticated) {
+    navigate("/", { replace: true });
+    return null;
+  }
 
   const errorMessages: Record<string, string> = {
     invalid_token: "Invalid verification link.",
