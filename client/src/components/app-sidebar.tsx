@@ -1,5 +1,7 @@
-import { Home, Image, ShoppingBag, Users, LayoutDashboard, BookOpen } from "lucide-react";
+import { Home, Image, ShoppingBag, Users, LayoutDashboard, BookOpen, LogIn, LogOut } from "lucide-react";
 import { useLocation, Link } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
+import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
@@ -48,6 +50,7 @@ const menuItems = [
 
 export function AppSidebar() {
   const [location] = useLocation();
+  const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
 
   return (
     <Sidebar>
@@ -69,8 +72,8 @@ export function AppSidebar() {
             <SidebarMenu>
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton 
-                    asChild 
+                  <SidebarMenuButton
+                    asChild
                     isActive={location === item.url}
                     data-testid={`link-nav-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
                   >
@@ -85,7 +88,29 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-4 border-t border-sidebar-border">
+      <SidebarFooter className="p-4 border-t border-sidebar-border space-y-3">
+        {isAuthenticated && user ? (
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground truncate" title={user.email ?? undefined}>
+              {user.firstName || user.email}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => logout()}
+              disabled={isLoggingOut}
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
+          </div>
+        ) : (
+          <Link href="/auth">
+            <Button variant="outline" size="sm" className="w-full">
+              <LogIn className="w-4 h-4 mr-2" />
+              Sign in
+            </Button>
+          </Link>
+        )}
         <p className="text-xs text-muted-foreground text-center">
           Discover. Collect. Create.
         </p>
