@@ -104,6 +104,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sync docker-compose to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: staging
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          source: deploy/staging/docker-compose.yml
+          target: ~/app/
+          strip_components: 2
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
         with:
