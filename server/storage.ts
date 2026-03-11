@@ -388,7 +388,8 @@ export class DatabaseStorage implements IStorage {
 
 export function generateWhiteRoomLayout(artworkCount: number): MazeLayout {
   const totalSlots = artworkCount > 0 ? artworkCount + 1 : 0;
-  const wallsPerSide = Math.max(1, Math.ceil(totalSlots / 4));
+  // +1 accounts for the door consuming one south wall slot
+  const wallsPerSide = Math.max(1, Math.ceil((totalSlots + 1) / 4));
   const roomWidth = Math.max(3, wallsPerSide + 2);
   const roomHeight = Math.max(3, wallsPerSide + 2);
 
