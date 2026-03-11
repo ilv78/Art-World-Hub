@@ -184,81 +184,54 @@ export async function registerRoutes(
   const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-  function createUploadStorage(subdir: string) {
+  function createUploadMiddleware(subdir: string) {
     const uploadDir = path.join(process.cwd(), "uploads", subdir);
     fs.mkdirSync(uploadDir, { recursive: true });
-    return multer.diskStorage({
+    const storage = multer.diskStorage({
       destination: (_req, _file, cb) => cb(null, uploadDir),
       filename: (_req, file, cb) => {
         const ext = path.extname(file.originalname).toLowerCase();
-        const name = crypto.randomUUID() + ext;
-        cb(null, name);
+        cb(null, crypto.randomUUID() + ext);
+      },
+    });
+    return multer({
+      storage,
+      limits: { fileSize: MAX_FILE_SIZE },
+      fileFilter: (_req, file, cb) => {
+        if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+          cb(null, true);
+        } else {
+          cb(new Error("Only JPEG, PNG, WebP, and GIF images are allowed"));
+        }
       },
     });
   }
 
-  const artworkUpload = multer({
-    storage: createUploadStorage("artworks"),
-    limits: { fileSize: MAX_FILE_SIZE },
-    fileFilter: (_req, file, cb) => {
-      if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-        cb(null, true);
-      } else {
-        cb(new Error("Only JPEG, PNG, WebP, and GIF images are allowed"));
-      }
-    },
-  });
-
-  const blogCoverUpload = multer({
-    storage: createUploadStorage("blog-covers"),
-    limits: { fileSize: MAX_FILE_SIZE },
-    fileFilter: (_req, file, cb) => {
-      if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-        cb(null, true);
-      } else {
-        cb(new Error("Only JPEG, PNG, WebP, and GIF images are allowed"));
-      }
-    },
-  });
+  function createUploadHandler(upload: multer.Multer, subdir: string) {
+    return (req: any, res: any) => {
+      upload.single("image")(req, res, (err: any) => {
+        if (err instanceof multer.MulterError) {
+          if (err.code === "LIMIT_FILE_SIZE") {
+            return res.status(400).json({ error: "File too large. Maximum size is 10MB." });
+          }
+          return res.status(400).json({ error: err.message });
+        }
+        if (err) {
+          return res.status(400).json({ error: err.message });
+        }
+        if (!req.file) {
+          return res.status(400).json({ error: "No image file provided" });
+        }
+        res.json({ imageUrl: `/uploads/${subdir}/${req.file.filename}` });
+      });
+    };
+  }
 
   // Image upload endpoints
-  app.post("/api/upload/artwork", isAuthenticated, (req: any, res) => {
-    artworkUpload.single("image")(req, res, (err: any) => {
-      if (err instanceof multer.MulterError) {
-        if (err.code === "LIMIT_FILE_SIZE") {
-          return res.status(400).json({ error: "File too large. Maximum size is 10MB." });
-        }
-        return res.status(400).json({ error: err.message });
-      }
-      if (err) {
-        return res.status(400).json({ error: err.message });
-      }
-      if (!req.file) {
-        return res.status(400).json({ error: "No image file provided" });
-      }
-      const imageUrl = `/uploads/artworks/${req.file.filename}`;
-      res.json({ imageUrl });
-    });
-  });
-
-  app.post("/api/upload/blog-cover", isAuthenticated, (req: any, res) => {
-    blogCoverUpload.single("image")(req, res, (err: any) => {
-      if (err instanceof multer.MulterError) {
-        if (err.code === "LIMIT_FILE_SIZE") {
-          return res.status(400).json({ error: "File too large. Maximum size is 10MB." });
-        }
-        return res.status(400).json({ error: err.message });
-      }
-      if (err) {
-        return res.status(400).json({ error: err.message });
-      }
-      if (!req.file) {
-        return res.status(400).json({ error: "No image file provided" });
-      }
-      const imageUrl = `/uploads/blog-covers/${req.file.filename}`;
-      res.json({ imageUrl });
-    });
-  });
+  const artworkUpload = createUploadMiddleware("artworks");
+  const blogCoverUpload = createUploadMiddleware("blog-covers");
+  app.post("/api/upload/artwork", isAuthenticated, createUploadHandler(artworkUpload, "artworks"));
+  app.post("/api/upload/blog-cover", isAuthenticated, createUploadHandler(blogCoverUpload, "blog-covers"));
 
   app.get("/api/image-proxy", (req, res) => {
     const imageUrl = req.query.url as string;
