@@ -292,7 +292,7 @@ function Minimap({ artistRooms, placements, hallLeft, hallRight, hallwayLen, pla
         })}
         <g transform={`translate(${ox + playerPosition.x * mapScale}, ${oz + playerPosition.z * mapScale})`}>
           <g transform={`rotate(${-playerPosition.rotation * 180 / Math.PI})`}>
-            <polygon points="0,-4 3,3 0,1.5 -3,3" fill="#F97316" stroke="#fff" strokeWidth={0.8} />
+            <polygon points="0,-4 3,3 0,1.5 -3,3" fill="hsl(var(--primary))" stroke="#fff" strokeWidth={0.8} />
           </g>
         </g>
       </svg>
