@@ -24,11 +24,12 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 
 | # | Title | Priority | Category | Status | Branch | Notes |
 |---|-------|----------|----------|--------|--------|-------|
-| 3 | Store images | high | feature | In Progress | `feature/issue-3-store-images` | Filesystem uploads, local paths in DB |
+| 3 | Store images | high | feature | Done (staging) | `feature/issue-3-store-images` | PR #10, merged, on staging |
 | 4 | Bug hunter | medium | devops | Open | — | Automated bug detection/testing |
 | 5 | Documentor | medium | documentation, devops | Open | — | Documentation tooling |
 | 6 | Email login | medium | enhancement | Open | — | Add email/password auth flow |
 | 7 | Role gallery curator | medium | feature | Open | — | Curator role for gallery management |
+| 11 | Fix Google OAuth login | high | bug | In Progress | `fix/issue-11-google-oauth` | Cookie fix + callback URL + OIDC config |
 
 ## Completed Issues
 

@@ -75,7 +75,7 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: sessionTtl,
     },
@@ -116,22 +116,6 @@ export async function setupAuth(app: Express) {
     console.warn(
       "[auth] OIDC_CLIENT_ID / OIDC_CLIENT_SECRET not set; auth routes will be disabled"
     );
-
-    // Dev-only: fake login so the dashboard is testable without OIDC
-    if (process.env.NODE_ENV === "development") {
-      console.warn("[auth] DEV MODE: auto-login enabled for testing");
-      const devUser = {
-        claims: { sub: "dev-user-1", email: "dev@localhost", given_name: "Dev", family_name: "User" },
-        expires_at: Math.floor(Date.now() / 1000) + 86400,
-      };
-      await upsertUser(devUser.claims);
-      app.use((req, _res, next) => {
-        (req as any).user = devUser;
-        (req as any).isAuthenticated = () => true;
-        next();
-      });
-    }
-
     return;
   }
 
@@ -149,15 +133,22 @@ export async function setupAuth(app: Express) {
 
   const registeredStrategies = new Set<string>();
 
-  const ensureStrategy = (domain: string) => {
-    const strategyName = `oidc:${domain}`;
+  // Build the origin (protocol + host + port) for callback URLs
+  function getOrigin(req: any): string {
+    const proto = process.env.NODE_ENV === "production" ? "https" : req.protocol;
+    const host = req.get("host"); // includes port if non-standard
+    return `${proto}://${host}`;
+  }
+
+  const ensureStrategy = (host: string, origin: string) => {
+    const strategyName = `oidc:${host}`;
     if (!registeredStrategies.has(strategyName)) {
       const strategy = new Strategy(
         {
           name: strategyName,
           config,
           scope: "openid email profile",
-          callbackURL: `https://${domain}/api/callback`,
+          callbackURL: `${origin}/api/callback`,
         },
         verify
       );
@@ -170,13 +161,14 @@ export async function setupAuth(app: Express) {
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
+    const host = req.get("host")!;
     try {
       assertHostAllowed(req.hostname);
     } catch (e) {
       return res.status(400).json({ message: "Invalid host" });
     }
-    ensureStrategy(req.hostname);
-    passport.authenticate(`oidc:${req.hostname}`, {
+    ensureStrategy(host, getOrigin(req));
+    passport.authenticate(`oidc:${host}`, {
       prompt: "consent",
       access_type: "offline",
       scope: ["openid", "email", "profile"],
@@ -184,13 +176,14 @@ export async function setupAuth(app: Express) {
   });
 
   app.get("/api/callback", (req, res, next) => {
+    const host = req.get("host")!;
     try {
       assertHostAllowed(req.hostname);
     } catch (e) {
       return res.status(400).json({ message: "Invalid host" });
     }
-    ensureStrategy(req.hostname);
-    passport.authenticate(`oidc:${req.hostname}`, {
+    ensureStrategy(host, getOrigin(req));
+    passport.authenticate(`oidc:${host}`, {
       successReturnToOrRedirect: "/",
       failureRedirect: "/api/login",
     })(req, res, next);
