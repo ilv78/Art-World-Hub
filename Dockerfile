@@ -22,7 +22,7 @@ COPY --from=build /app/shared ./shared
 COPY --from=build /app/drizzle.config.ts ./
 COPY --from=build /app/migrations ./migrations
 COPY --from=build /app/docker-entrypoint.sh ./
-RUN chmod +x docker-entrypoint.sh
+RUN chmod +x docker-entrypoint.sh && mkdir -p /app/uploads/artworks /app/uploads/blog-covers
 EXPOSE 5000
 ENTRYPOINT ["./docker-entrypoint.sh"]
 CMD ["node", "dist/index.cjs"]

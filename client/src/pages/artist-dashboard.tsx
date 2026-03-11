@@ -22,12 +22,12 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { 
-  Plus, 
-  Image as ImageIcon, 
-  FileText, 
-  Edit, 
-  Trash2, 
+import {
+  Plus,
+  Image as ImageIcon,
+  FileText,
+  Edit,
+  Trash2,
   Eye,
   EyeOff,
   Save,
@@ -35,7 +35,9 @@ import {
   X,
   LogIn,
   User,
-  Globe
+  Globe,
+  Upload,
+  Loader2
 } from "lucide-react";
 import { SiInstagram, SiX, SiFacebook, SiYoutube, SiTiktok, SiLinkedin, SiBehance, SiDribbble, SiDeviantart, SiPinterest } from "react-icons/si";
 import type { Artist, ArtworkWithArtist, BlogPost, InsertArtwork, InsertBlogPost, OrderWithArtwork } from "@shared/schema";
@@ -96,6 +98,38 @@ export default function ArtistDashboard() {
     coverImageUrl: "",
     isPublished: false,
   });
+
+  const [artworkUploading, setArtworkUploading] = useState(false);
+  const [blogCoverUploading, setBlogCoverUploading] = useState(false);
+
+  const handleImageUpload = async (
+    file: File,
+    endpoint: string,
+    onSuccess: (imageUrl: string) => void,
+    setUploading: (v: boolean) => void,
+  ) => {
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      const res = await fetch(endpoint, {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Upload failed");
+      }
+      const data = await res.json();
+      onSuccess(data.imageUrl);
+      toast({ title: "Image uploaded successfully" });
+    } catch (error: any) {
+      toast({ title: error.message || "Failed to upload image", variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   // Get logged-in artist's profile
   const { data: myArtist, isLoading: myArtistLoading, error: myArtistError } = useQuery<Artist>({
@@ -491,14 +525,35 @@ export default function ArtistDashboard() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="imageUrl">Image URL *</Label>
-                    <Input
-                      id="imageUrl"
-                      value={artworkForm.imageUrl}
-                      onChange={(e) => setArtworkForm({ ...artworkForm, imageUrl: e.target.value })}
-                      placeholder="https://..."
-                      data-testid="input-artwork-image"
-                    />
+                    <Label htmlFor="imageUpload">Image *</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="imageUpload"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        disabled={artworkUploading}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            handleImageUpload(
+                              file,
+                              "/api/upload/artwork",
+                              (url) => setArtworkForm({ ...artworkForm, imageUrl: url }),
+                              setArtworkUploading,
+                            );
+                          }
+                        }}
+                        data-testid="input-artwork-image"
+                      />
+                      {artworkUploading && <Loader2 className="h-4 w-4 animate-spin" />}
+                    </div>
+                    {artworkForm.imageUrl && (
+                      <img
+                        src={artworkForm.imageUrl}
+                        alt="Preview"
+                        className="mt-2 rounded-md max-h-40 object-contain border"
+                      />
+                    )}
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
@@ -715,14 +770,35 @@ export default function ArtistDashboard() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="blogCover">Cover Image URL</Label>
-                    <Input
-                      id="blogCover"
-                      value={blogForm.coverImageUrl}
-                      onChange={(e) => setBlogForm({ ...blogForm, coverImageUrl: e.target.value })}
-                      placeholder="https://..."
-                      data-testid="input-blog-cover"
-                    />
+                    <Label htmlFor="blogCoverUpload">Cover Image</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="blogCoverUpload"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        disabled={blogCoverUploading}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            handleImageUpload(
+                              file,
+                              "/api/upload/blog-cover",
+                              (url) => setBlogForm({ ...blogForm, coverImageUrl: url }),
+                              setBlogCoverUploading,
+                            );
+                          }
+                        }}
+                        data-testid="input-blog-cover"
+                      />
+                      {blogCoverUploading && <Loader2 className="h-4 w-4 animate-spin" />}
+                    </div>
+                    {blogForm.coverImageUrl && (
+                      <img
+                        src={blogForm.coverImageUrl}
+                        alt="Cover preview"
+                        className="mt-2 rounded-md max-h-40 object-contain border"
+                      />
+                    )}
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="blogContent">Content *</Label>

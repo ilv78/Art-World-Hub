@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import path from "path";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
@@ -69,6 +70,9 @@ app.use((req, res, next) => {
   }
   
   await registerRoutes(httpServer, app);
+
+  // Serve uploaded images (before MCP and static/vite catch-all)
+  app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
   registerMcpRoutes(app);
   log("MCP server registered at /mcp", "mcp");
