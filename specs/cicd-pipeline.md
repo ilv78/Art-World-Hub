@@ -357,61 +357,203 @@ Telegram notifications on every deploy, rollback, and failure.
 | `GITHUB_TOKEN` | Auto-provided | Build image | GHCR authentication |
 | `DEPLOY_HOST` | Set | Staging + Production deploy | VPS hostname (`artverse.idata.ro`) |
 | `DEPLOY_SSH_KEY` | Set | Staging + Production deploy | Shared ed25519 SSH key |
-| `TELEGRAM_BOT_TOKEN` | Needs setting | Deploy notifications | Telegram bot token from @BotFather |
-| `TELEGRAM_CHAT_ID` | Needs setting | Deploy notifications | Telegram chat ID for notifications |
+| `TELEGRAM_BOT_TOKEN` | Set | Deploy notifications | Telegram bot token from @BotFather |
+| `TELEGRAM_CHAT_ID` | Set | Deploy notifications | Telegram chat ID for notifications |
 
 DB passwords and session secrets are stored in `.env` files on the VPS (not in GitHub Secrets), since the docker-compose files read them locally.
 
 ---
 
-## 5. Final Pipeline Overview
+## 5. Pipeline Diagrams
 
-When fully implemented, the pipeline will look like:
+### 5.1 Development Workflow (end-to-end)
 
 ```
-Developer pushes code
-         │
-         ▼
-    ┌─────────┐
-    │  LINT    │ ── fail → block merge
-    ├─────────┤
-    │  TYPES  │ ── fail → block merge
-    ├─────────┤
-    │  TESTS  │ ── fail → block merge
-    ├─────────┤
-    │  BUILD  │ ── fail → block merge
-    └────┬────┘
-         │ all pass
-         ▼
-    PR mergeable ✓
-         │
-         │ merged to main
-         ▼
-    ┌──────────────┐
-    │ Build Docker  │
-    │ Push to GHCR  │
-    └──────┬───────┘
-           │
-           ▼
-    ┌──────────────┐
-    │   STAGING    │
-    │ Auto-deploy  │
-    │ DB push      │
-    │ Health check │
-    │ Smoke tests  │
-    └──────┬───────┘
-           │ staging verified
-           │
-           │ git tag v1.x.x
-           ▼
-    ┌──────────────┐
-    │  PRODUCTION  │
-    │ Approval gate│
-    │ DB migrate   │
-    │ Deploy       │
-    │ Health check │
-    │ Notify       │
-    └──────────────┘
+ ┌─────────────────────────────────────────────────────────────────┐
+ │                      DEVELOPER WORKSTATION                      │
+ │                                                                 │
+ │   1. Create branch ─── git checkout -b feature/issue-N-name    │
+ │   2. Write code                                                 │
+ │   3. Run checks ────── npm run lint / check / test / build     │
+ │   4. Generate migration (if schema changed)                     │
+ │   5. Commit ────────── git commit (closes #N)                  │
+ │   6. Push ──────────── git push origin feature/...             │
+ └─────────────────────────┬───────────────────────────────────────┘
+                           │
+                           ▼
+ ┌─────────────────────────────────────────────────────────────────┐
+ │                     GITHUB (Pull Request)                       │
+ │                                                                 │
+ │   CI runs on PR branch (lint → types → tests → build)          │
+ │   ✓ Pass → PR is mergeable                                     │
+ │   ✗ Fail → fix and push again                                  │
+ │                                                                 │
+ │   Review → Merge to main                                        │
+ └─────────────────────────┬───────────────────────────────────────┘
+                           │
+                           ▼
+ ┌─────────────────────────────────────────────────────────────────┐
+ │                   AUTOMATIC PIPELINE (on main)                  │
+ │                                                                 │
+ │   CI ──► Docker Build ──► Push to GHCR ──► Deploy to Staging   │
+ │                                              │                  │
+ │                                              ▼                  │
+ │                                      📱 Telegram notification   │
+ └─────────────────────────────────────────────────────────────────┘
+                           │
+                      Developer verifies
+                      staging manually
+                           │
+                           ▼
+ ┌─────────────────────────────────────────────────────────────────┐
+ │                  MANUAL PRODUCTION DEPLOY                       │
+ │                                                                 │
+ │   gh workflow run deploy-production.yml -f image_tag=<sha>      │
+ │                                                                 │
+ │   Save rollback state ──► Pull image ──► Deploy ──► Health chk │
+ │                                                       │        │
+ │                                                       ▼        │
+ │                                               📱 Telegram      │
+ └─────────────────────────────────────────────────────────────────┘
+```
+
+### 5.2 CI/CD Pipeline (ci.yml — triggers on every push)
+
+```
+                        Push to any branch
+                              │
+                              ▼
+               ┌──────────────────────────┐
+               │     CI Job (~3 min)      │
+               │                          │
+               │  ┌────────────────────┐  │
+               │  │  npm run lint      │  │  ← ESLint (0 errors required)
+               │  └────────┬───────────┘  │
+               │           ▼              │
+               │  ┌────────────────────┐  │
+               │  │  npm run check     │  │  ← TypeScript (6GB heap)
+               │  └────────┬───────────┘  │
+               │           ▼              │
+               │  ┌────────────────────┐  │
+               │  │  npm test          │  │  ← Vitest (32 tests)
+               │  └────────┬───────────┘  │
+               │           ▼              │
+               │  ┌────────────────────┐  │
+               │  │  npm run build     │  │  ← Vite + esbuild
+               │  └────────────────────┘  │
+               └──────────┬───────────────┘
+                          │
+                          │ only on main push
+                          ▼
+               ┌──────────────────────────┐
+               │  Docker Job (~2 min)     │
+               │                          │
+               │  Build multi-stage image │
+               │  Push to GHCR:           │
+               │    :latest               │
+               │    :<commit-sha>         │
+               └──────────┬───────────────┘
+                          │
+                          │ needs: docker job
+                          ▼
+               ┌──────────────────────────┐
+               │  Staging Deploy (~30s)   │
+               │                          │
+               │  SSH → staging user      │
+               │  docker pull <sha>       │
+               │  docker compose up -d    │
+               │  Health check (2 min)    │
+               │  📱 Telegram notify      │
+               └──────────────────────────┘
+```
+
+### 5.3 Production Deploy (deploy-production.yml — manual trigger)
+
+```
+  gh workflow run deploy-production.yml -f image_tag=<sha>
+                          │
+                          ▼
+               ┌──────────────────────────┐
+               │  Production Deploy       │
+               │                          │
+               │  SSH → production user   │
+               │  Save current tag ────┐  │
+               │    → .previous_image_tag │
+               │  docker pull <sha>       │
+               │  docker compose up -d    │
+               │  DB migrate (not push)   │
+               │  Health check (2 min)    │
+               │  📱 Telegram notify      │
+               └──────────────────────────┘
+```
+
+### 5.4 Rollback (rollback-production.yml — manual trigger)
+
+```
+  gh workflow run rollback-production.yml [-f image_tag=<sha>]
+                          │
+                   ┌──────┴──────┐
+                   │             │
+              tag empty     tag provided
+                   │             │
+                   ▼             │
+          Read .previous_       │
+          image_tag              │
+                   │             │
+                   └──────┬──────┘
+                          ▼
+               ┌──────────────────────────┐
+               │  Rollback Deploy         │
+               │                          │
+               │  Save current → previous │
+               │  docker pull <old-sha>   │
+               │  docker compose up -d    │
+               │  Health check (2 min)    │
+               │  📱 Telegram notify      │
+               └──────────────────────────┘
+```
+
+### 5.5 Infrastructure Overview
+
+```
+                    ┌─────────────────────┐
+                    │    GitHub (GHCR)     │
+                    │                     │
+                    │  Docker images:     │
+                    │  ghcr.io/ilv78/     │
+                    │  art-world-hub      │
+                    │    :latest          │
+                    │    :<sha>           │
+                    └────────┬────────────┘
+                             │ docker pull
+                    ┌────────┴────────────┐
+                    │                     │
+                    ▼                     ▼
+     ┌──────────────────────┐  ┌──────────────────────┐
+     │  STAGING             │  │  PRODUCTION           │
+     │  staging user        │  │  production user      │
+     │                      │  │                       │
+     │  App    → :5003      │  │  App    → :5002       │
+     │  DB     → :5435      │  │  DB     → :5434       │
+     │                      │  │                       │
+     │  DB mode: push       │  │  DB mode: migrate     │
+     │  Auto-deploy on main │  │  Manual deploy        │
+     └──────────┬───────────┘  └──────────┬────────────┘
+                │                         │
+                └────────┬────────────────┘
+                         │ localhost only
+                         ▼
+              ┌──────────────────────┐
+              │      Nginx           │
+              │                      │
+              │  staging.artverse.   │
+              │  idata.ro → :5003   │
+              │                      │
+              │  artverse.           │
+              │  idata.ro → :5002   │
+              │                      │
+              │  SSL via certbot     │
+              └──────────────────────┘
 ```
 
 ---
@@ -432,3 +574,4 @@ Developer pushes code
 | 2026-03-10 | Step 9 done — dual-mode DB schema management. Generated baseline migration (`migrations/0000_sturdy_frightful_four.sql`). Updated `docker-entrypoint.sh` to check `DB_MIGRATION_MODE` env var (push vs migrate). Production docker-compose sets `DB_MIGRATION_MODE=migrate`. Dockerfile copies `migrations/` directory. Added `npm run db:migrate` script. |
 | 2026-03-11 | Step 10 done — rollback mechanism. `deploy-production.yml` saves current tag to `.previous_image_tag` before deploying. Created `rollback-production.yml` workflow (auto-rollback to previous or specified tag). |
 | 2026-03-11 | Step 11 done — Telegram notifications on all deploy/rollback workflows. Requires `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` secrets. |
+| 2026-03-11 | Replaced old pipeline diagram with 5 comprehensive diagrams: development workflow, CI/CD pipeline, production deploy, rollback, and infrastructure overview. Updated Telegram secrets status to Set. |
