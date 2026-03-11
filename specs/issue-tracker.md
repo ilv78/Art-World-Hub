@@ -29,7 +29,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 5 | Documentor | medium | documentation, devops | Open | — | Documentation tooling |
 | 6 | Email login | medium | enhancement | Open | — | Add email/password auth flow |
 | 7 | Role gallery curator | medium | feature | Open | — | Curator role for gallery management |
-| 11 | Fix Google OAuth login | high | bug | In Progress | `fix/issue-11-google-oauth` | Cookie fix + callback URL + OIDC config |
+| 11 | Fix Google OAuth login | high | bug | Done | `fix/issue-11-google-oauth` | Cookie fix + callback URL + OIDC config, PRs #13 #15 |
 
 ## Completed Issues
 
