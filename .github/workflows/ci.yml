@@ -149,10 +149,12 @@ jobs:
           if [ -z "$TELEGRAM_BOT_TOKEN" ]; then exit 0; fi
           STATUS="${{ job.status }}"
           if [ "$STATUS" = "success" ]; then EMOJI="✅"; else EMOJI="❌"; fi
+          REPO_NAME="${{ github.event.repository.name }}"
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d chat_id="${TELEGRAM_CHAT_ID}" \
             -d parse_mode="HTML" \
-            -d text="${EMOJI} <b>Staging Deploy: ${STATUS}</b>
+            -d text="@racu8_bot
+          ${EMOJI} <b>Staging deployment: ${STATUS}</b> [${REPO_NAME}]
+          Staging address: https://staging.artverse.idata.ro
           Tag: <code>${{ github.sha }}</code>
-          By: ${{ github.actor }}
-          <a href=\"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\">View run</a>"
+          By: ${{ github.actor }}"
