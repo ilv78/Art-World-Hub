@@ -186,49 +186,28 @@ export default function Gallery() {
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-32 bg-gradient-to-b from-yellow-100/30 to-transparent dark:from-yellow-100/10 blur-xl" />
           </div>
 
-          <div className="relative flex-1 flex items-center justify-center p-8">
+          <div className="relative flex-1 flex items-center justify-center gap-4 p-8">
             <Button
               variant="secondary"
               size="icon"
-              className="absolute left-4 z-20 h-12 w-12 rounded-full shadow-lg"
+              className="flex-shrink-0 z-20 h-12 w-12 rounded-full shadow-lg"
               onClick={handlePrevious}
               data-testid="button-prev-artwork"
             >
               <ChevronLeft className="h-6 w-6" />
             </Button>
 
-            <Button
-              variant="secondary"
-              size="icon"
-              className="absolute right-4 z-20 h-12 w-12 rounded-full shadow-lg"
-              onClick={handleNext}
-              data-testid="button-next-artwork"
-            >
-              <ChevronRight className="h-6 w-6" />
-            </Button>
-
             <div
               className="relative transition-transform duration-500 ease-out"
               style={{ transform: `scale(${zoom})` }}
             >
-              <div className="absolute -inset-4 bg-black/20 blur-2xl -z-10" />
-              <div className="relative p-4 sm:p-6 bg-gradient-to-br from-amber-800 via-amber-900 to-amber-950 rounded-sm shadow-2xl">
-                <div className="p-1 bg-gradient-to-br from-amber-700 via-amber-800 to-amber-900 rounded-sm">
-                  <div className="p-0.5 bg-gradient-to-br from-yellow-600 via-yellow-700 to-yellow-800 rounded-sm">
-                    <div className="p-3 sm:p-5 bg-stone-100 dark:bg-stone-200">
-                      <div className="relative max-w-lg max-h-[50vh] overflow-hidden shadow-inner">
-                        <img
-                          src={currentArtwork.imageUrl}
-                          alt={currentArtwork.title}
-                          className="w-full h-full object-contain"
-                          data-testid="img-current-artwork"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="absolute -bottom-20 left-1/2 -translate-x-1/2 w-64 p-3 bg-white dark:bg-stone-800 shadow-lg rounded-sm text-center">
+              <img
+                src={currentArtwork.imageUrl}
+                alt={currentArtwork.title}
+                className="max-w-lg max-h-[60vh] object-contain shadow-2xl rounded-sm"
+                data-testid="img-current-artwork"
+              />
+              <div className="absolute bottom-0 left-full ml-2 z-20 w-48 p-2 bg-white/90 dark:bg-stone-800/90 backdrop-blur-sm shadow-lg rounded-sm text-left">
                 <h3 className="font-serif font-bold text-sm truncate" data-testid="text-artwork-title">
                   {currentArtwork.title}
                 </h3>
@@ -239,6 +218,17 @@ export default function Gallery() {
                 <p className="text-xs text-muted-foreground mt-1">{currentArtwork.medium}</p>
               </div>
             </div>
+
+            <Button
+              variant="secondary"
+              size="icon"
+              className="flex-shrink-0 z-20 h-12 w-12 rounded-full shadow-lg"
+              onClick={handleNext}
+              data-testid="button-next-artwork"
+            >
+              <ChevronRight className="h-6 w-6" />
+            </Button>
+
           </div>
 
           <div className="absolute bottom-4 left-4 z-20 flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-full p-1 shadow-lg">
