@@ -129,7 +129,7 @@ export default function Artists() {
                 </p>
 
                 <Link href={`/artists/${artist.id}`}>
-                  <Button variant="ghost" className="w-full bg-[#ff9a26]" data-testid={`button-view-artist-${artist.id}`}>
+                  <Button variant="ghost" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" data-testid={`button-view-artist-${artist.id}`}>
                     View Profile
                     <ExternalLink className="h-4 w-4 ml-2" />
                   </Button>

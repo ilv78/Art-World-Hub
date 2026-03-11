@@ -1100,7 +1100,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
               <g transform={`rotate(${(-playerPosition.rotation * 180 / Math.PI)})`}>
                 <polygon 
                   points={`0,${-5*scale} ${3*scale},${3*scale} 0,${1.5*scale} ${-3*scale},${3*scale}`}
-                  fill="#F97316" 
+                  fill="hsl(var(--primary))"
                   stroke="#fff"
                   strokeWidth={1}
                 />

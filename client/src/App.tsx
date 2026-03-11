@@ -7,6 +7,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { PalettePicker } from "@/components/palette-picker";
 import { CartSheet } from "@/components/cart-sheet";
 import Home from "@/pages/home";
 import Gallery from "@/pages/gallery";
@@ -50,6 +51,7 @@ function App() {
                   <SidebarTrigger data-testid="button-sidebar-toggle" />
                   <div className="flex items-center gap-2">
                     <CartSheet />
+                    <PalettePicker />
                     <ThemeToggle />
                   </div>
                 </header>
