@@ -36,13 +36,57 @@ import {
   LogIn,
   User,
   Globe,
-  Upload,
   Loader2
 } from "lucide-react";
 import { SiInstagram, SiX, SiFacebook, SiYoutube, SiTiktok, SiLinkedin, SiBehance, SiDribbble, SiDeviantart, SiPinterest } from "react-icons/si";
 import type { Artist, ArtworkWithArtist, BlogPost, InsertArtwork, InsertBlogPost, OrderWithArtwork } from "@shared/schema";
 import { ORDER_STATUSES, ORDER_TRANSITIONS } from "@shared/schema";
 import { ShoppingBag, Package, Mail, Search, Filter, ChevronRight, Ban, ArrowRight } from "lucide-react";
+
+function FileUploadField({
+  id,
+  label,
+  uploading,
+  imageUrl,
+  previewAlt,
+  onFileSelect,
+  testId,
+}: {
+  id: string;
+  label: string;
+  uploading: boolean;
+  imageUrl: string;
+  previewAlt: string;
+  onFileSelect: (file: File) => void;
+  testId?: string;
+}) {
+  return (
+    <div className="grid gap-2">
+      <Label htmlFor={id}>{label}</Label>
+      <div className="flex items-center gap-2">
+        <Input
+          id={id}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          disabled={uploading}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) onFileSelect(file);
+          }}
+          data-testid={testId}
+        />
+        {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
+      </div>
+      {imageUrl && (
+        <img
+          src={imageUrl}
+          alt={previewAlt}
+          className="mt-2 rounded-md max-h-40 object-contain border"
+        />
+      )}
+    </div>
+  );
+}
 
 const socialPlatformsList = [
   { key: "website", label: "Website", icon: Globe, placeholder: "https://yourwebsite.com" },
@@ -524,37 +568,22 @@ export default function ArtistDashboard() {
                       data-testid="input-artwork-title"
                     />
                   </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="imageUpload">Image *</Label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        id="imageUpload"
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp,image/gif"
-                        disabled={artworkUploading}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            handleImageUpload(
-                              file,
-                              "/api/upload/artwork",
-                              (url) => setArtworkForm({ ...artworkForm, imageUrl: url }),
-                              setArtworkUploading,
-                            );
-                          }
-                        }}
-                        data-testid="input-artwork-image"
-                      />
-                      {artworkUploading && <Loader2 className="h-4 w-4 animate-spin" />}
-                    </div>
-                    {artworkForm.imageUrl && (
-                      <img
-                        src={artworkForm.imageUrl}
-                        alt="Preview"
-                        className="mt-2 rounded-md max-h-40 object-contain border"
-                      />
-                    )}
-                  </div>
+                  <FileUploadField
+                    id="imageUpload"
+                    label="Image *"
+                    uploading={artworkUploading}
+                    imageUrl={artworkForm.imageUrl}
+                    previewAlt="Preview"
+                    testId="input-artwork-image"
+                    onFileSelect={(file) =>
+                      handleImageUpload(
+                        file,
+                        "/api/upload/artwork",
+                        (url) => setArtworkForm({ ...artworkForm, imageUrl: url }),
+                        setArtworkUploading,
+                      )
+                    }
+                  />
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="price">Price *</Label>
@@ -769,37 +798,22 @@ export default function ArtistDashboard() {
                       data-testid="input-blog-excerpt"
                     />
                   </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="blogCoverUpload">Cover Image</Label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        id="blogCoverUpload"
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp,image/gif"
-                        disabled={blogCoverUploading}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            handleImageUpload(
-                              file,
-                              "/api/upload/blog-cover",
-                              (url) => setBlogForm({ ...blogForm, coverImageUrl: url }),
-                              setBlogCoverUploading,
-                            );
-                          }
-                        }}
-                        data-testid="input-blog-cover"
-                      />
-                      {blogCoverUploading && <Loader2 className="h-4 w-4 animate-spin" />}
-                    </div>
-                    {blogForm.coverImageUrl && (
-                      <img
-                        src={blogForm.coverImageUrl}
-                        alt="Cover preview"
-                        className="mt-2 rounded-md max-h-40 object-contain border"
-                      />
-                    )}
-                  </div>
+                  <FileUploadField
+                    id="blogCoverUpload"
+                    label="Cover Image"
+                    uploading={blogCoverUploading}
+                    imageUrl={blogForm.coverImageUrl}
+                    previewAlt="Cover preview"
+                    testId="input-blog-cover"
+                    onFileSelect={(file) =>
+                      handleImageUpload(
+                        file,
+                        "/api/upload/blog-cover",
+                        (url) => setBlogForm({ ...blogForm, coverImageUrl: url }),
+                        setBlogCoverUploading,
+                      )
+                    }
+                  />
                   <div className="grid gap-2">
                     <Label htmlFor="blogContent">Content *</Label>
                     <Textarea
