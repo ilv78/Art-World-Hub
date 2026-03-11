@@ -610,7 +610,8 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
         if (p.isLeft) {
           worldRotY = localRotY - Math.PI / 2;
         } else {
-          worldRotY = localRotY + Math.PI / 2;
+          // Right-side transform is a reflection, not a rotation — negate localRotY
+          worldRotY = -localRotY + Math.PI / 2;
         }
 
         if (si === 0 && hasPoster) {

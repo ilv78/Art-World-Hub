@@ -348,8 +348,17 @@ export async function registerRoutes(
       const artistRooms = await Promise.all(
         artists.map(async (artist) => {
           const readyArtworks = await storage.getExhibitionReadyArtworks(artist.id);
+          // Regenerate layout if stale or missing
+          let layout = artist.galleryLayout;
+          if (readyArtworks.length > 0) {
+            const existingSlots = layout ? (layout as any).cells?.flatMap((c: any) => c.artworkSlots || []).length ?? 0 : 0;
+            const expectedSlots = readyArtworks.length + 1; // +1 for poster
+            if (!layout || existingSlots !== expectedSlots) {
+              layout = await storage.regenerateArtistGallery(artist.id);
+            }
+          }
           return {
-            artist: { id: artist.id, name: artist.name, avatarUrl: artist.avatarUrl, specialization: artist.specialization, bio: artist.bio, country: artist.country, galleryLayout: artist.galleryLayout },
+            artist: { id: artist.id, name: artist.name, avatarUrl: artist.avatarUrl, specialization: artist.specialization, bio: artist.bio, country: artist.country, galleryLayout: layout },
             artworks: readyArtworks,
           };
         })
