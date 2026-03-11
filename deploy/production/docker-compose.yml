@@ -36,6 +36,9 @@ services:
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
     ports:
       - 127.0.0.1:5002:5000
+    volumes:
+      - uploads:/app/uploads
 
 volumes:
   pgdata:
+  uploads:

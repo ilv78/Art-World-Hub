@@ -116,6 +116,22 @@ export async function setupAuth(app: Express) {
     console.warn(
       "[auth] OIDC_CLIENT_ID / OIDC_CLIENT_SECRET not set; auth routes will be disabled"
     );
+
+    // Dev-only: fake login so the dashboard is testable without OIDC
+    if (process.env.NODE_ENV === "development") {
+      console.warn("[auth] DEV MODE: auto-login enabled for testing");
+      const devUser = {
+        claims: { sub: "dev-user-1", email: "dev@localhost", given_name: "Dev", family_name: "User" },
+        expires_at: Math.floor(Date.now() / 1000) + 86400,
+      };
+      await upsertUser(devUser.claims);
+      app.use((req, _res, next) => {
+        (req as any).user = devUser;
+        (req as any).isAuthenticated = () => true;
+        next();
+      });
+    }
+
     return;
   }
 
