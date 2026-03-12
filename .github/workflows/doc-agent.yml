@@ -101,9 +101,12 @@ jobs:
           echo "AUDIT_EOF" >> "$GITHUB_OUTPUT"
 
           # Count findings
-          ERRORS=$(echo "$REPORT" | grep -c '^\- \[ \] \[S-\|^\- \[ \] \[C-' || echo "0")
-          WARNINGS=$(echo "$REPORT" | grep -c '^\- \[ \] \[ST-' || echo "0")
-          INFOS=$(echo "$REPORT" | grep -c '^\- \[Q-' || echo "0")
+          ERRORS=$(echo "$REPORT" | grep -cE '^\- \[ \] \[(S|C)-' || true)
+          WARNINGS=$(echo "$REPORT" | grep -cE '^\- \[ \] \[ST-' || true)
+          INFOS=$(echo "$REPORT" | grep -cE '^\- \[Q-' || true)
+          ERRORS=${ERRORS:-0}
+          WARNINGS=${WARNINGS:-0}
+          INFOS=${INFOS:-0}
           echo "errors=$ERRORS" >> "$GITHUB_OUTPUT"
           echo "warnings=$WARNINGS" >> "$GITHUB_OUTPUT"
           echo "infos=$INFOS" >> "$GITHUB_OUTPUT"
