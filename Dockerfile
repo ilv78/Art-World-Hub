@@ -16,14 +16,14 @@ FROM node:20-bookworm-slim AS run
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=build /app/package.json /app/package-lock.json ./
-COPY --from=build /app/node_modules ./node_modules
+RUN npm ci --omit=dev --ignore-scripts
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/shared ./shared
 COPY --from=build /app/drizzle.config.ts ./
 COPY --from=build /app/migrations ./migrations
 COPY --from=build /app/docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh && mkdir -p /app/uploads/artworks /app/uploads/blog-covers
-RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser \
+RUN addgroup --system appgroup && adduser --system --home /home/appuser --ingroup appgroup appuser \
     && chown -R appuser:appgroup /app
 USER appuser
 EXPOSE 5000
