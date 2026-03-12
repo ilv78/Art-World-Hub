@@ -133,6 +133,44 @@ describe("GET /api/exhibitions/active", () => {
   });
 });
 
+// ----- Auth-protected GET endpoints -----
+
+describe("GET /api/orders", () => {
+  const testArtist = { id: "art1", name: "Alice", bio: "Bio", userId: "test-user-id" };
+
+  it("returns only the logged-in artist's orders", async () => {
+    (mockStorage.getArtistByUserId as ReturnType<typeof vi.fn>).mockResolvedValue(testArtist);
+    const orders = [{ id: "o1", artworkId: "a1", status: "pending" }];
+    (mockStorage.getOrdersByArtist as ReturnType<typeof vi.fn>).mockResolvedValue(orders);
+
+    const res = await request(app).get("/api/orders");
+    expect(res.status).toBe(200);
+    expect(mockStorage.getOrdersByArtist).toHaveBeenCalledWith("art1");
+    expect(res.body).toEqual(orders);
+  });
+});
+
+describe("GET /api/artists/:id/orders", () => {
+  const testArtist = { id: "art1", name: "Alice", bio: "Bio", userId: "test-user-id" };
+
+  it("returns orders when artist views their own", async () => {
+    (mockStorage.getArtistByUserId as ReturnType<typeof vi.fn>).mockResolvedValue(testArtist);
+    const orders = [{ id: "o1", artworkId: "a1", status: "pending" }];
+    (mockStorage.getOrdersByArtist as ReturnType<typeof vi.fn>).mockResolvedValue(orders);
+
+    const res = await request(app).get("/api/artists/art1/orders");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(orders);
+  });
+
+  it("returns 403 when viewing another artist's orders", async () => {
+    (mockStorage.getArtistByUserId as ReturnType<typeof vi.fn>).mockResolvedValue(testArtist);
+
+    const res = await request(app).get("/api/artists/other-artist/orders");
+    expect(res.status).toBe(403);
+  });
+});
+
 // ----- POST validation -----
 
 describe("POST /api/orders", () => {

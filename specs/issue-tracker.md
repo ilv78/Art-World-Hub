@@ -34,7 +34,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 73 | Upgrade Node.js 20→25 | high | bug | Open | — | Dependabot PR #57 closed (major) |
 | 77 | Security Audit — Critical findings | critical | devops | In Progress | — | Parent. Sub-issues: #78, #79, #80, #81. 4 P0s, 6 P1s, 7 P2s. |
 | 78 | Add auth to 9 unprotected write endpoints | critical | bug | In Progress | `fix/issue-78-auth-write-endpoints` | Sub of #77 |
-| 79 | Lock down order endpoints (PII exposure) | critical | bug | Open | — | Sub of #77 |
+| 79 | Lock down order endpoints (PII exposure) | critical | bug | In Progress | `fix/issue-79-lock-order-endpoints` | Sub of #77 |
 | 80 | Add auth to MCP server endpoint | critical | bug | Open | — | Sub of #77 |
 | 81 | Fix SSRF in image proxy endpoint | critical | bug | Open | — | Sub of #77 |
 | 74 | Upgrade react-resizable-panels 2→4 | high | bug | Open | — | Dependabot PR #68 closed (major) |

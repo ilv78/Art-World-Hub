@@ -433,17 +433,28 @@ export async function registerRoutes(
   });
 
   // Orders routes
-  app.get("/api/orders", async (req, res) => {
+  app.get("/api/orders", isAuthenticated, async (req: any, res) => {
     try {
-      const orders = await storage.getOrders();
+      const userId = req.user?.claims?.sub;
+      const artist = await storage.getArtistByUserId(userId);
+      if (!artist) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+      // Return only this artist's orders (no admin role exists yet)
+      const orders = await storage.getOrdersByArtist(artist.id);
       res.json(orders);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch orders" });
     }
   });
 
-  app.get("/api/artists/:id/orders", async (req, res) => {
+  app.get("/api/artists/:id/orders", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user?.claims?.sub;
+      const artist = await storage.getArtistByUserId(userId);
+      if (!artist || artist.id !== req.params.id) {
+        return res.status(403).json({ error: "Not authorized to view another artist's orders" });
+      }
       const artistOrders = await storage.getOrdersByArtist(req.params.id);
       res.json(artistOrders);
     } catch (error) {
