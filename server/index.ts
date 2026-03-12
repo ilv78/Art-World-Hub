@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
+import helmet from "helmet";
 import path from "path";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
@@ -15,6 +16,9 @@ declare module "http" {
     rawBody: unknown;
   }
 }
+
+// Security headers via helmet
+app.use(helmet());
 
 app.use(
   express.json({
