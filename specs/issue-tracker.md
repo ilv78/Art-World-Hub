@@ -32,11 +32,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 32 | Correct names in museum gallery | medium | bug | Open | — | Artist room names incorrect |
 | 36 | Role securitas - in CI/CD | high | devops | In Progress | — | Parent: spec at `specs/SECURITY_AGENT.md`. Sub-issue #55 done. Audit completed → issue #77 (4×P0, 6×P1, 7×P2). |
 | 73 | Upgrade Node.js 20→25 | high | bug | Open | — | Dependabot PR #57 closed (major) |
-| 77 | Security Audit — Critical findings | critical | devops | In Progress | — | Parent. Sub-issues: #78, #79, #80, #81. 4 P0s, 6 P1s, 7 P2s. |
-| 78 | Add auth to 9 unprotected write endpoints | critical | bug | In Progress | `fix/issue-78-auth-write-endpoints` | Sub of #77 |
-| 79 | Lock down order endpoints (PII exposure) | critical | bug | In Progress | `fix/issue-79-lock-order-endpoints` | Sub of #77 |
-| 80 | Add auth to MCP server endpoint | critical | bug | In Progress | `fix/issue-80-81-mcp-auth-ssrf` | Sub of #77 |
-| 81 | Fix SSRF in image proxy endpoint | critical | bug | In Progress | `fix/issue-80-81-mcp-auth-ssrf` | Sub of #77 |
+| 77 | Security Audit — Critical findings | critical | devops | In Progress | — | Parent. All 4 P0s done. 6 P1s, 7 P2s remaining. |
 | 74 | Upgrade react-resizable-panels 2→4 | high | bug | Open | — | Dependabot PR #68 closed (major) |
 | 75 | Upgrade recharts 2→3 | high | bug | Open | — | Dependabot PR #69 closed (major) |
 | 76 | Upgrade Vite 7→8 | high | bug | Open | — | Dependabot PR #70 closed (major) |
@@ -64,6 +60,10 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 5 | Documentor (parent) | medium | documentation, devops | 2026-03-12 | — | Sub-issues #40, #41, #42 |
 | 53 | Refactor: consolidate duplicated auth/email/frontend code | medium | refactor | 2026-03-12 | `refactor/issue-53-simplify-auth-email` | #54 |
 | 55 | Implement security CI/CD pipeline | high | devops | 2026-03-12 | `feature/issue-55-security-pipeline` | #56 |
+| 78 | Add auth to 9 unprotected write endpoints | critical | bug | 2026-03-13 | `fix/issue-78-auth-write-endpoints` | #82 |
+| 79 | Lock down order endpoints (PII exposure) | critical | bug | 2026-03-13 | `fix/issue-79-lock-order-endpoints` | #83 |
+| 80 | Add auth to MCP server endpoint | critical | bug | 2026-03-13 | `fix/issue-80-81-mcp-auth-ssrf` | #84 |
+| 81 | Fix SSRF in image proxy endpoint | critical | bug | 2026-03-13 | `fix/issue-80-81-mcp-auth-ssrf` | #84 |
 
 ---
 
@@ -84,3 +84,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-12 | Moved #55 to Completed (PR #56 merged). #36 remains Active (audit pending). |
 | 2026-03-12 | Added #73, #74, #75, #76 (major dep upgrades from closed Dependabot PRs). Uploaded security agent spec. |
 | 2026-03-12 | Security audit completed. Created #77 (critical — 4 P0s, 6 P1s, 7 P2s). Updated #36 status. |
+| 2026-03-13 | All 4 P0s completed: #78 (PR #82), #79 (PR #83), #80+#81 (PR #84). Deployed to staging. |
