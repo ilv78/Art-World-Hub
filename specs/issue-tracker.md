@@ -30,6 +30,8 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 12 | Correct artist profile picture | low | bug | Open | — | Profile picture display issue |
 | 14 | Multiple gallery templates | low | enhancement | Open | — | Support different gallery room layouts |
 | 32 | Correct names in museum gallery | medium | bug | Open | — | Artist room names incorrect |
+| 36 | Role securitas - in CI/CD | high | devops | In Progress | — | Parent: security pipeline. Sub-issue #55 |
+| 55 | Implement security CI/CD pipeline | high | devops | In Progress | `feature/issue-55-security-pipeline` | PR #56 |
 
 ## Completed Issues
 
@@ -69,3 +71,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-12 | Moved #40 to Completed (PR #43), #41 to Completed (PR #44 + fix PR #45). |
 | 2026-03-12 | Moved #42 to Completed (PR #48). Moved #5 (parent) to Completed — all sub-issues done. |
 | 2026-03-12 | Added #53 (refactor auth/email/frontend) to Completed (PR #54). |
+| 2026-03-12 | Added #36 (securitas parent) and #55 (security pipeline sub-issue) to Active — PR #56. |
