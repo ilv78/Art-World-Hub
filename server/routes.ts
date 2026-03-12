@@ -7,22 +7,11 @@ import { z } from "zod";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import https from "https";
 import http from "http";
-import { Resend } from "resend";
+import { getResendClient, getFromEmail } from "./email";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
-
-function getResendClient(): { client: Resend; fromEmail: string } {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    throw new Error("RESEND_API_KEY is not configured");
-  }
-  return {
-    client: new Resend(apiKey),
-    fromEmail: process.env.RESEND_FROM_EMAIL || "ArtVerse <onboarding@resend.dev>",
-  };
-}
 
 async function sendOrderNotificationEmail(
   artist: Artist,
@@ -32,9 +21,9 @@ async function sendOrderNotificationEmail(
 ) {
   if (!artist.email) return;
 
-  let resendClient: { client: Resend; fromEmail: string };
+  let client;
   try {
-    resendClient = getResendClient();
+    client = getResendClient();
   } catch (e) {
     console.log("Resend not configured, skipping email notification:", (e as Error).message);
     return;
@@ -46,7 +35,7 @@ async function sendOrderNotificationEmail(
       <h1 style="color: #1a1a2e; border-bottom: 2px solid #F97316; padding-bottom: 10px;">New Artwork Order</h1>
       <p>Dear ${artist.name},</p>
       <p>Great news! One of your artworks has been purchased.</p>
-      
+
       <div style="background: #faf8f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
         <h2 style="color: #1a1a2e; margin-top: 0;">Order Details</h2>
         <table style="width: 100%; border-collapse: collapse;">
@@ -57,7 +46,7 @@ async function sendOrderNotificationEmail(
           <tr><td style="padding: 8px 0; color: #666;">Price:</td><td style="padding: 8px 0; font-weight: bold; color: #F97316;">${parseInt(order.totalAmount).toLocaleString()}</td></tr>
         </table>
       </div>
-      
+
       <div style="background: #f0f0f0; padding: 20px; border-radius: 8px; margin: 20px 0;">
         <h2 style="color: #1a1a2e; margin-top: 0;">Buyer Information</h2>
         <table style="width: 100%; border-collapse: collapse;">
@@ -66,7 +55,7 @@ async function sendOrderNotificationEmail(
           <tr><td style="padding: 8px 0; color: #666;">Shipping Address:</td><td style="padding: 8px 0;">${orderData.shippingAddress}</td></tr>
         </table>
       </div>
-      
+
       <p style="color: #666; font-size: 14px; margin-top: 30px;">
         Please prepare the artwork for shipping. You can view all your orders in your artist dashboard.
       </p>
@@ -74,8 +63,8 @@ async function sendOrderNotificationEmail(
     </div>
   `;
 
-  await resendClient.client.emails.send({
-    from: resendClient.fromEmail,
+  await client.emails.send({
+    from: getFromEmail(),
     to: artist.email,
     subject,
     html,
@@ -88,9 +77,9 @@ async function sendBuyerConfirmationEmail(
   order: Order,
   orderData: InsertOrder,
 ) {
-  let resendClient: { client: Resend; fromEmail: string };
+  let client;
   try {
-    resendClient = getResendClient();
+    client = getResendClient();
   } catch (e) {
     console.log("Resend not configured, skipping buyer confirmation:", (e as Error).message);
     return;
@@ -130,8 +119,8 @@ async function sendBuyerConfirmationEmail(
     </div>
   `;
 
-  await resendClient.client.emails.send({
-    from: resendClient.fromEmail,
+  await client.emails.send({
+    from: getFromEmail(),
     to: orderData.buyerEmail,
     subject,
     html,

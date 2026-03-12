@@ -75,25 +75,18 @@ class AuthStorage implements IAuthStorage {
   }
 
   async consumeMagicLink(token: string): Promise<MagicLink | undefined> {
-    // Find valid, unused, non-expired token
+    // Atomic: find valid token and mark as used in one query (prevents double-consumption)
     const [link] = await db
-      .select()
-      .from(magicLinks)
+      .update(magicLinks)
+      .set({ usedAt: new Date() })
       .where(
         and(
           eq(magicLinks.token, token),
           isNull(magicLinks.usedAt),
           gt(magicLinks.expiresAt, new Date())
         )
-      );
-
-    if (!link) return undefined;
-
-    // Mark as used
-    await db
-      .update(magicLinks)
-      .set({ usedAt: new Date() })
-      .where(eq(magicLinks.id, link.id));
+      )
+      .returning();
 
     return link;
   }
