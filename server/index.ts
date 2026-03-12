@@ -18,7 +18,15 @@ declare module "http" {
 }
 
 // Security headers via helmet
-app.use(helmet());
+// In development, Vite uses inline scripts and eval for HMR — relax CSP accordingly
+app.use(
+  helmet({
+    contentSecurityPolicy:
+      process.env.NODE_ENV === "production"
+        ? undefined // use helmet defaults in production
+        : false, // disable CSP in development (Vite HMR needs inline scripts)
+  }),
+);
 
 app.use(
   express.json({

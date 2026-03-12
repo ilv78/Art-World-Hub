@@ -30,8 +30,13 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 12 | Correct artist profile picture | low | bug | Open | — | Profile picture display issue |
 | 14 | Multiple gallery templates | low | enhancement | Open | — | Support different gallery room layouts |
 | 32 | Correct names in museum gallery | medium | bug | Open | — | Artist room names incorrect |
-| 36 | Role securitas - in CI/CD | high | devops | In Progress | — | Parent: spec at `specs/SECURITY_AGENT.md`. Sub-issue #55 done. Audit pending. |
+| 36 | Role securitas - in CI/CD | high | devops | In Progress | — | Parent: spec at `specs/SECURITY_AGENT.md`. Sub-issue #55 done. Audit completed → issue #77 (4×P0, 6×P1, 7×P2). |
 | 73 | Upgrade Node.js 20→25 | high | bug | Open | — | Dependabot PR #57 closed (major) |
+| 77 | Security Audit — Critical findings | critical | devops | In Progress | — | Parent. Sub-issues: #78, #79, #80, #81. 4 P0s, 6 P1s, 7 P2s. |
+| 78 | Add auth to 9 unprotected write endpoints | critical | bug | In Progress | `fix/issue-78-auth-write-endpoints` | Sub of #77 |
+| 79 | Lock down order endpoints (PII exposure) | critical | bug | Open | — | Sub of #77 |
+| 80 | Add auth to MCP server endpoint | critical | bug | Open | — | Sub of #77 |
+| 81 | Fix SSRF in image proxy endpoint | critical | bug | Open | — | Sub of #77 |
 | 74 | Upgrade react-resizable-panels 2→4 | high | bug | Open | — | Dependabot PR #68 closed (major) |
 | 75 | Upgrade recharts 2→3 | high | bug | Open | — | Dependabot PR #69 closed (major) |
 | 76 | Upgrade Vite 7→8 | high | bug | Open | — | Dependabot PR #70 closed (major) |
@@ -78,3 +83,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-12 | Added #36 (securitas parent) and #55 (security pipeline sub-issue) to Active — PR #56. |
 | 2026-03-12 | Moved #55 to Completed (PR #56 merged). #36 remains Active (audit pending). |
 | 2026-03-12 | Added #73, #74, #75, #76 (major dep upgrades from closed Dependabot PRs). Uploaded security agent spec. |
+| 2026-03-12 | Security audit completed. Created #77 (critical — 4 P0s, 6 P1s, 7 P2s). Updated #36 status. |
