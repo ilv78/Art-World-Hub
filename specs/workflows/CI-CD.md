@@ -1,5 +1,10 @@
 # ArtVerse — CI/CD Pipeline Specification
 
+**Status:** Active
+**Last Updated:** 2026-03-12
+
+---
+
 ## 1. Current State
 
 ### What Exists Today

@@ -14,7 +14,7 @@ This file tracks all work items for the project. Every feature, bug fix, or enha
    gh issue create --title "Short title" --body "Description" --label "feature"
    ```
 3. **Add labels** — use priority (`priority: high`, `priority: medium`, `priority: low`, `priority: critical`) and category (`bug`, `feature`, `enhancement`, `ui/ux`, `refactor`, `devops`, `documentation`)
-4. **Then follow** the development workflow in `specs/development-procedures.md` (branch → code → test → PR → merge → deploy)
+4. **Then follow** the development workflow in `specs/workflows/LOCAL-DEV.md` (branch → code → test → PR → merge → deploy)
 
 This ensures traceability, keeps the team aligned, and prevents work from getting lost.
 
@@ -31,7 +31,9 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 12 | Correct artist profile picture | low | bug | Open | — | Profile picture display issue |
 | 14 | Multiple gallery templates | low | enhancement | Open | — | Support different gallery room layouts |
 | 32 | Correct names in museum gallery | medium | bug | Open | — | Artist room names incorrect |
-| 34 | Email signup magic link not sent | high | bug | Open | — | Magic link emails not being sent on signup (staging + prod) |
+| 40 | Restructure specs/ directory | medium | documentation | In Progress | `feature/issue-40-restructure-specs` | Sub-issue of #5 |
+| 41 | Create doc agent GitHub Actions workflow | medium | documentation, devops | Open | — | Sub-issue of #5 |
+| 42 | Backfill documentation | medium | documentation | Open | — | Sub-issue of #5 |
 
 ## Completed Issues
 
@@ -49,6 +51,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 26 | Telegram announcing format | low | enhancement | 2026-03-11 | `enhancement/issue-26-telegram-format` | #27 |
 | 28 | Galleries not ok in museum | high | bug | 2026-03-11 | `fix/issue-28-museum-gallery-stale-layout` | #29 |
 | 6 | Email login | medium | enhancement | 2026-03-12 | `feature/issue-6-email-login` | #33 |
+| 34 | Email signup magic link not sent | high | bug | 2026-03-12 | `fix/issue-34-magic-link-emails` | #38 |
 
 ---
 
@@ -61,3 +64,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-11 | Bulk update: completed #9, #19, #20, #22, #25, #26, #28. Added open #8, #12, #14, #32. |
 | 2026-03-12 | Moved #6 (email login) to Completed — deployed to production. |
 | 2026-03-12 | Added #34 (email signup magic link not sent) — high priority bug. |
+| 2026-03-12 | Moved #34 to Completed (PR #38). Added #40, #41, #42 (doc agent sub-issues of #5). |

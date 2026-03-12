@@ -45,7 +45,7 @@ Tests live in `server/__tests__/`. Storage tests mock `server/db.ts`; route test
 
 ### Database
 
-PostgreSQL 16 with Drizzle ORM. Schema defined in `shared/schema.ts`. Tables: `users`, `sessions`, `artists`, `artworks`, `auctions`, `bids`, `orders`, `exhibitions`, `exhibition_artworks`, `blog_posts`. Run `npm run db:push` after schema changes (no migration files, uses push mode).
+PostgreSQL 16 with Drizzle ORM. Schema defined in `shared/schema.ts` + `shared/models/auth.ts`. Tables: `users`, `sessions`, `magic_links`, `artists`, `artworks`, `auctions`, `bids`, `orders`, `exhibitions`, `exhibition_artworks`, `blog_posts`. Dual-mode: staging uses `drizzle-kit push`, production uses versioned migrations from `migrations/`. See `specs/architecture/DATA-MODEL.md` for full schema docs.
 
 ### Server Data Layer
 
@@ -83,8 +83,9 @@ Shadcn UI (Radix primitives) + Tailwind CSS. Component source in `client/src/com
 
 ### CI/CD
 
-- `.github/workflows/ci.yml` — type check + build on push/PR (uses PostgreSQL 16 service container)
-- `.github/workflows/deploy.yml` — Docker image build + push to GHCR on push to main
+- `.github/workflows/ci.yml` — lint → type check → tests → build → Docker image → staging deploy (on main push)
+- `.github/workflows/deploy-production.yml` — manual production deploy with rollback state tracking
+- `.github/workflows/rollback-production.yml` — one-click rollback to previous version
 
 ### Order Status Flow
 
@@ -92,4 +93,16 @@ Shadcn UI (Radix primitives) + Tailwind CSS. Component source in `client/src/com
 
 ## Environment Variables
 
-Required: `DATABASE_URL`, `SESSION_SECRET`. Optional: `SEED_DB=true` (seeds sample data), `OIDC_ISSUER_URL`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`. See `.env.example`.
+Required: `DATABASE_URL`, `SESSION_SECRET`. Optional: `SEED_DB=true` (seeds sample data), `OIDC_ISSUER_URL`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`. See `.env.example`.
+
+## Documentation Culture
+
+All documentation lives in `specs/`. Before starting any task:
+1. Read `specs/DOC-AGENT-SPEC.md` to understand what must be documented.
+2. If adding a new feature → create or update `specs/features/<name>/SPEC.md`.
+3. If changing the database schema → update `specs/architecture/DATA-MODEL.md`.
+4. If making an architectural decision → create `specs/architecture/ADR/ADR-XXXX.md`.
+5. If fixing a bug → create or update `specs/bugs/BUG-XXXX-title.md`.
+
+The Documentation Agent enforces these rules on every PR.
+Undocumented changes will block merge.

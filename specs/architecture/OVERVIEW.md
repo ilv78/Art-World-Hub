@@ -1,4 +1,10 @@
-# ArtVerse — Architecture & Software Specification
+# ArtVerse — Architecture Overview
+
+**Status:** Active
+**Last Updated:** 2026-03-12
+**Owner:** Architecture
+
+---
 
 ## 1. What This Software Does
 
@@ -13,7 +19,7 @@ ArtVerse is a full-stack art gallery platform that combines e-commerce with an i
 - **Blog System** — Artists can publish posts with cover images and excerpts
 - **Exhibition System** — Curated group exhibitions with wall placement metadata
 - **MCP Server** — 14 resources, 12 tools, 4 prompt templates for AI integration
-- **OIDC Authentication** — Google OAuth (configurable) with auto-created artist profiles
+- **Authentication** — Google OIDC + email/password with magic link signup (Resend)
 
 ---
 
@@ -34,14 +40,15 @@ ArtVerse is a full-stack art gallery platform that combines e-commerce with an i
 │                                                                     │
 │  routes.ts ──────→ storage.ts (IStorage) ──────→ db.ts (Drizzle)   │
 │  mcp.ts ─────────→ storage.ts                                       │
-│  auth/ ──────────→ Passport.js + OIDC + connect-pg-simple           │
+│  auth/ ──────────→ Passport.js + OIDC + Local + connect-pg-simple   │
+│  email.ts ───────→ Resend (magic links, order notifications)        │
 └───────────────────────────┬─────────────────────────────────────────┘
                             │ SQL (node-postgres)
                             ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │                      PostgreSQL 16                                  │
 │                                                                     │
-│  users, sessions, artists, artworks, auctions, bids,               │
+│  users, sessions, magic_links, artists, artworks, auctions, bids,  │
 │  orders, exhibitions, exhibition_artworks, blog_posts              │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -59,61 +66,24 @@ Art-World-Hub/
 │   ├── routes.ts         40+ API endpoints
 │   ├── storage.ts        34-method database layer (IStorage interface)
 │   ├── mcp.ts            MCP server (AI integration)
+│   ├── email.ts          Resend email client (magic links, order emails)
 │   ├── seed.ts           Demo data seeder
 │   ├── __tests__/        70+ unit & integration tests
-│   └── replit_integrations/auth/   OIDC authentication
+│   └── replit_integrations/auth/   Authentication (OIDC + local)
 ├── shared/
-│   └── schema.ts         Single source of truth: Drizzle tables, Zod schemas, TS types
+│   ├── schema.ts         Single source of truth: Drizzle tables, Zod schemas, TS types
+│   └── models/auth.ts    Auth tables (users, sessions, magic_links)
 ├── script/build.ts       Production build orchestrator
-├── .github/workflows/    CI (typecheck+build) and CD (Docker→GHCR)
-├── docker-compose.yml    PostgreSQL + app containers
+├── .github/workflows/    CI/CD pipelines
+├── deploy/               Docker-compose files, Nginx configs, setup scripts
+├── migrations/           Drizzle SQL migration files (versioned)
+├── docker-compose.yml    Local dev: PostgreSQL + app containers
 └── Dockerfile            Multi-stage Node 20 build
 ```
 
 ---
 
-## 3. Database Schema
-
-All tables defined in `shared/schema.ts` using Drizzle ORM. IDs are UUIDs (varchar).
-
-### Tables
-
-| Table | Key Columns | Purpose |
-|-------|-------------|---------|
-| **users** | id, email (unique), firstName, lastName, profileImageUrl, createdAt, updatedAt | Authentication accounts |
-| **sessions** | sid (PK), sess (jsonb), expire | PostgreSQL session store |
-| **artists** | id, userId (FK→users), name, bio, avatarUrl, country, specialization, email, galleryLayout (jsonb), socialLinks (jsonb) | Artist profiles |
-| **artworks** | id, title, description, imageUrl, artistId (FK→artists), price (decimal), medium, dimensions, year, isForSale, isInGallery, isReadyForExhibition, exhibitionOrder, category | Art pieces |
-| **auctions** | id, artworkId (FK→artworks), startingPrice, currentBid, minimumIncrement, startTime, endTime, status, winnerName | Live auctions |
-| **bids** | id, auctionId (FK→auctions), bidderName, amount, timestamp | Auction bids |
-| **orders** | id, artworkId (FK→artworks), buyerName, buyerEmail, shippingAddress, totalAmount, status, createdAt | Purchase orders |
-| **exhibitions** | id, name, description, layout (text/JSON), isActive, createdAt | Curated shows |
-| **exhibition_artworks** | id, exhibitionId (FK), artworkId (FK), wallId, position | Wall placement in exhibitions |
-| **blog_posts** | id, artistId (FK→artists), title, content, excerpt, coverImageUrl, isPublished, createdAt, updatedAt | Artist blog entries |
-
-### Order Status State Machine
-
-```
-pending ──→ communicating ──→ sending ──→ closed
-   │              │               │          │
-   └──→ canceled ←┘───── canceled ←┘─ canceled
-```
-
-Any non-terminal state can transition to `canceled`.
-
-### Composite Types (exported from schema)
-
-- `ArtworkWithArtist` — Artwork joined with its Artist
-- `AuctionWithArtwork` — Auction joined with ArtworkWithArtist
-- `ExhibitionWithArtworks` — Exhibition with all placed artworks
-- `BlogPostWithArtist` — Blog post joined with Artist
-- `OrderWithArtwork` — Order joined with ArtworkWithArtist
-- `MazeLayout` — 3D gallery definition: `{ width, height, cells: MazeCell[], spawnPoint }`
-- `MazeCell` — `{ x, z, walls: { north, south, east, west }, artworkSlots[] }`
-
----
-
-## 4. API Endpoints
+## 3. API Endpoints
 
 All routes defined in `server/routes.ts`. Base path: `/api/`.
 
@@ -183,7 +153,12 @@ All routes defined in `server/routes.ts`. Base path: `/api/`.
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | GET | `/api/auth/user` | Yes | Get current authenticated user |
-| GET | `/api/login/google` | No | Initiate OIDC login flow |
+| GET | `/api/auth/config` | No | Auth methods available (googleEnabled) |
+| POST | `/api/auth/signup` | No | Send magic link email for signup |
+| GET | `/api/auth/verify-email` | No | Consume magic link token, create user |
+| POST | `/api/auth/set-password` | Yes | Set password after email verification |
+| POST | `/api/auth/login` | No | Email + password login |
+| GET | `/api/login/google` | No | Initiate Google OIDC login flow |
 | GET | `/api/callback` | No | OIDC callback handler |
 | POST | `/api/logout` | Yes | End session |
 
@@ -194,20 +169,24 @@ All routes defined in `server/routes.ts`. Base path: `/api/`.
 
 ---
 
-## 5. Frontend Pages & Routing
+## 4. Frontend Pages & Routing
 
 Router: Wouter (lightweight, `<Route path="...">` pattern). Defined in `client/src/App.tsx`.
 
 | Route | Page Component | Description |
 |-------|---------------|-------------|
-| `/` | `home.tsx` (178 lines) | Landing page — hero section, feature cards, featured artworks carousel |
-| `/gallery` | `gallery.tsx` (352 lines) | Virtual gallery — toggle between 3D museum hallway and classic framed viewer |
-| `/store` | `store.tsx` (270 lines) | Art store — search, category/sort filters, grid/list toggle, detail dialogs |
-| `/auctions` | `auctions.tsx` (506 lines) | Auction platform — active/upcoming/ended tabs, bid placement, stats |
-| `/artists` | `artists.tsx` (243 lines) | Artist directory — search, featured cards, detail dialogs |
-| `/artists/:id` | `artist-profile.tsx` (358 lines) | Artist profile — 3D maze gallery, portfolio, blog tabs |
-| `/dashboard` | `artist-dashboard.tsx` (1214 lines) | Artist management — artworks CRUD, blog, orders, profile settings |
-| `*` | `not-found.tsx` (21 lines) | 404 page |
+| `/` | `home.tsx` | Landing page — hero section, feature cards, featured artworks carousel |
+| `/gallery` | `gallery.tsx` | Virtual gallery — toggle between 3D museum hallway and classic framed viewer |
+| `/store` | `store.tsx` | Art store — search, category/sort filters, grid/list toggle, detail dialogs |
+| `/auctions` | `auctions.tsx` | Auction platform — active/upcoming/ended tabs, bid placement, stats |
+| `/artists` | `artists.tsx` | Artist directory — search, featured cards, detail dialogs |
+| `/artists/:id` | `artist-profile.tsx` | Artist profile — 3D maze gallery, portfolio, blog tabs |
+| `/dashboard` | `artist-dashboard.tsx` | Artist management — artworks CRUD, blog, orders, profile settings |
+| `/blog` | `blog.tsx` | Blog listing page |
+| `/blog/:id` | `blog-post.tsx` | Individual blog post |
+| `/auth` | `auth-page.tsx` | Login/signup (email + password, Google OIDC) |
+| `/auth/set-password` | `set-password-page.tsx` | Set password after magic link verification |
+| `*` | `not-found.tsx` | 404 page |
 
 ### App Layout Structure
 
@@ -225,11 +204,11 @@ App
 
 ---
 
-## 6. 3D Gallery System
+## 5. 3D Gallery System
 
 Two Three.js WebGL components power the virtual museum experience.
 
-### HallwayGallery3D (`components/hallway-gallery-3d.tsx` — 1151 lines)
+### HallwayGallery3D (`components/hallway-gallery-3d.tsx`)
 
 The main museum entrance. A long hallway with doorways branching off to individual artist rooms.
 
@@ -241,7 +220,7 @@ The main museum entrance. A long hallway with doorways branching off to individu
 - Texture caching with Promise-based loading
 - Constants: cell size 2.5u, wall thickness 0.15u, player height 1.5u, move speed 0.08u/frame
 
-### MazeGallery3D (`components/maze-gallery-3d.tsx` — 1288 lines)
+### MazeGallery3D (`components/maze-gallery-3d.tsx`)
 
 Individual artist exhibition rooms displayed on artist profile pages.
 
@@ -265,7 +244,7 @@ Individual artist exhibition rooms displayed on artist profile pages.
 
 ---
 
-## 7. State Management
+## 6. State Management
 
 | Layer | Tool | Location | Purpose |
 |-------|------|----------|---------|
@@ -288,21 +267,31 @@ Individual artist exhibition rooms displayed on artist profile pages.
 
 ---
 
-## 8. Authentication
+## 7. Authentication
 
 Implemented in `server/replit_integrations/auth/`.
 
+### Google OIDC
 - **Protocol:** OIDC (OpenID Connect) via `openid-client` v6
 - **Default provider:** Google (`accounts.google.com`)
 - **Strategy:** Passport.js with `ClientSecretPost` authentication
-- **Sessions:** PostgreSQL-backed via `connect-pg-simple`, 7-day TTL, HttpOnly/Secure/SameSite=Lax cookies
 - **Auto-provisioning:** On first login, a user record is upserted and an artist profile is auto-created
 - **Host validation:** Optional `OIDC_ALLOWED_HOSTS` whitelist (comma-separated)
-- **User lookup:** By stable email key with upsert-on-conflict
+
+### Email/Password (Local Auth)
+- **Signup:** Email → magic link (Resend) → verify → set password
+- **Login:** Email + password via Passport local strategy (bcryptjs)
+- **Password storage:** bcrypt hash (12 rounds), null for OIDC-only users
+- **Magic links:** Single-use tokens, 1-hour expiry, stored in `magic_links` table
+
+### Sessions
+- PostgreSQL-backed via `connect-pg-simple`, 7-day TTL
+- HttpOnly/Secure/SameSite=Lax cookies
+- User lookup by stable email key with upsert-on-conflict
 
 ---
 
-## 9. MCP Server
+## 8. MCP Server
 
 Endpoint: `POST/GET/DELETE /mcp` with `mcp-session-id` header. Stateful per-session instances using Streamable HTTP transport.
 
@@ -335,7 +324,7 @@ Data access points for AI clients: all-artists, artist-by-id, all-artworks, artw
 
 ---
 
-## 10. UI Framework & Design System
+## 9. UI Framework & Design System
 
 - **Component library:** Shadcn UI (47 components in `components/ui/`)
 - **Primitives:** Radix UI (fully accessible, keyboard-navigable)
@@ -350,7 +339,7 @@ Data access points for AI clients: all-artists, artist-by-id, all-artworks, artw
 
 ---
 
-## 11. Build & Deployment
+## 10. Build & Deployment
 
 ### Development
 ```bash
@@ -368,20 +357,21 @@ npm run dev    # tsx hot-reload on port 5000, Vite HMR for client
 - Ports: PostgreSQL on 5433, app on 5000 (localhost only)
 
 ### CI/CD (GitHub Actions)
-- **ci.yml:** On every push/PR — type check (6GB heap for tsc) + full build with PostgreSQL service container
-- **deploy.yml:** On push to main — build Docker image, push to GitHub Container Registry (ghcr.io) with `latest` + commit SHA tags
+- **ci.yml:** Lint → type check → tests → build → Docker image → staging deploy (on main push)
+- **deploy-production.yml:** Manual production deploy with rollback state tracking
+- **rollback-production.yml:** One-click rollback to previous version
 
 ---
 
-## 12. Testing
+## 11. Testing
 
 Framework: Vitest. Tests in `server/__tests__/`.
 
 ### Test Structure
-- **storage.test.ts** — 29 unit tests: gallery layout generation algorithm, mocked DatabaseStorage methods, cascading delete verification
-- **routes.test.ts** — 40+ integration tests: HTTP endpoint validation with supertest, input validation (Zod), auction bid rules, order state machine enforcement, gallery regeneration triggers
+- **storage.test.ts** — Unit tests: gallery layout generation algorithm, mocked DatabaseStorage methods, cascading delete verification
+- **routes.test.ts** — Integration tests: HTTP endpoint validation with supertest, input validation (Zod), auction bid rules, order state machine enforcement, gallery regeneration triggers
 - **helpers/test-app.ts** — Test fixture: mocked storage + auth, Express app factory
-- **helpers/mock-storage.ts** — Full IStorage mock (32 `vi.fn()` stubs)
+- **helpers/mock-storage.ts** — Full IStorage mock (`vi.fn()` stubs)
 
 ### Running Tests
 ```bash
@@ -392,7 +382,7 @@ npx vitest run <file>       # Single file
 
 ---
 
-## 13. Environment Variables
+## 12. Environment Variables
 
 | Variable | Required | Default | Purpose |
 |----------|----------|---------|---------|
@@ -405,16 +395,18 @@ npx vitest run <file>       # Single file
 | `OIDC_CLIENT_ID` | No | — | OAuth client ID |
 | `OIDC_CLIENT_SECRET` | No | — | OAuth client secret |
 | `OIDC_ALLOWED_HOSTS` | No | — | Comma-separated allowed redirect hosts |
+| `RESEND_API_KEY` | No | — | Resend API key for email (magic links, order notifications) |
+| `RESEND_FROM_EMAIL` | No | `ArtVerse <onboarding@resend.dev>` | Sender address for emails |
 
 ---
 
-## 14. Key Dependencies
+## 13. Key Dependencies
 
 | Package | Version | Role |
 |---------|---------|------|
 | React | 18.3 | UI framework |
 | Express | 5.0 | HTTP server |
-| Drizzle ORM | 0.39 | Database ORM (push mode, no migrations) |
+| Drizzle ORM | 0.39 | Database ORM (dual-mode: push for staging, migrations for production) |
 | PostgreSQL (pg) | 8.16 | Database driver |
 | Three.js | 0.182 | 3D WebGL rendering |
 | Vite | 7.3 | Frontend build tool + dev server |
@@ -423,16 +415,17 @@ npx vitest run <file>       # Single file
 | Wouter | 3.3 | Client-side routing |
 | Passport | 0.7 | Authentication middleware |
 | openid-client | 6.8 | OIDC protocol |
+| bcryptjs | 3.0 | Password hashing |
+| Resend | 4.0 | Transactional email |
 | Zod | 3.24 | Schema validation |
 | @modelcontextprotocol/sdk | 1.26 | MCP server |
-| Resend | 4.0 | Email notifications |
 | esbuild | 0.25 | Server bundler |
 | Vitest | 3.2 | Test framework |
 | TypeScript | 5.6 | Type system |
 
 ---
 
-## 15. Seed Data
+## 14. Seed Data
 
 When `SEED_DB=true`, the application seeds:
 - **1 artist:** Alexandra C. (Romanian/Dutch reverse glass painter)
