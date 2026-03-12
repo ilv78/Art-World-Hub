@@ -451,7 +451,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/orders", async (req, res) => {
+  app.post("/api/orders", isAuthenticated, async (req: any, res) => {
     try {
       const orderData = insertOrderSchema.parse(req.body);
       const order = await storage.createOrder(orderData);
@@ -587,9 +587,17 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/blog", async (req, res) => {
+  app.post("/api/blog", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user?.claims?.sub;
+      const artist = await storage.getArtistByUserId(userId);
+      if (!artist) {
+        return res.status(403).json({ error: "Not authorized — no artist profile" });
+      }
       const postData = insertBlogPostSchema.parse(req.body);
+      if (postData.artistId !== artist.id) {
+        return res.status(403).json({ error: "Not authorized to create posts for another artist" });
+      }
       const post = await storage.createBlogPost(postData);
       res.status(201).json(post);
     } catch (error) {
@@ -600,24 +608,42 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/blog/:id", async (req, res) => {
+  app.patch("/api/blog/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const post = await storage.updateBlogPost(req.params.id, req.body);
-      if (!post) {
+      const userId = req.user?.claims?.sub;
+      const artist = await storage.getArtistByUserId(userId);
+      if (!artist) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+      const existing = await storage.getBlogPost(req.params.id);
+      if (!existing) {
         return res.status(404).json({ error: "Blog post not found" });
       }
-      res.json(post);
+      if (existing.artistId !== artist.id) {
+        return res.status(403).json({ error: "Not authorized to edit another artist's post" });
+      }
+      const post = await storage.updateBlogPost(req.params.id, req.body);
+      res.json(post!);
     } catch (error) {
       res.status(500).json({ error: "Failed to update blog post" });
     }
   });
 
-  app.delete("/api/blog/:id", async (req, res) => {
+  app.delete("/api/blog/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const deleted = await storage.deleteBlogPost(req.params.id);
-      if (!deleted) {
+      const userId = req.user?.claims?.sub;
+      const artist = await storage.getArtistByUserId(userId);
+      if (!artist) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+      const existing = await storage.getBlogPost(req.params.id);
+      if (!existing) {
         return res.status(404).json({ error: "Blog post not found" });
       }
+      if (existing.artistId !== artist.id) {
+        return res.status(403).json({ error: "Not authorized to delete another artist's post" });
+      }
+      await storage.deleteBlogPost(req.params.id);
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete blog post" });
@@ -625,8 +651,13 @@ export async function registerRoutes(
   });
 
   // Artist management routes
-  app.patch("/api/artists/:id", async (req, res) => {
+  app.patch("/api/artists/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user?.claims?.sub;
+      const currentArtist = await storage.getArtistByUserId(userId);
+      if (!currentArtist || currentArtist.id !== req.params.id) {
+        return res.status(403).json({ error: "Not authorized to edit another artist's profile" });
+      }
       const artist = await storage.updateArtist(req.params.id, req.body);
       if (!artist) {
         return res.status(404).json({ error: "Artist not found" });
@@ -637,9 +668,17 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/artworks", async (req, res) => {
+  app.post("/api/artworks", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user?.claims?.sub;
+      const artist = await storage.getArtistByUserId(userId);
+      if (!artist) {
+        return res.status(403).json({ error: "Not authorized — no artist profile" });
+      }
       const artworkData = insertArtworkSchema.parse(req.body);
+      if (artworkData.artistId !== artist.id) {
+        return res.status(403).json({ error: "Not authorized to create artworks for another artist" });
+      }
       const artwork = await storage.createArtwork(artworkData);
       if (artwork.isReadyForExhibition) {
         await storage.regenerateArtistGallery(artwork.artistId);
@@ -653,11 +692,19 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/artworks/:id", async (req, res) => {
+  app.patch("/api/artworks/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user?.claims?.sub;
+      const artist = await storage.getArtistByUserId(userId);
+      if (!artist) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
       const existingArtwork = await storage.getArtwork(req.params.id);
       if (!existingArtwork) {
         return res.status(404).json({ error: "Artwork not found" });
+      }
+      if (existingArtwork.artist.id !== artist.id) {
+        return res.status(403).json({ error: "Not authorized to edit another artist's artwork" });
       }
       const artwork = await storage.updateArtwork(req.params.id, req.body);
       if (!artwork) {
@@ -674,11 +721,19 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/artworks/:id", async (req, res) => {
+  app.delete("/api/artworks/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user?.claims?.sub;
+      const artist = await storage.getArtistByUserId(userId);
+      if (!artist) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
       const artwork = await storage.getArtwork(req.params.id);
       if (!artwork) {
         return res.status(404).json({ error: "Artwork not found" });
+      }
+      if (artwork.artist.id !== artist.id) {
+        return res.status(403).json({ error: "Not authorized to delete another artist's artwork" });
       }
       const deleted = await storage.deleteArtwork(req.params.id);
       if (!deleted) {
