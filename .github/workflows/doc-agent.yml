@@ -21,9 +21,14 @@ jobs:
     steps:
       - name: Check for API key
         id: check-key
+        run: |
+          if [ -n "$ANTHROPIC_API_KEY" ]; then
+            echo "has_key=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_key=false" >> "$GITHUB_OUTPUT"
+          fi
         env:
-          HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
-        run: echo "has_key=$HAS_KEY" >> "$GITHUB_OUTPUT"
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
       - uses: actions/checkout@v4
         if: steps.check-key.outputs.has_key == 'true'
