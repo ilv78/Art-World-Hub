@@ -23,8 +23,10 @@ git checkout -b feature/my-feature-name    # or fix/bug-description
 ### Running locally
 
 ```bash
-npm run dev          # Start dev server on port 5000
+npm run dev          # Start dev server on port 5000 (loads .env via dotenv)
 ```
+
+The server uses `dotenv` to load `.env` automatically. For local development outside Docker, ensure your `.env` has the correct `DATABASE_URL` pointing to `localhost:5433` (not the Docker-internal `db` hostname).
 
 Or with Docker (matches production environment):
 
@@ -345,7 +347,7 @@ Deploy notifications are sent to Telegram automatically. You'll receive a messag
 - **Production deploys** — after manual deploy (success or failure)
 - **Production rollbacks** — after rollback (success or failure)
 
-Each notification includes the status, image tag, who triggered it, and a link to the GitHub Actions run.
+Each notification includes the `@racu8_bot` tag, status, repo name, environment URL, image tag, and who triggered it.
 
 **Setup:** Requires `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` GitHub secrets. If not set, notifications are silently skipped.
 
@@ -394,3 +396,4 @@ After installing, commit both `package.json` and `package-lock.json`. The CI and
 | 2026-03-10 | Updated database section for dual-mode schema management (push for staging, migrate for production) |
 | 2026-03-11 | Added rollback procedures (one-click, specific version, emergency SSH) and commands |
 | 2026-03-11 | Added notifications section (Telegram) and updated GitHub secrets table |
+| 2026-03-11 | Updated notification format description. Added dotenv note for local dev. |

@@ -26,9 +26,12 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 |---|-------|----------|----------|--------|--------|-------|
 | 4 | Bug hunter | medium | devops | Open | — | Automated bug detection/testing |
 | 5 | Documentor | medium | documentation, devops | Open | — | Documentation tooling |
-| 6 | Email login | medium | enhancement | Open | — | Add email/password auth flow |
 | 7 | Role gallery curator | medium | feature | Open | — | Curator role for gallery management |
-| 20 | CI/CD pipeline e2e test | high | devops | In Progress | `test/issue-20-cicd-e2e-test` | Testing full pipeline + Telegram notifications |
+| 8 | Create admin section | high | feature | Open | — | Admin panel for platform management |
+| 12 | Correct artist profile picture | low | bug | Open | — | Profile picture display issue |
+| 14 | Multiple gallery templates | low | enhancement | Open | — | Support different gallery room layouts |
+| 32 | Correct names in museum gallery | medium | bug | Open | — | Artist room names incorrect |
+| 34 | Email signup magic link not sent | high | bug | Open | — | Magic link emails not being sent on signup (staging + prod) |
 
 ## Completed Issues
 
@@ -36,8 +39,16 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 |---|-------|----------|----------|-----------|--------|----|
 | 1 | A new color palette | — | — | 2026-03-11 | `feature/issue-1-color-palettes` | #2 |
 | 3 | Store images | high | feature | 2026-03-11 | `feature/issue-3-store-images` | #10 |
+| 9 | Classic view gallery arrows | high | bug | 2026-03-11 | `fix/issue-9-classic-gallery-arrows` | #31 |
 | 11 | Fix Google OAuth login | high | bug | 2026-03-11 | `fix/issue-11-google-oauth` | #13 #15 |
 | 17 | Deduplicate upload code | low | refactor | 2026-03-11 | `refactor/issue-17-deduplicate-upload-code` | #18 |
+| 19 | /blog route SPA 404 | high | bug | 2026-03-11 | `fix/issue-19-blog-route` | #24 |
+| 20 | CI/CD pipeline e2e test | high | devops | 2026-03-11 | `test/issue-20-cicd-e2e-test` | #21 |
+| 22 | Add README.md | — | documentation | 2026-03-11 | `feature/issue-22-readme` | #23 |
+| 25 | Missing artwork in gallery | high | bug | 2026-03-11 | `fix/issue-25-gallery-slot-count` | #30 |
+| 26 | Telegram announcing format | low | enhancement | 2026-03-11 | `enhancement/issue-26-telegram-format` | #27 |
+| 28 | Galleries not ok in museum | high | bug | 2026-03-11 | `fix/issue-28-museum-gallery-stale-layout` | #29 |
+| 6 | Email login | medium | enhancement | 2026-03-12 | `feature/issue-6-email-login` | #33 |
 
 ---
 
@@ -47,3 +58,6 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 |------|--------|
 | 2026-03-11 | Initial version — catalogued all existing GitHub issues |
 | 2026-03-11 | Moved #3, #11 to Completed. Added #17 (upload code refactor). |
+| 2026-03-11 | Bulk update: completed #9, #19, #20, #22, #25, #26, #28. Added open #8, #12, #14, #32. |
+| 2026-03-12 | Moved #6 (email login) to Completed — deployed to production. |
+| 2026-03-12 | Added #34 (email signup magic link not sent) — high priority bug. |

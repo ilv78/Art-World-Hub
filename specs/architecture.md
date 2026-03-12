@@ -51,7 +51,7 @@ ArtVerse is a full-stack art gallery platform that combines e-commerce with an i
 ```
 Art-World-Hub/
 ├── client/src/           React frontend
-│   ├── pages/            8 page components
+│   ├── pages/            10 page components
 │   ├── components/       3D galleries, cards, dialogs, 47 Shadcn UI components
 │   ├── hooks/            use-auth, use-toast, use-mobile
 │   └── lib/              queryClient, cart-store, utils
