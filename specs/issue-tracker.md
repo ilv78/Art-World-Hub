@@ -30,8 +30,6 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 12 | Correct artist profile picture | low | bug | Open | — | Profile picture display issue |
 | 14 | Multiple gallery templates | low | enhancement | Open | — | Support different gallery room layouts |
 | 32 | Correct names in museum gallery | medium | bug | Open | — | Artist room names incorrect |
-| 36 | Role securitas - in CI/CD | high | devops | In Progress | — | Parent: security pipeline. Sub-issue #55 |
-| 55 | Implement security CI/CD pipeline | high | devops | In Progress | `feature/issue-55-security-pipeline` | PR #56 |
 
 ## Completed Issues
 
@@ -55,6 +53,8 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 42 | Backfill documentation | medium | documentation | 2026-03-12 | `feature/issue-42-backfill-docs` | #48 |
 | 5 | Documentor (parent) | medium | documentation, devops | 2026-03-12 | — | Sub-issues #40, #41, #42 |
 | 53 | Refactor: consolidate duplicated auth/email/frontend code | medium | refactor | 2026-03-12 | `refactor/issue-53-simplify-auth-email` | #54 |
+| 55 | Implement security CI/CD pipeline | high | devops | 2026-03-12 | `feature/issue-55-security-pipeline` | #56 |
+| 36 | Role securitas - in CI/CD (parent) | high | devops | 2026-03-12 | — | Sub-issue #55 |
 
 ---
 
@@ -72,3 +72,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-12 | Moved #42 to Completed (PR #48). Moved #5 (parent) to Completed — all sub-issues done. |
 | 2026-03-12 | Added #53 (refactor auth/email/frontend) to Completed (PR #54). |
 | 2026-03-12 | Added #36 (securitas parent) and #55 (security pipeline sub-issue) to Active — PR #56. |
+| 2026-03-12 | Moved #55 and #36 to Completed (PR #56 merged). |
