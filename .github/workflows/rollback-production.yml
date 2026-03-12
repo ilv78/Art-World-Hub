@@ -8,23 +8,31 @@ on:
         required: false
         default: ""
 
+permissions:
+  contents: read
+
 jobs:
   rollback-production:
     name: Rollback Production
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+
     steps:
       - name: Rollback via SSH
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
+        env:
+          ROLLBACK_TAG: ${{ github.event.inputs.image_tag }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: production
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          envs: ROLLBACK_TAG
           script: |
             cd ~/app
 
             # Determine which tag to roll back to
-            ROLLBACK_TAG="${{ github.event.inputs.image_tag }}"
             if [ -z "$ROLLBACK_TAG" ]; then
               if [ ! -f .previous_image_tag ]; then
                 echo "ERROR: No previous image tag found and none specified"
