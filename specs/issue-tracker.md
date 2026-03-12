@@ -25,13 +25,11 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | # | Title | Priority | Category | Status | Branch | Notes |
 |---|-------|----------|----------|--------|--------|-------|
 | 4 | Bug hunter | medium | devops | Open | — | Automated bug detection/testing |
-| 5 | Documentor | medium | documentation, devops | Open | — | Documentation tooling |
 | 7 | Role gallery curator | medium | feature | Open | — | Curator role for gallery management |
 | 8 | Create admin section | high | feature | Open | — | Admin panel for platform management |
 | 12 | Correct artist profile picture | low | bug | Open | — | Profile picture display issue |
 | 14 | Multiple gallery templates | low | enhancement | Open | — | Support different gallery room layouts |
 | 32 | Correct names in museum gallery | medium | bug | Open | — | Artist room names incorrect |
-| 42 | Backfill documentation | medium | documentation | Open | — | Sub-issue of #5 |
 
 ## Completed Issues
 
@@ -52,6 +50,8 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 34 | Email signup magic link not sent | high | bug | 2026-03-12 | `fix/issue-34-magic-link-emails` | #38 |
 | 40 | Restructure specs/ directory | medium | documentation | 2026-03-12 | `feature/issue-40-restructure-specs` | #43 |
 | 41 | Create doc agent GitHub Actions workflow | medium | documentation, devops | 2026-03-12 | `feature/issue-41-doc-agent-workflow` | #44 #45 |
+| 42 | Backfill documentation | medium | documentation | 2026-03-12 | `feature/issue-42-backfill-docs` | #48 |
+| 5 | Documentor (parent) | medium | documentation, devops | 2026-03-12 | — | Sub-issues #40, #41, #42 |
 
 ---
 
@@ -66,3 +66,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-12 | Added #34 (email signup magic link not sent) — high priority bug. |
 | 2026-03-12 | Moved #34 to Completed (PR #38). Added #40, #41, #42 (doc agent sub-issues of #5). |
 | 2026-03-12 | Moved #40 to Completed (PR #43), #41 to Completed (PR #44 + fix PR #45). |
+| 2026-03-12 | Moved #42 to Completed (PR #48). Moved #5 (parent) to Completed — all sub-issues done. |
