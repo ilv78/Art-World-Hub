@@ -1,0 +1,127 @@
+name: Documentation Agent
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 8 * * 1'   # Weekly Monday 08:00 UTC
+  workflow_dispatch:
+
+jobs:
+  # --- ENFORCE MODE: Runs on PRs using Claude to analyze the diff ---
+  enforce:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Check for API key
+        id: check-key
+        env:
+          HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+        run: echo "has_key=$HAS_KEY" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        if: steps.check-key.outputs.has_key == 'true'
+        with:
+          fetch-depth: 0
+
+      - name: Run Documentation Agent (Enforce)
+        if: steps.check-key.outputs.has_key == 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          prompt: |
+            You are the ArtVerse Documentation Agent in ENFORCE mode.
+            Read specs/DOC-AGENT-SPEC.md for the full rule set, then analyze this PR.
+
+            Check these rules against the PR diff:
+            - C-001: PR adds a migration → specs/architecture/DATA-MODEL.md must be updated or ADR linked
+            - C-002: PR adds a new Express route → feature spec must exist or be updated
+            - C-003: PR changes CLAUDE.md → specs/decisions/DECISION-LOG.md needs an entry
+            - C-004: PR title has "breaking-change" → ADR must be linked in description
+            - C-005: Bug files with status Open >30 days need a ## Workaround section
+            - S-001 to S-006: Required files must exist
+            - Q-001 to Q-004: Quality checks on any spec files in the diff
+
+            Post all findings as WARNINGS (not errors) — enforcement is not active yet.
+            If a PR label matches "docs-skip: XX-NNN", skip that rule.
+
+            Use this output format for your comment:
+
+            ## 📋 Documentation Agent Report
+
+            | Severity | Count |
+            |---|---|
+            | 🟡 Warnings | N |
+            | 🟢 Info | M |
+
+            ### Warnings
+            - [ ] [RULE-ID] Description
+
+            ### Info
+            - [RULE-ID] Observation
+
+            ---
+            _Documentation Agent · [View Full Spec](specs/DOC-AGENT-SPEC.md)_
+
+            If no issues found, just say:
+            ## 📋 Documentation Agent Report
+            ✅ All documentation rules pass. No issues found.
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          use_sticky_comment: true
+
+      - name: Skip notice
+        if: steps.check-key.outputs.has_key != 'true'
+        run: echo "⏭️ Skipping doc agent enforce — ANTHROPIC_API_KEY not configured."
+
+  # --- AUDIT MODE: Runs on push to main, weekly schedule, or manual trigger ---
+  audit:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Documentation Audit
+        id: audit
+        run: |
+          REPORT=$(.github/scripts/doc-audit.sh 2>&1) || true
+          echo "report<<AUDIT_EOF" >> "$GITHUB_OUTPUT"
+          echo "$REPORT" >> "$GITHUB_OUTPUT"
+          echo "AUDIT_EOF" >> "$GITHUB_OUTPUT"
+
+          # Count findings
+          ERRORS=$(echo "$REPORT" | grep -c '^\- \[ \] \[S-\|^\- \[ \] \[C-' || echo "0")
+          WARNINGS=$(echo "$REPORT" | grep -c '^\- \[ \] \[ST-' || echo "0")
+          INFOS=$(echo "$REPORT" | grep -c '^\- \[Q-' || echo "0")
+          echo "errors=$ERRORS" >> "$GITHUB_OUTPUT"
+          echo "warnings=$WARNINGS" >> "$GITHUB_OUTPUT"
+          echo "infos=$INFOS" >> "$GITHUB_OUTPUT"
+          echo "has_findings=$( [ $((ERRORS + WARNINGS + INFOS)) -gt 0 ] && echo true || echo false )" >> "$GITHUB_OUTPUT"
+
+      - name: Create audit issue
+        if: steps.audit.outputs.has_findings == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DATE=$(date -u +%Y-%m-%d)
+          TITLE="📋 Docs Audit: ${DATE} — ${{ steps.audit.outputs.errors }} errors, ${{ steps.audit.outputs.warnings }} warnings, ${{ steps.audit.outputs.infos }} info"
+          gh issue create \
+            --title "$TITLE" \
+            --label "docs-audit" \
+            --assignee "${{ github.repository_owner }}" \
+            --body "${{ steps.audit.outputs.report }}"
+
+      - name: Log clean audit
+        if: steps.audit.outputs.has_findings == 'false'
+        run: echo "✅ Documentation audit passed with no findings."
