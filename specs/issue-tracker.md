@@ -35,8 +35,8 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 77 | Security Audit — Critical findings | critical | devops | In Progress | — | Parent. Sub-issues: #78, #79, #80, #81. 4 P0s, 6 P1s, 7 P2s. |
 | 78 | Add auth to 9 unprotected write endpoints | critical | bug | In Progress | `fix/issue-78-auth-write-endpoints` | Sub of #77 |
 | 79 | Lock down order endpoints (PII exposure) | critical | bug | In Progress | `fix/issue-79-lock-order-endpoints` | Sub of #77 |
-| 80 | Add auth to MCP server endpoint | critical | bug | Open | — | Sub of #77 |
-| 81 | Fix SSRF in image proxy endpoint | critical | bug | Open | — | Sub of #77 |
+| 80 | Add auth to MCP server endpoint | critical | bug | In Progress | `fix/issue-80-81-mcp-auth-ssrf` | Sub of #77 |
+| 81 | Fix SSRF in image proxy endpoint | critical | bug | In Progress | `fix/issue-80-81-mcp-auth-ssrf` | Sub of #77 |
 | 74 | Upgrade react-resizable-panels 2→4 | high | bug | Open | — | Dependabot PR #68 closed (major) |
 | 75 | Upgrade recharts 2→3 | high | bug | Open | — | Dependabot PR #69 closed (major) |
 | 76 | Upgrade Vite 7→8 | high | bug | Open | — | Dependabot PR #70 closed (major) |

@@ -189,20 +189,60 @@ export async function registerRoutes(
   app.post("/api/upload/artwork", isAuthenticated, createUploadHandler(artworkUpload, "artworks"));
   app.post("/api/upload/blog-cover", isAuthenticated, createUploadHandler(blogCoverUpload, "blog-covers"));
 
+  // SSRF-safe image proxy: block private/internal IP ranges
+  function isPrivateHostname(hostname: string): boolean {
+    // Block localhost variants
+    if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1" || hostname === "0.0.0.0") {
+      return true;
+    }
+    // Block metadata endpoints
+    if (hostname === "169.254.169.254" || hostname === "metadata.google.internal") {
+      return true;
+    }
+    // Block private IP ranges
+    const parts = hostname.split(".").map(Number);
+    if (parts.length === 4 && parts.every((p) => !isNaN(p))) {
+      if (parts[0] === 10) return true; // 10.0.0.0/8
+      if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true; // 172.16.0.0/12
+      if (parts[0] === 192 && parts[1] === 168) return true; // 192.168.0.0/16
+      if (parts[0] === 127) return true; // 127.0.0.0/8
+      if (parts[0] === 169 && parts[1] === 254) return true; // 169.254.0.0/16 (link-local)
+    }
+    return false;
+  }
+
   app.get("/api/image-proxy", (req, res) => {
     const imageUrl = req.query.url as string;
     if (!imageUrl) {
       return res.status(400).json({ error: "Missing url parameter" });
     }
+    let parsedUrl: URL;
     try {
-      new URL(imageUrl);
+      parsedUrl = new URL(imageUrl);
     } catch {
       return res.status(400).json({ error: "Invalid URL" });
+    }
+    // Only allow http/https
+    if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+      return res.status(400).json({ error: "Only HTTP/HTTPS URLs are allowed" });
+    }
+    // Block private/internal hostnames
+    if (isPrivateHostname(parsedUrl.hostname)) {
+      return res.status(403).json({ error: "Access to internal addresses is not allowed" });
     }
     const client = imageUrl.startsWith("https") ? https : http;
     const proxyReq = client.get(imageUrl, { headers: { "User-Agent": "Mozilla/5.0" } }, (proxyRes) => {
       if (proxyRes.statusCode && proxyRes.statusCode >= 300 && proxyRes.statusCode < 400 && proxyRes.headers.location) {
         const redirectUrl = proxyRes.headers.location;
+        // Validate redirect URL against SSRF too
+        try {
+          const redirectParsed = new URL(redirectUrl);
+          if (isPrivateHostname(redirectParsed.hostname)) {
+            return res.status(403).json({ error: "Redirect to internal address is not allowed" });
+          }
+        } catch {
+          return res.status(400).json({ error: "Invalid redirect URL" });
+        }
         const redirectClient = redirectUrl.startsWith("https") ? https : http;
         redirectClient.get(redirectUrl, { headers: { "User-Agent": "Mozilla/5.0" } }, (redirectRes) => {
           const contentType = redirectRes.headers["content-type"] || "image/jpeg";

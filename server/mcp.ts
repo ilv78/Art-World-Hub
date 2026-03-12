@@ -3,6 +3,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import type { Express, Request, Response } from "express";
+import { isAuthenticated } from "./replit_integrations/auth";
 import { DatabaseStorage } from "./storage";
 import { ORDER_TRANSITIONS, ORDER_STATUSES } from "@shared/schema";
 
@@ -819,7 +820,7 @@ Use third person, present tense. Keep it professional yet warm and engaging.`,
 const sessions = new Map<string, { transport: StreamableHTTPServerTransport; server: McpServer }>();
 
 export function registerMcpRoutes(app: Express) {
-  app.post("/mcp", async (req: Request, res: Response) => {
+  app.post("/mcp", isAuthenticated, async (req: Request, res: Response) => {
     const sessionId = req.headers["mcp-session-id"] as string | undefined;
 
     if (sessionId && sessions.has(sessionId)) {
@@ -865,7 +866,7 @@ export function registerMcpRoutes(app: Express) {
     }
   });
 
-  app.get("/mcp", async (req: Request, res: Response) => {
+  app.get("/mcp", isAuthenticated, async (req: Request, res: Response) => {
     const sessionId = req.headers["mcp-session-id"] as string | undefined;
     if (!sessionId || !sessions.has(sessionId)) {
       res.status(404).json({ jsonrpc: "2.0", error: { code: -32000, message: "Session not found" } });
@@ -881,7 +882,7 @@ export function registerMcpRoutes(app: Express) {
     }
   });
 
-  app.delete("/mcp", async (req: Request, res: Response) => {
+  app.delete("/mcp", isAuthenticated, async (req: Request, res: Response) => {
     const sessionId = req.headers["mcp-session-id"] as string | undefined;
     if (!sessionId || !sessions.has(sessionId)) {
       res.status(404).json({ jsonrpc: "2.0", error: { code: -32000, message: "Session not found" } });
