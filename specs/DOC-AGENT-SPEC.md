@@ -109,7 +109,7 @@ The agent enforces rules at three severity levels: **ERROR** (blocks merge), **W
 |---|---|
 | Q-001 | SPEC.md files with fewer than 100 words are flagged as stubs |
 | Q-002 | ADR files missing `## Consequences` section |
-| Q-003 | Any `TODO` or `TBD` placeholder in an Active document |
+| Q-003 | Any unfinished-work placeholder (to-do / to-be-determined) in an Active document |
 | Q-004 | Broken internal links between spec files |
 
 ---
