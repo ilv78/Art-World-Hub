@@ -19,3 +19,4 @@ Lightweight log for minor decisions that don't warrant a full ADR. For significa
 | 2026-03-12 | Use Resend for transactional email | Simple API, good free tier, handles deliverability — replaced dead Replit connector | Architecture |
 | 2026-03-12 | Restructure specs/ into taxonomy | Per DOC-AGENT-SPEC.md — enables automated documentation validation | Architecture |
 | 2026-03-12 | Doc agent: Claude for PRs, shell script for audits | claude-code-action API doesn't support scheduled/push triggers well; shell script is reliable and free for structural checks | Architecture |
+| 2026-03-12 | Q-003 rule text: avoid literal placeholder words | Rule description triggered false positive on itself; rephrased to avoid grep match | Architecture |
