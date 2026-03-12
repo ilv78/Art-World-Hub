@@ -12,6 +12,18 @@ import connectPg from "connect-pg-simple";
 import { authStorage } from "./storage";
 import { sendMagicLinkEmail } from "../../email";
 import { z } from "zod";
+import type { User } from "@shared/models/auth";
+
+function buildSessionUser(user: { id: string; email: string | null; firstName: string | null; lastName: string | null }) {
+  return {
+    claims: {
+      sub: user.id,
+      email: user.email,
+      first_name: user.firstName,
+      last_name: user.lastName,
+    },
+  };
+}
 
 /**
  * Generic OIDC auth (used for Google OAuth in production).
@@ -151,16 +163,7 @@ export async function setupAuth(app: Express) {
           if (!valid) {
             return done(null, false, { message: "Invalid email or password" });
           }
-          // Build session object matching OIDC shape so the rest of the app works
-          const sessionUser = {
-            claims: {
-              sub: user.id,
-              email: user.email,
-              first_name: user.firstName,
-              last_name: user.lastName,
-            },
-          };
-          return done(null, sessionUser);
+          return done(null, buildSessionUser(user));
         } catch (err) {
           return done(err);
         }
@@ -219,17 +222,7 @@ export async function setupAuth(app: Express) {
         emailVerified: true,
       });
 
-      // Log the user in
-      const sessionUser = {
-        claims: {
-          sub: user.id,
-          email: user.email,
-          first_name: user.firstName,
-          last_name: user.lastName,
-        },
-      };
-
-      req.login(sessionUser, (err) => {
+      req.login(buildSessionUser(user), (err) => {
         if (err) {
           console.error("Login after verify error:", err);
           return res.redirect("/auth?error=login_failed");

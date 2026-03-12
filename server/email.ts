@@ -2,7 +2,7 @@ import { Resend } from "resend";
 
 let resendClient: Resend | null = null;
 
-function getResendClient(): Resend {
+export function getResendClient(): Resend {
   if (!resendClient) {
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
@@ -13,7 +13,7 @@ function getResendClient(): Resend {
   return resendClient;
 }
 
-function getFromEmail(): string {
+export function getFromEmail(): string {
   return process.env.RESEND_FROM_EMAIL || "ArtVerse <onboarding@resend.dev>";
 }
 

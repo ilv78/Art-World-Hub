@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,15 +17,8 @@ export default function SetPassword() {
 
   const setPasswordMutation = useMutation({
     mutationFn: async (password: string) => {
-      const res = await fetch("/api/auth/set-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
-        credentials: "include",
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
-      return data;
+      const res = await apiRequest("POST", "/api/auth/set-password", { password });
+      return res.json();
     },
     onSuccess: () => {
       toast({ title: "Password set!", description: "Your account is ready." });
