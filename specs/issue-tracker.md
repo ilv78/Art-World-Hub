@@ -31,8 +31,6 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 12 | Correct artist profile picture | low | bug | Open | — | Profile picture display issue |
 | 14 | Multiple gallery templates | low | enhancement | Open | — | Support different gallery room layouts |
 | 32 | Correct names in museum gallery | medium | bug | Open | — | Artist room names incorrect |
-| 40 | Restructure specs/ directory | medium | documentation | In Progress | `feature/issue-40-restructure-specs` | Sub-issue of #5 |
-| 41 | Create doc agent GitHub Actions workflow | medium | documentation, devops | Open | — | Sub-issue of #5 |
 | 42 | Backfill documentation | medium | documentation | Open | — | Sub-issue of #5 |
 
 ## Completed Issues
@@ -52,6 +50,8 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 28 | Galleries not ok in museum | high | bug | 2026-03-11 | `fix/issue-28-museum-gallery-stale-layout` | #29 |
 | 6 | Email login | medium | enhancement | 2026-03-12 | `feature/issue-6-email-login` | #33 |
 | 34 | Email signup magic link not sent | high | bug | 2026-03-12 | `fix/issue-34-magic-link-emails` | #38 |
+| 40 | Restructure specs/ directory | medium | documentation | 2026-03-12 | `feature/issue-40-restructure-specs` | #43 |
+| 41 | Create doc agent GitHub Actions workflow | medium | documentation, devops | 2026-03-12 | `feature/issue-41-doc-agent-workflow` | #44 #45 |
 
 ---
 
@@ -65,3 +65,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-12 | Moved #6 (email login) to Completed — deployed to production. |
 | 2026-03-12 | Added #34 (email signup magic link not sent) — high priority bug. |
 | 2026-03-12 | Moved #34 to Completed (PR #38). Added #40, #41, #42 (doc agent sub-issues of #5). |
+| 2026-03-12 | Moved #40 to Completed (PR #43), #41 to Completed (PR #44 + fix PR #45). |
