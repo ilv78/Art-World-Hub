@@ -335,9 +335,18 @@ Telegram notifications on every deploy, rollback, and failure.
    - `ci.yml` → `deploy-staging` job: notifies on staging deploy success/failure
    - `deploy-production.yml`: notifies on production deploy success/failure
    - `rollback-production.yml`: notifies on rollback success/failure
-2. Each notification includes: status emoji, environment, image tag, actor, and link to the GitHub Actions run
+2. Each notification includes: `@racu8_bot` header, status emoji, environment name with repo name, environment URL, image tag, and actor
 3. Notifications use `if: always()` so they fire even on failure
 4. Gracefully skip if `TELEGRAM_BOT_TOKEN` secret is not set
+
+**Notification format:**
+```
+@racu8_bot
+✅ Staging deployment: success [Art-World-Hub]
+Staging address: https://staging.artverse.idata.ro
+Tag: <commit-sha>
+By: username
+```
 
 **GitHub Secrets required:**
 - `TELEGRAM_BOT_TOKEN` — Telegram bot token from @BotFather
@@ -575,3 +584,4 @@ DB passwords and session secrets are stored in `.env` files on the VPS (not in G
 | 2026-03-11 | Step 10 done — rollback mechanism. `deploy-production.yml` saves current tag to `.previous_image_tag` before deploying. Created `rollback-production.yml` workflow (auto-rollback to previous or specified tag). |
 | 2026-03-11 | Step 11 done — Telegram notifications on all deploy/rollback workflows. Requires `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` secrets. |
 | 2026-03-11 | Replaced old pipeline diagram with 5 comprehensive diagrams: development workflow, CI/CD pipeline, production deploy, rollback, and infrastructure overview. Updated Telegram secrets status to Set. |
+| 2026-03-11 | Updated Telegram notification format: added @racu8_bot header, repo name, environment URLs. Removed "View run" link. (Issue #26, PR #27) |
