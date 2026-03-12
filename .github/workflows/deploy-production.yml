@@ -61,16 +61,18 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          DEPLOY_STATUS: ${{ job.status }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          IMAGE_TAG: ${{ github.event.inputs.image_tag }}
+          TRIGGERED_BY: ${{ github.actor }}
         run: |
           if [ -z "$TELEGRAM_BOT_TOKEN" ]; then exit 0; fi
-          STATUS="${{ job.status }}"
-          if [ "$STATUS" = "success" ]; then EMOJI="✅"; else EMOJI="❌"; fi
-          REPO_NAME="${{ github.event.repository.name }}"
+          if [ "$DEPLOY_STATUS" = "success" ]; then EMOJI="✅"; else EMOJI="❌"; fi
           curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d chat_id="${TELEGRAM_CHAT_ID}" \
             -d parse_mode="HTML" \
             -d text="@racu8_bot
-          ${EMOJI} <b>Production deployment: ${STATUS}</b> [${REPO_NAME}]
+          ${EMOJI} <b>Production deployment: ${DEPLOY_STATUS}</b> [${REPO_NAME}]
           Production address: https://artverse.idata.ro
-          Tag: <code>${{ github.event.inputs.image_tag }}</code>
-          By: ${{ github.actor }}"
+          Tag: <code>${IMAGE_TAG}</code>
+          By: ${TRIGGERED_BY}"

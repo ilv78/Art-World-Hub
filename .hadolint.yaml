@@ -1,0 +1,9 @@
+failure-threshold: warning
+
+ignore:
+  - DL3008  # apt-get: pin versions — acceptable for bookworm-slim base
+
+trustedRegistries:
+  - docker.io
+  - ghcr.io
+  - public.ecr.aws

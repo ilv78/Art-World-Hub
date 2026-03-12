@@ -1,0 +1,172 @@
+name: Security
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Full scan every Monday at 08:00 UTC — catches new CVEs against unchanged code
+    - cron: "0 8 * * 1"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+
+  # ─────────────────────────────────────────────
+  # JOB 1 — SECRET SCANNING
+  # Blocks if any secret, token, or key is found
+  # anywhere in the commit history being pushed.
+  # ─────────────────────────────────────────────
+  secret-scan:
+    name: Secret Scanning (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0  # full history — gitleaks scans all commits in the push
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ─────────────────────────────────────────────
+  # JOB 2 — DEPENDENCY VULNERABILITY AUDIT
+  # npm audit for known CVEs in dependencies.
+  # Fails on critical or high severity findings.
+  # ─────────────────────────────────────────────
+  dependency-audit:
+    name: Dependency Audit (npm audit)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup Node
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Audit for critical and high vulnerabilities
+        run: npm audit --audit-level=high
+
+  # ─────────────────────────────────────────────
+  # JOB 3 — STATIC ANALYSIS (SEMGREP)
+  # Scans source code for OWASP Top 10 patterns:
+  # SQL injection, XSS, insecure JWT usage,
+  # hardcoded secrets, prototype pollution, etc.
+  # ─────────────────────────────────────────────
+  sast:
+    name: Static Analysis (Semgrep)
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Run Semgrep
+        run: |
+          semgrep scan \
+            --config p/owasp-top-ten \
+            --config p/nodejs \
+            --config p/typescript \
+            --config p/jwt \
+            --config p/secrets \
+            --exclude="deploy/nginx/*" \
+            --error
+
+  # ─────────────────────────────────────────────
+  # JOB 4 — DOCKERFILE LINTING (HADOLINT)
+  # Enforces Dockerfile best practices:
+  # non-root USER, no latest tags, multi-stage
+  # builds, no secrets in ENV/ARG, etc.
+  # ─────────────────────────────────────────────
+  dockerfile-lint:
+    name: Dockerfile Lint (hadolint)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Lint Dockerfile
+        uses: hadolint/hadolint-action@54c9adbab1582c2ef04b2016b760714a4bfde3cf # v3.1.0
+        with:
+          dockerfile: Dockerfile
+          failure-threshold: warning
+
+  # ─────────────────────────────────────────────
+  # JOB 5 — CONTAINER IMAGE VULNERABILITY SCAN
+  # Only runs on pushes to main (post-merge),
+  # since it requires building the Docker image.
+  # Scans OS packages + Node deps inside the image.
+  # ─────────────────────────────────────────────
+  container-scan:
+    name: Container Scan (Trivy)
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.event_name == 'schedule'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Build Docker image
+        run: docker build -t artverse:${{ github.sha }} .
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@6e7b7d1fd3e4fef0c5fa8cce1229c54b2c9bd0d8 # 0.30.0
+        with:
+          image-ref: artverse:${{ github.sha }}
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+
+  # ─────────────────────────────────────────────
+  # JOB 6 — CUSTOM SECURITY CHECKS
+  # Fast, targeted checks specific to ArtVerse:
+  # - helmet middleware present
+  # - rate limiter on auth routes
+  # - .env never committed
+  # - no security TODOs left open
+  # ─────────────────────────────────────────────
+  custom-checks:
+    name: ArtVerse Security Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Run custom security checks
+        run: bash .github/scripts/security-checks.sh
+
+  # ─────────────────────────────────────────────
+  # SUMMARY — Required status check for branch
+  # protection. All jobs must pass for this to
+  # succeed. Add "Security / Gate" as the required
+  # check in GitHub branch protection settings.
+  # ─────────────────────────────────────────────
+  gate:
+    name: Gate
+    runs-on: ubuntu-latest
+    needs:
+      - secret-scan
+      - dependency-audit
+      - sast
+      - dockerfile-lint
+      - custom-checks
+    if: always()
+    steps:
+      - name: Check all security jobs passed
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
+            echo "One or more security checks failed. Merge is blocked."
+            exit 1
+          fi
+          echo "All security checks passed."

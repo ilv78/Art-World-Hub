@@ -6,6 +6,7 @@ import crypto from "crypto";
 
 import passport from "passport";
 import session from "express-session";
+import rateLimit from "express-rate-limit";
 import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
@@ -173,8 +174,17 @@ export async function setupAuth(app: Express) {
 
   // --- Email auth routes ---
 
+  // Rate limit auth endpoints: 10 requests per 15 minutes per IP
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Too many attempts, please try again later" },
+  });
+
   // Sign up: send magic link
-  app.post("/api/auth/signup", async (req, res) => {
+  app.post("/api/auth/signup", authLimiter, async (req, res) => {
     try {
       const { email } = signupSchema.parse(req.body);
 
@@ -263,7 +273,7 @@ export async function setupAuth(app: Express) {
   });
 
   // Sign in with email + password
-  app.post("/api/auth/login", (req, res, next) => {
+  app.post("/api/auth/login", authLimiter, (req, res, next) => {
     try {
       loginSchema.parse(req.body);
     } catch (error) {
