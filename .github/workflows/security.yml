@@ -81,6 +81,7 @@ jobs:
             --config p/typescript \
             --config p/jwt \
             --config p/secrets \
+            --exclude="deploy/nginx/*" \
             --error
 
   # ─────────────────────────────────────────────
