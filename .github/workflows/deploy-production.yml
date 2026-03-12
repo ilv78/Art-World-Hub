@@ -8,17 +8,23 @@ on:
         required: true
         default: "latest"
 
+permissions:
+  contents: read
+
 jobs:
   deploy-production:
     name: Deploy to Production
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Sync docker-compose to VPS
-        uses: appleboy/scp-action@v1.0.0
+        uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345 # v1.0.0
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: production
@@ -28,21 +34,24 @@ jobs:
           strip_components: 2
 
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
+        env:
+          IMAGE_TAG: ${{ github.event.inputs.image_tag }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: production
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          envs: IMAGE_TAG
           script: |
             cd ~/app
             # Save current IMAGE_TAG for rollback
             CURRENT_TAG=$(grep '^IMAGE_TAG=' .env | cut -d= -f2 || true)
-            if [ -n "$CURRENT_TAG" ] && [ "$CURRENT_TAG" != "${{ github.event.inputs.image_tag }}" ]; then
+            if [ -n "$CURRENT_TAG" ] && [ "$CURRENT_TAG" != "$IMAGE_TAG" ]; then
               echo "Saving current tag for rollback: $CURRENT_TAG"
               echo "$CURRENT_TAG" > .previous_image_tag
             fi
-            docker pull ghcr.io/ilv78/art-world-hub:${{ github.event.inputs.image_tag }}
-            sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=${{ github.event.inputs.image_tag }}/' .env || echo 'IMAGE_TAG=${{ github.event.inputs.image_tag }}' >> .env
+            docker pull ghcr.io/ilv78/art-world-hub:$IMAGE_TAG
+            sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$IMAGE_TAG/" .env || echo "IMAGE_TAG=$IMAGE_TAG" >> .env
             docker compose up -d --remove-orphans
             echo "Waiting for app to be healthy..."
             for i in $(seq 1 60); do

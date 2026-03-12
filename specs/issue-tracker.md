@@ -32,7 +32,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 32 | Correct names in museum gallery | medium | bug | Open | — | Artist room names incorrect |
 | 36 | Role securitas - in CI/CD | high | devops | In Progress | — | Parent: spec at `specs/SECURITY_AGENT.md`. Sub-issue #55 done. Audit completed → issue #77 (4×P0, 6×P1, 7×P2). |
 | 73 | Upgrade Node.js 20→25 | high | bug | Open | — | Dependabot PR #57 closed (major) |
-| 77 | Security Audit — Critical findings | critical | devops | In Progress | — | Parent. All 4 P0s done. 6 P1s, 7 P2s remaining. |
+| 77 | Security Audit — Critical findings | critical | devops | In Progress | — | Parent. All 4 P0s done, all 6 P1s done. 7 P2s remaining. |
 | 74 | Upgrade react-resizable-panels 2→4 | high | bug | Open | — | Dependabot PR #68 closed (major) |
 | 75 | Upgrade recharts 2→3 | high | bug | Open | — | Dependabot PR #69 closed (major) |
 | 76 | Upgrade Vite 7→8 | high | bug | Open | — | Dependabot PR #70 closed (major) |

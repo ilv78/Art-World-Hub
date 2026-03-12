@@ -21,6 +21,7 @@ export const artists = pgTable("artists", {
 });
 
 export const insertArtistSchema = createInsertSchema(artists).omit({ id: true });
+export const updateArtistSchema = insertArtistSchema.partial().omit({ userId: true });
 export type InsertArtist = z.infer<typeof insertArtistSchema>;
 export type Artist = typeof artists.$inferSelect;
 
@@ -43,6 +44,7 @@ export const artworks = pgTable("artworks", {
 });
 
 export const insertArtworkSchema = createInsertSchema(artworks).omit({ id: true });
+export const updateArtworkSchema = insertArtworkSchema.partial().omit({ artistId: true });
 export type InsertArtwork = z.infer<typeof insertArtworkSchema>;
 export type Artwork = typeof artworks.$inferSelect;
 
@@ -117,6 +119,7 @@ export const blogPosts = pgTable("blog_posts", {
 });
 
 export const insertBlogPostSchema = createInsertSchema(blogPosts).omit({ id: true, createdAt: true, updatedAt: true });
+export const updateBlogPostSchema = insertBlogPostSchema.partial().omit({ artistId: true });
 export type InsertBlogPost = z.infer<typeof insertBlogPostSchema>;
 export type BlogPost = typeof blogPosts.$inferSelect;
 
