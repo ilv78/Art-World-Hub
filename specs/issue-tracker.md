@@ -52,6 +52,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 41 | Create doc agent GitHub Actions workflow | medium | documentation, devops | 2026-03-12 | `feature/issue-41-doc-agent-workflow` | #44 #45 |
 | 42 | Backfill documentation | medium | documentation | 2026-03-12 | `feature/issue-42-backfill-docs` | #48 |
 | 5 | Documentor (parent) | medium | documentation, devops | 2026-03-12 | — | Sub-issues #40, #41, #42 |
+| 53 | Refactor: consolidate duplicated auth/email/frontend code | medium | refactor | 2026-03-12 | `refactor/issue-53-simplify-auth-email` | #54 |
 
 ---
 
@@ -67,3 +68,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-12 | Moved #34 to Completed (PR #38). Added #40, #41, #42 (doc agent sub-issues of #5). |
 | 2026-03-12 | Moved #40 to Completed (PR #43), #41 to Completed (PR #44 + fix PR #45). |
 | 2026-03-12 | Moved #42 to Completed (PR #48). Moved #5 (parent) to Completed — all sub-issues done. |
+| 2026-03-12 | Added #53 (refactor auth/email/frontend) to Completed (PR #54). |
