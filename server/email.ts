@@ -14,7 +14,7 @@ export function getResendClient(): Resend {
 }
 
 export function getFromEmail(): string {
-  return process.env.RESEND_FROM_EMAIL || "ArtVerse <onboarding@resend.dev>";
+  return process.env.RESEND_FROM_EMAIL || "ArtVerse <gallery@idata.ro>";
 }
 
 export async function sendMagicLinkEmail(
