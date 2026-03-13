@@ -1,6 +1,9 @@
 #!/bin/sh
 set -e
 
+# Ensure upload subdirectories exist (volume mount may lack new ones)
+mkdir -p /app/uploads/artworks /app/uploads/blog-covers /app/uploads/avatars
+
 if [ "$DB_MIGRATION_MODE" = "migrate" ]; then
   echo "Running database migrations..."
   npx drizzle-kit migrate
