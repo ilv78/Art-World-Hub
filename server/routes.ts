@@ -220,8 +220,10 @@ export async function registerRoutes(
   // Image upload endpoints
   const artworkUpload = createUploadMiddleware("artworks");
   const blogCoverUpload = createUploadMiddleware("blog-covers");
+  const avatarUpload = createUploadMiddleware("avatars");
   app.post("/api/upload/artwork", isAuthenticated, createUploadHandler(artworkUpload, "artworks"));
   app.post("/api/upload/blog-cover", isAuthenticated, createUploadHandler(blogCoverUpload, "blog-covers"));
+  app.post("/api/upload/avatar", isAuthenticated, createUploadHandler(avatarUpload, "avatars"));
 
   // SSRF-safe image proxy: block private/internal IP ranges
   function isPrivateHostname(hostname: string): boolean {

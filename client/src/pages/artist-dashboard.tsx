@@ -145,6 +145,7 @@ export default function ArtistDashboard() {
 
   const [artworkUploading, setArtworkUploading] = useState(false);
   const [blogCoverUploading, setBlogCoverUploading] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   const handleImageUpload = async (
     file: File,
@@ -1163,7 +1164,22 @@ export default function ArtistDashboard() {
                     </AvatarFallback>
                   </Avatar>
                   {profileEditing && (
-                    <span className="text-xs text-muted-foreground">Update URL below</span>
+                    <FileUploadField
+                      id="profile-avatar"
+                      label=""
+                      uploading={avatarUploading}
+                      imageUrl=""
+                      previewAlt="Profile picture"
+                      onFileSelect={(file) =>
+                        handleImageUpload(
+                          file,
+                          "/api/upload/avatar",
+                          (imageUrl) => setProfileForm({ ...profileForm, avatarUrl: imageUrl }),
+                          setAvatarUploading,
+                        )
+                      }
+                      testId="input-profile-avatar"
+                    />
                   )}
                 </div>
                 {!profileEditing ? (
@@ -1213,16 +1229,6 @@ export default function ArtistDashboard() {
                         onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
                         placeholder="Your name"
                         data-testid="input-profile-name"
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="profile-avatar">Profile Picture URL</Label>
-                      <Input
-                        id="profile-avatar"
-                        value={profileForm.avatarUrl}
-                        onChange={(e) => setProfileForm({ ...profileForm, avatarUrl: e.target.value })}
-                        placeholder="https://..."
-                        data-testid="input-profile-avatar"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
