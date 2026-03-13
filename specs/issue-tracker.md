@@ -36,7 +36,6 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 74 | Upgrade react-resizable-panels 2→4 | high | bug | Open | — | Dependabot PR #68 closed (major) |
 | 75 | Upgrade recharts 2→3 | high | bug | Open | — | Dependabot PR #69 closed (major) |
 | 76 | Upgrade Vite 7→8 | high | bug | Open | — | Dependabot PR #70 closed (major) |
-| 89 | Auto-update issue tracker on issue/bug closure | low | devops | Open | — | Automate `issue-tracker.md` updates via GitHub Actions on issue close |
 
 ## Completed Issues
 
@@ -67,6 +66,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 81 | Fix SSRF in image proxy endpoint | critical | bug | 2026-03-13 | `fix/issue-80-81-mcp-auth-ssrf` | #84 |
 | 37 | Resend not sending except to owner email | high | bug | 2026-03-13 | `fix/issue-37-resend-sender` | #88 |
 
+| 89 | Auto-update issue tracker on issue/bug closure | low | devops | 2026-03-13 | `feature/issue-89-auto-issue-tracker` | #90 |
 ---
 
 ## Revision Log
@@ -90,3 +90,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-13 | All 6 P1s completed (PR #85): Helmet headers, email HTML escaping, Zod PATCH validation, magic byte upload validation, Actions SHA pinning, shell injection fixes, DB_MIGRATION_MODE→migrate. Deployed to production (`f80196af`). 6 P2s remaining. |
 | 2026-03-13 | Added #86 (update specs to reflect security fixes). Updated 8 spec files: CI-CD, OVERVIEW, DEPLOYMENT, DECISION-LOG, authentication, email-login, image-upload, mcp-server. |
 | 2026-03-13 | #37 completed (PR #88) — changed Resend sender from sandbox to gallery@idata.ro. Deployed to production. |
+| 2026-03-13 | Auto-closed #89 (Auto-update issue tracker on issue/bug closure). Moved from Active to Completed. PR #90. |
