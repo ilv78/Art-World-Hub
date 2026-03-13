@@ -1,0 +1,48 @@
+name: Issue Tracker Auto-Update
+
+on:
+  issues:
+    types: [closed]
+
+jobs:
+  update-tracker:
+    runs-on: ubuntu-latest
+    # Skip issues closed by bots (e.g. stale bot) — only process human-closed issues
+    # Also skip issues with "docs-audit" label (automated audit issues)
+    if: >-
+      !contains(github.event.issue.labels.*.name, 'docs-audit')
+
+    permissions:
+      contents: write
+      pull-requests: read
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update issue tracker
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_LABELS: ${{ join(github.event.issue.labels.*.name, ',') }}
+          ISSUE_CLOSED_AT: ${{ github.event.issue.closed_at }}
+        run: .github/scripts/update-issue-tracker.sh
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add specs/issue-tracker.md specs/bugs/
+          # Only commit if there are changes
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Auto-update issue tracker: close #${{ github.event.issue.number }}
+
+            Automated by issue-tracker workflow."
+            git push origin main
+          fi
