@@ -1,7 +1,7 @@
 # Feature: Authentication
 
 **Status:** Active
-**Last Updated:** 2026-03-12
+**Last Updated:** 2026-03-13
 **Owner:** Architecture
 
 ## Summary
@@ -20,6 +20,8 @@ As a visitor, I want to sign in with my Google account or email/password, so tha
 - [x] Auto-creation of artist profile on first login
 - [x] Token refresh for OIDC sessions (checks `expires_at`, uses refresh token)
 - [x] `isAuthenticated` middleware protects all mutation routes
+- [x] Ownership authorization on write endpoints (artist can only modify their own resources)
+- [x] MCP endpoint requires authentication
 - [x] `GET /api/auth/config` exposes available auth methods to frontend
 - [x] Auth page at `/auth` with login/signup tabs
 
@@ -75,6 +77,24 @@ Authentication lives in `server/replit_integrations/auth/` with four files:
 - `connect-pg-simple` v10.0.0 — PostgreSQL session store
 - `bcryptjs` v3.0.3 — Password hashing (12 salt rounds)
 - `memoizee` v0.4.17 — Cache OIDC config (3600s TTL)
+
+### Endpoint Authorization (2026-03-13)
+
+Beyond `isAuthenticated` (which verifies the user is logged in), write endpoints enforce **ownership authorization**:
+
+1. The authenticated user's ID is matched to an artist profile via `getArtistByUserId()`
+2. The target resource's `artistId` is compared to the authenticated artist's ID
+3. Mismatches return `403 Forbidden`
+
+This applies to:
+- `POST/PATCH/DELETE /api/artworks` — artist can only manage their own artworks
+- `POST/PATCH/DELETE /api/blog` — artist can only manage their own blog posts
+- `PATCH /api/artists/:id` — artist can only update their own profile
+- `POST /api/orders` — requires authentication
+- `GET /api/orders`, `GET /api/artists/:id/orders` — scoped to own artist profile (prevents PII exposure)
+- `POST/GET/DELETE /mcp` — requires authentication (added P0 fix, PR #84)
+
+(P0 fixes — PRs #82, #83, #84)
 
 ## Open Questions
 

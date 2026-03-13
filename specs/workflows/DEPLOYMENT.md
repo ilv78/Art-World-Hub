@@ -1,7 +1,7 @@
 # ArtVerse — Deployment Procedures
 
 **Status:** Active
-**Last Updated:** 2026-03-12
+**Last Updated:** 2026-03-13
 
 ---
 
@@ -79,6 +79,10 @@ docker compose up -d --remove-orphans
 ```
 
 **Note:** Rollback only affects the app image. If a database migration already ran, you may need to restore from a DB backup for destructive schema changes.
+
+### Database migration mode (security)
+
+Production uses `DB_MIGRATION_MODE=migrate` in `docker-compose.yml`. This means the app runs `drizzle-kit migrate` on startup, applying only versioned SQL files from the `migrations/` directory. This is a deliberate security choice — the alternative (`push` mode, used in staging) can destructively alter the schema without review, potentially dropping columns or tables. Migration mode ensures all schema changes are explicit, versioned, code-reviewed SQL files committed to git. (P1 fix — 2026-03-13, PR #85)
 
 ### Database backup (before destructive changes)
 

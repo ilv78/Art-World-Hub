@@ -32,7 +32,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 32 | Correct names in museum gallery | medium | bug | Open | — | Artist room names incorrect |
 | 36 | Role securitas - in CI/CD | high | devops | In Progress | — | Parent: spec at `specs/SECURITY_AGENT.md`. Sub-issue #55 done. Audit completed → issue #77 (4×P0, 6×P1, 7×P2). |
 | 73 | Upgrade Node.js 20→25 | high | bug | Open | — | Dependabot PR #57 closed (major) |
-| 77 | Security Audit — Critical findings | critical | devops | In Progress | — | Parent. All 4 P0s done, all 6 P1s done. 7 P2s remaining. |
+| 77 | Security Audit — Critical findings | critical | devops | In Progress | — | Parent. All 4 P0s done (PRs #82–#84), all 6 P1s done (PR #85). 6 P2s remaining (1 P2 was done in P1 batch). |
 | 74 | Upgrade react-resizable-panels 2→4 | high | bug | Open | — | Dependabot PR #68 closed (major) |
 | 75 | Upgrade recharts 2→3 | high | bug | Open | — | Dependabot PR #69 closed (major) |
 | 76 | Upgrade Vite 7→8 | high | bug | Open | — | Dependabot PR #70 closed (major) |
@@ -85,3 +85,5 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-12 | Added #73, #74, #75, #76 (major dep upgrades from closed Dependabot PRs). Uploaded security agent spec. |
 | 2026-03-12 | Security audit completed. Created #77 (critical — 4 P0s, 6 P1s, 7 P2s). Updated #36 status. |
 | 2026-03-13 | All 4 P0s completed: #78 (PR #82), #79 (PR #83), #80+#81 (PR #84). Deployed to staging. |
+| 2026-03-13 | All 6 P1s completed (PR #85): Helmet headers, email HTML escaping, Zod PATCH validation, magic byte upload validation, Actions SHA pinning, shell injection fixes, DB_MIGRATION_MODE→migrate. Deployed to production (`f80196af`). 6 P2s remaining. |
+| 2026-03-13 | Added #86 (update specs to reflect security fixes). Updated 8 spec files: CI-CD, OVERVIEW, DEPLOYMENT, DECISION-LOG, authentication, email-login, image-upload, mcp-server. |

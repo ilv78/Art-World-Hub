@@ -1,7 +1,7 @@
 # ArtVerse — CI/CD Pipeline Specification
 
 **Status:** Active
-**Last Updated:** 2026-03-12
+**Last Updated:** 2026-03-13
 
 ---
 
@@ -572,7 +572,63 @@ DB passwords and session secrets are stored in `.env` files on the VPS (not in G
 
 ---
 
-## 6. Revision Log
+## 6. Security Hardening (2026-03-13)
+
+### 6.1 GitHub Actions Hardening
+
+All third-party actions across all workflow files are **pinned to commit SHAs** (not mutable version tags like `@v3` or `@v6`). This prevents supply chain attacks where a compromised action tag is silently redirected to malicious code.
+
+| Action | Pinned SHA |
+|--------|-----------|
+| `actions/checkout` | `de0fac2e4500dabe0009e67214ff5f5447ce83dd` |
+| `actions/setup-node` | `53b83947a5a98c8d113130e565377fae1a50d02f` |
+| `docker/setup-buildx-action` | `4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd` |
+| `docker/login-action` | `c94ce9fb468520275223c153574b00df6fe4bcc9` |
+| `docker/build-push-action` | `d08e5c354a6adb9ed34480a06d141179aa583294` |
+| `appleboy/scp-action` | `ff85246acaad7bdce478db94a363cd2bf7c90345` |
+| `appleboy/ssh-action` | `0ff4204d59e8e51228ff73bce53f80d53301dee2` |
+| `anthropics/claude-code-action` | `5d0cc745cd0cce4c0e9e0b3511de26c3bc285eb5` |
+
+**Applies to:** `ci.yml`, `deploy-production.yml`, `rollback-production.yml`, `doc-agent.yml`
+
+### 6.2 Shell Injection Prevention
+
+All GitHub context variables (`${{ github.sha }}`, `${{ github.actor }}`, `${{ github.event.inputs.* }}`, `${{ steps.*.outputs.* }}`) are moved from inline `${{ }}` interpolation in `run:` blocks to `env:` blocks. Shell scripts reference them as `$ENV_VAR` instead. This prevents shell injection if an attacker can control the input value (e.g., PR title, workflow dispatch input).
+
+For SSH deploy steps, variables are passed via `appleboy/ssh-action`'s `envs:` parameter rather than embedded in the script string.
+
+### 6.3 Explicit Permissions Blocks
+
+All workflow files now declare explicit `permissions:` blocks at the top level and/or job level, following the principle of least privilege:
+
+| Workflow | Permissions |
+|----------|------------|
+| `ci.yml` | `contents: read`, `packages: write` (Docker job only) |
+| `deploy-production.yml` | `contents: read` |
+| `rollback-production.yml` | `contents: read` |
+| `doc-agent.yml` | `contents: read`, `pull-requests: write` (enforce), `issues: write` (audit) |
+
+### 6.4 Security Scanning Pipeline
+
+`.github/workflows/security.yml` runs 7 security scanning jobs on every push and PR:
+
+| Job | Tool | Purpose |
+|-----|------|---------|
+| `gitleaks` | Gitleaks | Scan git history for committed secrets |
+| `npm-audit` | npm audit | Check for known vulnerabilities in dependencies |
+| `semgrep` | Semgrep | Static analysis for security anti-patterns |
+| `hadolint` | Hadolint | Dockerfile best practice linting |
+| `trivy` | Trivy | Container image vulnerability scanning |
+| `custom-checks` | `.github/scripts/security-checks.sh` | ArtVerse-specific security checks |
+| `gate` | — | Aggregation gate — fails if any upstream job fails |
+
+All actions in `security.yml` are pinned to commit SHAs. The pipeline has explicit `permissions: contents: read` and runs on `push` and `pull_request` triggers.
+
+**Spec:** `specs/SECURITY_AGENT.md` defines the audit scope and methodology.
+
+---
+
+## 7. Revision Log
 
 | Date | Change |
 |------|--------|
@@ -590,3 +646,4 @@ DB passwords and session secrets are stored in `.env` files on the VPS (not in G
 | 2026-03-11 | Step 11 done — Telegram notifications on all deploy/rollback workflows. Requires `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` secrets. |
 | 2026-03-11 | Replaced old pipeline diagram with 5 comprehensive diagrams: development workflow, CI/CD pipeline, production deploy, rollback, and infrastructure overview. Updated Telegram secrets status to Set. |
 | 2026-03-11 | Updated Telegram notification format: added @racu8_bot header, repo name, environment URLs. Removed "View run" link. (Issue #26, PR #27) |
+| 2026-03-13 | Added Section 6: Security hardening — SHA-pinned actions, shell injection prevention, explicit permissions blocks, security scanning pipeline documentation. (Issue #77, PR #85) |

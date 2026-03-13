@@ -1,7 +1,7 @@
 # Feature: Email Login
 
 **Status:** Active
-**Last Updated:** 2026-03-12
+**Last Updated:** 2026-03-13
 **Owner:** Architecture
 
 ## Summary
@@ -58,6 +58,10 @@ HTML email sent via Resend with:
 - CTA button linking to `/api/auth/verify-email?token=...`
 - Footer: "Link expires in 1 hour"
 - Styled with serif font, primary orange (#F97316) accent
+
+### Email Security
+
+All user-supplied values interpolated into email HTML templates (order notifications, magic link emails) are passed through an `escapeHtml()` function that escapes `&`, `<`, `>`, `"`, and `'` characters. This prevents HTML injection attacks where a malicious buyer name or address could inject scripts or phishing content into notification emails. (P1 fix — 2026-03-13, PR #85)
 
 ### Environment Variables
 
