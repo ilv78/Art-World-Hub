@@ -1,17 +1,19 @@
 #!/bin/sh
 set -e
 
-# Ensure upload subdirectories exist (volume mount may lack new ones)
+# Ensure upload subdirs exist and are writable by appuser
+# (Docker volume mount may not have newly added subdirectories)
 mkdir -p /app/uploads/artworks /app/uploads/blog-covers /app/uploads/avatars
+chown -R appuser:appgroup /app/uploads
 
 if [ "$DB_MIGRATION_MODE" = "migrate" ]; then
   echo "Running database migrations..."
-  npx drizzle-kit migrate
+  gosu appuser npx drizzle-kit migrate
   echo "Migrations complete."
 else
   echo "Pushing database schema..."
-  npx drizzle-kit push --force
+  gosu appuser npx drizzle-kit push --force
   echo "Schema push complete."
 fi
 
-exec "$@"
+exec gosu appuser "$@"
