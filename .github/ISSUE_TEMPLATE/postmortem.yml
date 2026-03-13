@@ -1,0 +1,134 @@
+name: Postmortem
+description: Document a production incident and its action items
+title: "Postmortem: [short incident title]"
+labels: ["postmortem", "reliability"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Use this template for production incidents.**
+        Fill out as much as you can immediately — mark unknowns as `UNKNOWN` and update later.
+        For the full workflow, see `docs/postmortems/POSTMORTEM_WORKFLOW.md`.
+
+        A postmortem is required if any of these apply:
+        - User-visible downtime or degradation
+        - Data loss of any kind
+        - On-call engineer intervention (rollback, rerouting, emergency fix)
+        - Resolution time above 1 hour
+        - Monitoring failure (manually discovered)
+        - Security or credential exposure
+        - Deploy or config push causing degradation
+
+  - type: dropdown
+    id: incident-type
+    attributes:
+      label: Incident Type
+      options:
+        - Reliability — service degradation or outage
+        - Security — credential exposure, unauthorized access, or data breach
+        - Data — data loss, corruption, or integrity issue
+        - CI/CD — deploy or pipeline failure reaching production
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - P0 — Total outage / data loss risk
+        - P1 — Major feature degradation
+        - P2 — Partial degradation, workaround exists
+        - P3 — Minor, low user impact
+    validations:
+      required: true
+
+  - type: input
+    id: incident-date
+    attributes:
+      label: Incident Date and Duration
+      placeholder: "YYYY-MM-DD HH:MM UTC — HH:MM UTC (e.g. 45 minutes)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: trigger
+    attributes:
+      label: Postmortem Trigger
+      description: "Which criterion triggered this postmortem?"
+      options:
+        - Deploy or config push causing degradation
+        - User-visible downtime or degradation
+        - On-call intervention (rollback / rerouting / emergency fix)
+        - Data loss
+        - Resolution time above 1 hour
+        - Monitoring failure (manually discovered)
+        - Security or credential exposure
+        - Stakeholder request
+    validations:
+      required: true
+
+  - type: input
+    id: what-changed-last
+    attributes:
+      label: What Changed Last?
+      description: "Most recent deploy, config change, migration, or infrastructure update before the incident. ~68% of outages trace to a binary or config push."
+      placeholder: "e.g. Deployed v1.4.2 at 14:30 UTC, 20 minutes before incident start"
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: "One paragraph: what broke, how it was detected, how it was mitigated."
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: "Quantify: error rate, users affected, duration. Use estimates if exact data is unavailable — label them as estimates."
+    validations:
+      required: true
+
+  - type: textarea
+    id: root-cause
+    attributes:
+      label: Root Cause(s)
+      description: |
+        What system condition(s) made this failure possible?
+        Go at least 2 levels deep — past the human action, to the system gap.
+        List multiple contributing causes separately if present.
+    validations:
+      required: true
+
+  - type: textarea
+    id: action-items
+    attributes:
+      label: Action Items
+      description: |
+        At least 3 items. Format each as:
+        `[type] [priority] — [specific outcome: verb + object + success criterion] — [owner role]`
+
+        Types: prevent / mitigate / detect / repair / document
+
+        Example:
+        `prevent P1 — Add idempotency guard to deploy rollback script so double-execution is safe — backend lead`
+    validations:
+      required: true
+
+  - type: input
+    id: postmortem-doc
+    attributes:
+      label: Link to full postmortem document
+      placeholder: "docs/postmortems/YYYY-MM-DD-slug.md"
+
+  - type: checkboxes
+    id: security-checklist
+    attributes:
+      label: Security Incident Checklist (complete if applicable)
+      options:
+        - label: Credentials / secrets identified and rotation is in progress
+        - label: Affected users notified (if required)
+        - label: Distribution restricted pending investigation
