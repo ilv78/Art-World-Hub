@@ -35,6 +35,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 74 | Upgrade react-resizable-panels 2→4 | high | bug | Open | — | Dependabot PR #68 closed (major) |
 | 75 | Upgrade recharts 2→3 | high | bug | Open | — | Dependabot PR #69 closed (major) |
 | 76 | Upgrade Vite 7→8 | high | bug | Open | — | Dependabot PR #70 closed (major) |
+| 97 | Post-mortem: Issue #8 admin section pushed directly to main | critical | bug | Open | — | Parent postmortem issue. Action items: #100 (done), #101 (done), #102 (in progress). |
 
 ## Completed Issues
 
@@ -68,6 +69,9 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 89 | Auto-update issue tracker on issue/bug closure | low | devops | 2026-03-13 | `feature/issue-89-auto-issue-tracker` | #90 |
 | 12 | correct artist profile picture | low | bug | 2026-03-13 | `feature/issue-12-profile-picture-upload` | #91 |
 | 35 | Release workflow | medium | enhancement | 2026-03-13 | `feature/issue-35-release-management` | #96 |
+| 100 | Enable branch protection on main | high | devops | 2026-03-13 | — | Enabled via GitHub API (postmortem action item #1) |
+| 101 | Add pre-push hook to block direct pushes to main | high | devops | 2026-03-13 | `feature/issue-101-pre-push-hook` | #105 |
+| 102 | Document postmortem in issue tracker and README index | low | documentation | 2026-03-14 | `docs/issue-102-postmortem-tracker` | — |
 ---
 
 ## Revision Log
@@ -94,3 +98,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-13 | Auto-closed #89 (Auto-update issue tracker on issue/bug closure). Moved from Active to Completed. PR #90. |
 | 2026-03-13 | Auto-closed #12 (correct artist profile picture). Moved from Active to Completed. PR #91. |
 | 2026-03-13 | Auto-closed #35 (Release workflow). Moved from Active to Completed. PR #96. |
+| 2026-03-14 | Added postmortem-related issues: #97 (Active), #100, #101, #102 (Completed). Postmortem action items from 2026-03-13 incident. |
