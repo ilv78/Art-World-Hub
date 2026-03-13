@@ -6,6 +6,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ArtVerse — a full-stack art gallery platform with a 3D virtual museum, marketplace, auction system, and artist dashboards. Monolithic architecture with React frontend, Express backend, and PostgreSQL.
 
+## Postmortem Workflow
+
+When the developer says any of the following, follow the workflow defined in
+`docs/postmortems/POSTMORTEM_WORKFLOW.md`:
+
+- `"run a postmortem on [incident/event]"`
+- `"write a postmortem for [description]"`
+- `"postmortem: [description]"`
+- `"conduct a postmortem"`
+
+Key constraints:
+- Always blameless — no individual names in failure sections
+- Always create the file at `docs/postmortems/YYYY-MM-DD-<slug>.md`
+- Always produce at least one P0 or P1 action item
+- Always investigate "what changed last" before any other root cause analysis
+- Security incidents use restricted distribution — do not commit until confirmed safe
+- Run the self-review checklist before presenting the draft
+
 ## Commands
 
 ```bash
