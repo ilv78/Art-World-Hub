@@ -23,9 +23,9 @@ COPY --from=build /app/drizzle.config.ts ./
 COPY --from=build /app/migrations ./migrations
 COPY --from=build /app/docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh && mkdir -p /app/uploads/artworks /app/uploads/blog-covers /app/uploads/avatars
-RUN apt-get update && apt-get install -y --no-install-recommends gosu && rm -rf /var/lib/apt/lists/*
 RUN addgroup --system appgroup && adduser --system --home /home/appuser --ingroup appgroup appuser \
     && chown -R appuser:appgroup /app
+USER appuser
 EXPOSE 5000
 ENTRYPOINT ["./docker-entrypoint.sh"]
 CMD ["node", "dist/index.cjs"]
