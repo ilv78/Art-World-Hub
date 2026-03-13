@@ -46,7 +46,11 @@ On successful staging deploy, the CI creates a git tag `release-{run_number}` po
 
 ### 6. CHANGELOG.md
 
-Root-level changelog following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format. `[Unreleased]` section updated per feature branch; moved to dated release section before merging to main.
+Root-level changelog following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format. `[Unreleased]` section updated per feature branch; moved to dated release section when declaring a new version.
+
+### 7. Versioning Policy
+
+Semantic versioning (`vX.Y.Z`) for milestone releases, separate from deployment tags (`release-{N}`). Full policy documented in `specs/workflows/VERSIONING.md`.
 
 ## Required Secrets
 
