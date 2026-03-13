@@ -64,6 +64,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 79 | Lock down order endpoints (PII exposure) | critical | bug | 2026-03-13 | `fix/issue-79-lock-order-endpoints` | #83 |
 | 80 | Add auth to MCP server endpoint | critical | bug | 2026-03-13 | `fix/issue-80-81-mcp-auth-ssrf` | #84 |
 | 81 | Fix SSRF in image proxy endpoint | critical | bug | 2026-03-13 | `fix/issue-80-81-mcp-auth-ssrf` | #84 |
+| 37 | Resend not sending except to owner email | high | bug | 2026-03-13 | `fix/issue-37-resend-sender` | #88 |
 
 ---
 
@@ -85,3 +86,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-12 | Added #73, #74, #75, #76 (major dep upgrades from closed Dependabot PRs). Uploaded security agent spec. |
 | 2026-03-12 | Security audit completed. Created #77 (critical — 4 P0s, 6 P1s, 7 P2s). Updated #36 status. |
 | 2026-03-13 | All 4 P0s completed: #78 (PR #82), #79 (PR #83), #80+#81 (PR #84). Deployed to staging. |
+| 2026-03-13 | #37 completed (PR #88) — changed Resend sender from sandbox to gallery@idata.ro. Deployed to production. |
