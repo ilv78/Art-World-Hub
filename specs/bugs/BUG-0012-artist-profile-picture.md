@@ -1,8 +1,8 @@
 # BUG-0012: Artist Profile Picture Upload
 
-**Status:** Open
+**Status:** Resolved
 **Severity:** Low
-**Last Updated:** 2026-03-12
+**Last Updated:** 2026-03-13
 **Reporter:** User
 
 ## Description

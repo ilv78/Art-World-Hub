@@ -27,7 +27,6 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 4 | Bug hunter | medium | devops | Open | — | Automated bug detection/testing |
 | 7 | Role gallery curator | medium | feature | Open | — | Curator role for gallery management |
 | 8 | Create admin section | high | feature | Open | — | Admin panel for platform management |
-| 12 | Correct artist profile picture | low | bug | Open | — | Profile picture display issue |
 | 14 | Multiple gallery templates | low | enhancement | Open | — | Support different gallery room layouts |
 | 32 | Correct names in museum gallery | medium | bug | Open | — | Artist room names incorrect |
 | 36 | Role securitas - in CI/CD | high | devops | In Progress | — | Parent: spec at `specs/SECURITY_AGENT.md`. Sub-issue #55 done. Audit completed → issue #77 (4×P0, 6×P1, 7×P2). |
@@ -67,6 +66,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 37 | Resend not sending except to owner email | high | bug | 2026-03-13 | `fix/issue-37-resend-sender` | #88 |
 
 | 89 | Auto-update issue tracker on issue/bug closure | low | devops | 2026-03-13 | `feature/issue-89-auto-issue-tracker` | #90 |
+| 12 | correct artist profile picture | low | bug | 2026-03-13 | `feature/issue-12-profile-picture-upload` | #91 |
 ---
 
 ## Revision Log
@@ -91,3 +91,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-13 | Added #86 (update specs to reflect security fixes). Updated 8 spec files: CI-CD, OVERVIEW, DEPLOYMENT, DECISION-LOG, authentication, email-login, image-upload, mcp-server. |
 | 2026-03-13 | #37 completed (PR #88) — changed Resend sender from sandbox to gallery@idata.ro. Deployed to production. |
 | 2026-03-13 | Auto-closed #89 (Auto-update issue tracker on issue/bug closure). Moved from Active to Completed. PR #90. |
+| 2026-03-13 | Auto-closed #12 (correct artist profile picture). Moved from Active to Completed. PR #91. |
