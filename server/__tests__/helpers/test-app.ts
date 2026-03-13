@@ -40,10 +40,6 @@ const { mockStorage } = vi.hoisted(() => {
     deleteBlogPost: fn().mockResolvedValue(false),
     getExhibitionReadyArtworks: fn().mockResolvedValue([]),
     regenerateArtistGallery: fn().mockResolvedValue({ width: 3, height: 3, cells: [], spawnPoint: { x: 1, z: 1 } }),
-    getUsers: fn().mockResolvedValue([]),
-    updateUserRole: fn().mockResolvedValue(undefined),
-    deleteArtist: fn().mockResolvedValue(false),
-    deleteExhibition: fn().mockResolvedValue(false),
   };
   return { mockStorage };
 });
@@ -52,17 +48,6 @@ vi.mock("../../replit_integrations/auth", () => ({
   setupAuth: vi.fn().mockResolvedValue(undefined),
   registerAuthRoutes: vi.fn(),
   isAuthenticated: (req: any, _res: any, next: any) => {
-    req.user = {
-      claims: {
-        sub: "test-user-id",
-        first_name: "Test",
-        last_name: "User",
-        email: "test@example.com",
-      },
-    };
-    next();
-  },
-  isAdmin: (req: any, _res: any, next: any) => {
     req.user = {
       claims: {
         sub: "test-user-id",

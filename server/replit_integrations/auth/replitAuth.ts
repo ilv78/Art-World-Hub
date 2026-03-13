@@ -388,31 +388,6 @@ export async function setupAuth(app: Express) {
   });
 }
 
-export const isAdmin: RequestHandler = async (req, res, next) => {
-  // First check authentication
-  if (typeof (req as any).isAuthenticated !== "function" || !req.isAuthenticated()) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
-  const user = req.user as any;
-  const claims = user?.claims;
-  const email = claims?.email;
-  const userId = claims?.sub;
-
-  // Look up the user to check their role
-  const dbUser = email
-    ? await authStorage.getUserByEmail(email)
-    : userId
-      ? await authStorage.getUser(userId)
-      : undefined;
-
-  if (!dbUser || dbUser.role !== "admin") {
-    return res.status(403).json({ message: "Forbidden — admin access required" });
-  }
-
-  return next();
-};
-
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const user = req.user as any;
 

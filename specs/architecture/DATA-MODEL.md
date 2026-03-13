@@ -22,7 +22,7 @@ All tables defined using Drizzle ORM. Main schema in `shared/schema.ts`, auth ta
 
 | Table | Source File | Key Columns | Purpose |
 |-------|-----------|-------------|---------|
-| **users** | `shared/models/auth.ts` | id, email (unique), password (nullable, bcrypt hash), emailVerified (boolean), firstName, lastName, profileImageUrl, role (user/curator/admin, default: user), createdAt, updatedAt | Authentication accounts (OIDC + local) with RBAC |
+| **users** | `shared/models/auth.ts` | id, email (unique), password (nullable, bcrypt hash), emailVerified (boolean), firstName, lastName, profileImageUrl, createdAt, updatedAt | Authentication accounts (OIDC + local) |
 | **sessions** | `shared/models/auth.ts` | sid (PK), sess (jsonb), expire | PostgreSQL session store (connect-pg-simple) |
 | **magic_links** | `shared/models/auth.ts` | id, email, token (unique), expiresAt, usedAt, createdAt | Email signup verification tokens (1-hour expiry, single-use) |
 | **artists** | `shared/schema.ts` | id, userId (FK→users), name, bio, avatarUrl, country, specialization, email, galleryLayout (jsonb), socialLinks (jsonb) | Artist profiles |
