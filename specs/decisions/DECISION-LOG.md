@@ -1,7 +1,7 @@
 # ArtVerse — Decision Log
 
 **Status:** Active
-**Last Updated:** 2026-03-12
+**Last Updated:** 2026-03-13
 
 Lightweight log for minor decisions that don't warrant a full ADR. For significant architectural decisions, create an ADR in `specs/architecture/ADR/`.
 
@@ -19,3 +19,11 @@ Lightweight log for minor decisions that don't warrant a full ADR. For significa
 | 2026-03-12 | Use Resend for transactional email | Simple API, good free tier, handles deliverability — replaced dead Replit connector | Architecture |
 | 2026-03-12 | Restructure specs/ into taxonomy | Per DOC-AGENT-SPEC.md — enables automated documentation validation | Architecture |
 | 2026-03-12 | Doc agent: Claude for PRs, shell script for audits | claude-code-action API doesn't support scheduled/push triggers well; shell script is reliable and free for structural checks | Architecture |
+| 2026-03-13 | Pin all GitHub Actions to commit SHAs | Mutable tags (@v3, @v6) can be moved to malicious code — SHA pinning prevents supply chain attacks on CI/CD | Architecture |
+| 2026-03-13 | Move `${{ }}` interpolation to `env:` blocks in workflows | Direct `${{ }}` in `run:` steps is vulnerable to shell injection if attacker controls the value (PR title, dispatch input) | Architecture |
+| 2026-03-13 | Add ownership authorization to all write endpoints | Auth alone isn't enough — artist A could modify artist B's data. Ownership checks enforce resource-level access control | Architecture |
+| 2026-03-13 | Add auth to MCP server endpoint | MCP exposed full CRUD with zero authentication — any HTTP client could manipulate all data | Architecture |
+| 2026-03-13 | Block private IPs in image proxy (SSRF) | Image proxy could be used to scan internal network or access cloud metadata (169.254.169.254) | Architecture |
+| 2026-03-13 | Validate file uploads via magic bytes, not just MIME header | Client-supplied MIME type is trivially spoofed — magic byte inspection verifies actual file content | Architecture |
+| 2026-03-13 | HTML-escape user values in email templates | Unescaped user input (buyer name, address) could inject malicious HTML/phishing into notification emails | Architecture |
+| 2026-03-13 | Use `DB_MIGRATION_MODE=migrate` in production | Push mode can destructively alter schema without review; migration mode requires explicit versioned SQL files committed to git | Architecture |

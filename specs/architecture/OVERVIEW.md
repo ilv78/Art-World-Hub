@@ -1,7 +1,7 @@
 # ArtVerse — Architecture Overview
 
 **Status:** Active
-**Last Updated:** 2026-03-12
+**Last Updated:** 2026-03-13
 **Owner:** Architecture
 
 ---
@@ -119,9 +119,9 @@ All routes defined in `server/routes.ts`. Base path: `/api/`.
 ### Orders
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api/orders` | No | List all orders |
-| POST | `/api/orders` | No | Create order (marks artwork not-for-sale, sends email) |
-| PATCH | `/api/orders/:id/status` | Yes | Transition order status (enforces state machine) |
+| GET | `/api/orders` | Yes | List orders for current user's artist profile only (ownership enforced) |
+| POST | `/api/orders` | Yes | Create order (marks artwork not-for-sale, sends email) |
+| PATCH | `/api/orders/:id/status` | Yes | Transition order status (enforces state machine + ownership) |
 
 ### Exhibitions
 | Method | Path | Auth | Description |
@@ -147,7 +147,7 @@ All routes defined in `server/routes.ts`. Base path: `/api/`.
 ### Utilities
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api/image-proxy` | No | Proxy external images (CORS bypass, 1-day cache) |
+| GET | `/api/image-proxy` | No | Proxy external images (CORS bypass, 1-day cache, SSRF-protected) |
 
 ### Authentication
 | Method | Path | Auth | Description |
@@ -163,9 +163,9 @@ All routes defined in `server/routes.ts`. Base path: `/api/`.
 | POST | `/api/logout` | Yes | End session |
 
 ### MCP (Model Context Protocol)
-| Method | Path | Description |
-|--------|------|-------------|
-| POST/GET/DELETE | `/mcp` | Stateful MCP endpoint (session per connection) |
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST/GET/DELETE | `/mcp` | Yes | Stateful MCP endpoint (session per connection, requires authentication) |
 
 ---
 
@@ -293,7 +293,7 @@ Implemented in `server/replit_integrations/auth/`.
 
 ## 8. MCP Server
 
-Endpoint: `POST/GET/DELETE /mcp` with `mcp-session-id` header. Stateful per-session instances using Streamable HTTP transport.
+Endpoint: `POST/GET/DELETE /mcp` with `mcp-session-id` header. Stateful per-session instances using Streamable HTTP transport. **All routes require authentication** via `isAuthenticated` middleware (P0 fix — 2026-03-13).
 
 ### Resources (14)
 Data access points for AI clients: all-artists, artist-by-id, all-artworks, artworks-by-artist, artwork-by-id, all-auctions, auction-by-id, auction-bids, orders-by-artist, blog-posts, blog-posts-by-artist, artist-gallery, exhibitions.
@@ -321,6 +321,37 @@ Data access points for AI clients: all-artists, artist-by-id, all-artworks, artw
 | `blog_draft` | Draft 400-800 word blog post in artist voice |
 | `order_summary` | Analyze artist's sales data and recommend next steps |
 | `artist_bio` | Write professional 2-3 paragraph bio |
+
+---
+
+## 8b. Security Hardening (2026-03-13)
+
+The following security measures were implemented as part of the security audit (issue #77):
+
+### HTTP Security Headers (Helmet)
+Express uses `helmet` middleware to set security headers in production:
+- `Content-Security-Policy` — restricts script sources (disabled in dev for Vite HMR inline scripts)
+- `Strict-Transport-Security` (HSTS) — enforces HTTPS
+- `X-Frame-Options` — prevents clickjacking
+- `X-Content-Type-Options: nosniff` — prevents MIME sniffing
+- `Referrer-Policy` — limits referrer information
+
+### Endpoint Authorization
+All write endpoints (POST/PATCH/DELETE) for artworks, blog posts, and artist profiles enforce **ownership authorization** — the authenticated user must own the artist profile associated with the resource. Cross-artist mutations return `403 Forbidden`.
+
+Order endpoints (`GET /api/orders`, `GET /api/artists/:id/orders`) are scoped to the authenticated user's own artist profile, preventing PII exposure (buyer names, emails, addresses).
+
+### Input Validation
+All PATCH endpoints validate request bodies against Zod partial schemas (`updateArtworkSchema`, `updateBlogPostSchema`, `updateArtistSchema`) before passing data to the database layer. Invalid fields are rejected with `400 Bad Request`.
+
+### SSRF Protection
+The image proxy (`GET /api/image-proxy`) blocks requests to private/internal IP ranges (RFC 1918, loopback, link-local, cloud metadata endpoints). Redirect targets are also validated.
+
+### File Upload Hardening
+Uploaded files are validated via magic byte inspection (file signature matching) in addition to MIME type filtering. Mismatched files are rejected.
+
+### Email Template Security
+All user-supplied values in email templates (order notifications) are HTML-escaped to prevent injection of malicious HTML/scripts into emails.
 
 ---
 

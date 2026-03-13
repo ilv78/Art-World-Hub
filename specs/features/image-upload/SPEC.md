@@ -1,7 +1,7 @@
 # Feature: Image Upload and Proxy
 
 **Status:** Active
-**Last Updated:** 2026-03-12
+**Last Updated:** 2026-03-13
 **Owner:** Architecture
 
 ## Summary
@@ -47,10 +47,21 @@ As a visitor, I want external images to load without CORS issues, so that I can 
 ### Image Proxy
 
 - Query param: `url` (external image URL)
-- Follows HTTP redirects (3xx)
+- **SSRF protection:** Before fetching, the proxy validates the target URL against a blocklist of private/internal addresses. Blocked ranges include `localhost`, `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.169.254` (cloud metadata), and `metadata.google.internal`. Requests to blocked hosts return `403 Forbidden`. (P0 fix — 2026-03-13, PR #84)
+- Follows HTTP redirects (3xx) — redirect targets are also validated against the SSRF blocklist
 - Sets response headers: `Content-Type`, `Cache-Control: public, max-age=86400`, `Access-Control-Allow-Origin: *`
 - Timeout: 10 seconds (returns 504)
 - Error handling: 502 on connection errors, forwards 4xx/5xx from remote
+
+### File Upload Validation
+
+- **MIME type:** multer `fileFilter` accepts `image/jpeg`, `image/png`, `image/webp`, `image/gif`
+- **Magic byte validation:** After upload, the first bytes of the file are checked against known image file signatures to ensure the file content matches the claimed MIME type. This prevents uploading malicious files (e.g., scripts) renamed with image extensions. Supported magic bytes:
+  - JPEG: `FF D8 FF`
+  - PNG: `89 50 4E 47`
+  - GIF: `47 49 46 38`
+  - WebP: `52 49 46 46`
+- Files that fail magic byte validation are deleted and the upload returns `400 Bad Request`. (P1 fix — 2026-03-13, PR #85)
 
 ### Database Storage
 

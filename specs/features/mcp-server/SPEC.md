@@ -1,7 +1,7 @@
 # Feature: MCP Server
 
 **Status:** Active
-**Last Updated:** 2026-03-12
+**Last Updated:** 2026-03-13
 **Owner:** Architecture
 
 ## Summary
@@ -28,6 +28,7 @@ As an AI assistant (Claude), I want to access ArtVerse data and perform operatio
 ### Transport
 
 - **Protocol:** Streamable HTTP over `POST/GET/DELETE /mcp`
+- **Authentication:** All three MCP routes (`POST`, `GET`, `DELETE /mcp`) require `isAuthenticated` middleware. Unauthenticated requests receive `401 Unauthorized`. This was added as a P0 security fix (2026-03-13, PR #84) — previously the MCP endpoint had no authentication, exposing full CRUD access to anyone.
 - **Session management:** Random UUID per session, stored in memory `Map<sessionId, {transport, server}>`
 - **Headers:** `mcp-session-id` header for subsequent requests after initialization
 - **Lifecycle:** Session created on first POST, cleaned up on DELETE or transport close
