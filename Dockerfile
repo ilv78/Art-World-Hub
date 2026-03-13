@@ -22,7 +22,7 @@ COPY --from=build /app/shared ./shared
 COPY --from=build /app/drizzle.config.ts ./
 COPY --from=build /app/migrations ./migrations
 COPY --from=build /app/docker-entrypoint.sh ./
-RUN chmod +x docker-entrypoint.sh && mkdir -p /app/uploads/artworks /app/uploads/blog-covers
+RUN chmod +x docker-entrypoint.sh && mkdir -p /app/uploads/artworks /app/uploads/blog-covers /app/uploads/avatars
 RUN addgroup --system appgroup && adduser --system --home /home/appuser --ingroup appgroup appuser \
     && chown -R appuser:appgroup /app
 USER appuser
