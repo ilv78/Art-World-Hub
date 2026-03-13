@@ -159,6 +159,18 @@ Produce a minimum of **3 action items** across these types:
 
 Mark any action item that needs more context with `⚠️ NEEDS DETAIL`.
 
+### Step 4b — Create GitHub Issues for Action Items
+
+After the postmortem is reviewed and approved, create a GitHub issue for each action item that does not already have one. **Every issue must include the `postmortem` label** in addition to its regular priority and category labels. This ensures all postmortem-driven work is traceable.
+
+```bash
+gh issue create --title "<action item title>" \
+  --label "postmortem" --label "<priority label>" --label "<category label>" \
+  --body "From postmortem: docs/postmortems/YYYY-MM-DD-slug.md — Action Item #N ..."
+```
+
+After creating all issues, update the postmortem document to replace `[GH-???]` placeholders with the real issue numbers.
+
 ---
 
 ### Step 5 — Self-Review Checklist
