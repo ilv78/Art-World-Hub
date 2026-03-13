@@ -169,7 +169,9 @@ gh issue create --title "<action item title>" \
   --body "From postmortem: docs/postmortems/YYYY-MM-DD-slug.md — Action Item #N ..."
 ```
 
-After creating all issues, update the postmortem document to replace `[GH-???]` placeholders with the real issue numbers.
+After creating all issues, update the postmortem document to replace `[GH-???]` placeholders with **full markdown links** — not bare `#123` references. Postmortem documents are standalone artifacts that may be read outside of GitHub (locally, in editors, exported). Bare `#123` references are only clickable on GitHub, not in other contexts.
+
+**Format:** `[#123](https://github.com/ilv78/Art-World-Hub/issues/123)` — not `#123`.
 
 ---
 

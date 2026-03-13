@@ -204,12 +204,12 @@ N/A — no security incident.
 
 | # | Action Item | Type | Priority | Owner | Issue |
 |---|-------------|------|----------|-------|-------|
-| 1 | Enable GitHub branch protection on `main` requiring PR reviews and passing CI before merge — evaluate making repo public or upgrading to Pro | prevent | P1 | [project lead] | #100 |
-| 2 | Add pre-push git hook that runs `npm run check` and `npm test` before allowing push to any branch, with explicit block on direct pushes to `main` | prevent | P1 | [project lead] | #101 |
-| 3 | Add AI agent verification step: before any `git push`, agent must run `git branch --show-current` and abort if on `main` — reinforced in agent memory | prevent | P0 | [project lead] | #97 (done) |
-| 4 | Clean up `main` branch history — decide whether to squash the push+revert commits or leave as audit trail | repair | P2 | [project lead] | #97 |
-| 5 | Create proper PR from `feature/issue-8-admin-section` with code review and actual test cases for admin functionality | repair | P1 | [project lead] | #8 |
-| 6 | Document this incident as the first entry in the postmortem index at `docs/postmortems/README.md` | document | P2 | [project lead] | #102 |
+| 1 | Enable GitHub branch protection on `main` requiring PR reviews and passing CI before merge — evaluate making repo public or upgrading to Pro | prevent | P1 | [project lead] | [#100](https://github.com/ilv78/Art-World-Hub/issues/100) |
+| 2 | Add pre-push git hook that runs `npm run check` and `npm test` before allowing push to any branch, with explicit block on direct pushes to `main` | prevent | P1 | [project lead] | [#101](https://github.com/ilv78/Art-World-Hub/issues/101) |
+| 3 | Add AI agent verification step: before any `git push`, agent must run `git branch --show-current` and abort if on `main` — reinforced in agent memory | prevent | P0 | [project lead] | [#97](https://github.com/ilv78/Art-World-Hub/issues/97) (done) |
+| 4 | Clean up `main` branch history — decide whether to squash the push+revert commits or leave as audit trail | repair | P2 | [project lead] | [#97](https://github.com/ilv78/Art-World-Hub/issues/97) |
+| 5 | Create proper PR from `feature/issue-8-admin-section` with code review and actual test cases for admin functionality | repair | P1 | [project lead] | [#8](https://github.com/ilv78/Art-World-Hub/issues/8) |
+| 6 | Document this incident as the first entry in the postmortem index at `docs/postmortems/README.md` | document | P2 | [project lead] | [#102](https://github.com/ilv78/Art-World-Hub/issues/102) |
 
 ---
 

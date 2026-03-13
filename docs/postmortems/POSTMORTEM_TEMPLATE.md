@@ -197,7 +197,7 @@ _Minimum 3 items. Every item must have: description, type, priority, owner place
 
 | # | Action Item | Type | Priority | Owner | Issue |
 |---|-------------|------|----------|-------|-------|
-| 1 | [Specific, testable outcome: verb + object + success criterion] | prevent / mitigate / detect / repair / document | P0 / P1 / P2 | [role] | [GH-???] |
+| 1 | [Specific, testable outcome: verb + object + success criterion] | prevent / mitigate / detect / repair / document | P0 / P1 / P2 | [role] | [#N](https://github.com/ilv78/Art-World-Hub/issues/N) |
 | 2 | | | | | |
 | 3 | | | | | |
 
@@ -216,7 +216,7 @@ _Complete for security incidents. Mark N/A if not applicable._
 
 | # | Action Item | Type | Priority | Owner | Issue |
 |---|-------------|------|----------|-------|-------|
-| 1 | [e.g. Rotate all exposed credentials and revoke old tokens] | repair | P0 | [role] | [GH-???] |
+| 1 | [e.g. Rotate all exposed credentials and revoke old tokens] | repair | P0 | [role] | [#N](https://github.com/ilv78/Art-World-Hub/issues/N) |
 | 2 | | | | | |
 
 ---
