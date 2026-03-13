@@ -52,6 +52,8 @@ jobs:
             fi
             docker pull ghcr.io/ilv78/art-world-hub:$IMAGE_TAG
             sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$IMAGE_TAG/" .env || echo "IMAGE_TAG=$IMAGE_TAG" >> .env
+            # Ensure upload subdirs exist on the Docker volume (new subdirs may be missing)
+            docker compose run --rm --no-deps --user root --entrypoint sh app -c "mkdir -p /app/uploads/artworks /app/uploads/blog-covers /app/uploads/avatars && chown -R appuser:appgroup /app/uploads"
             docker compose up -d --remove-orphans
             echo "Waiting for app to be healthy..."
             for i in $(seq 1 60); do
