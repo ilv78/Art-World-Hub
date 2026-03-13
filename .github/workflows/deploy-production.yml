@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       image_tag:
-        description: "Image tag to deploy (commit SHA or 'latest')"
+        description: "Image tag to deploy (commit SHA, run_number, or 'latest')"
         required: true
         default: "latest"
 
@@ -57,13 +57,56 @@ jobs:
             docker compose up -d --remove-orphans
             echo "Waiting for app to be healthy..."
             for i in $(seq 1 60); do
-              if docker compose exec -T app node -e "fetch('http://localhost:5000/api/artists').then(r => { if (!r.ok) process.exit(1) })" 2>/dev/null; then
+              if docker compose exec -T app node -e "fetch('http://localhost:5000/health').then(r => { if (!r.ok) process.exit(1) })" 2>/dev/null; then
                 echo "Production is healthy after ${i}s"
                 exit 0
               fi
               sleep 2
             done
             echo "Health check failed"
+            docker compose logs --tail=50 app
+            exit 1
+
+      - name: Smoke test — health check
+        run: |
+          echo "Waiting for container to boot..."
+          sleep 15
+          HEALTH_URL="${{ secrets.PRODUCTION_URL }}/health"
+          HTTP_STATUS=$(curl --silent --output /dev/null --write-out "%{http_code}" "$HEALTH_URL")
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "Health check failed — HTTP $HTTP_STATUS"
+            echo "Triggering rollback..."
+            exit 1
+          fi
+          echo "Health check passed — production deployment verified"
+
+      - name: Rollback on failure
+        if: failure()
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: production
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd ~/app
+            if [ ! -f .previous_image_tag ]; then
+              echo "ERROR: No previous image tag found — cannot rollback"
+              exit 1
+            fi
+            ROLLBACK_TAG=$(cat .previous_image_tag)
+            echo "Rolling back to: $ROLLBACK_TAG"
+            docker pull ghcr.io/ilv78/art-world-hub:$ROLLBACK_TAG
+            sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$ROLLBACK_TAG/" .env
+            docker compose up -d --remove-orphans
+            echo "Waiting for rollback to be healthy..."
+            for i in $(seq 1 60); do
+              if docker compose exec -T app node -e "fetch('http://localhost:5000/health').then(r => { if (!r.ok) process.exit(1) })" 2>/dev/null; then
+                echo "Rollback healthy after ${i}s"
+                exit 0
+              fi
+              sleep 2
+            done
+            echo "Rollback health check failed"
             docker compose logs --tail=50 app
             exit 1
 

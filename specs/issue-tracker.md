@@ -29,6 +29,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 8 | Create admin section | high | feature | Open | — | Admin panel for platform management |
 | 14 | Multiple gallery templates | low | enhancement | Open | — | Support different gallery room layouts |
 | 32 | Correct names in museum gallery | medium | bug | Open | — | Artist room names incorrect |
+| 35 | Release workflow | medium | enhancement | In Progress | `feature/issue-35-release-management` | Release management: image tagging, health endpoint, smoke tests, rollback, git release tags |
 | 36 | Role securitas - in CI/CD | high | devops | In Progress | — | Parent: spec at `specs/SECURITY_AGENT.md`. Sub-issue #55 done. Audit completed → issue #77 (4×P0, 6×P1, 7×P2). |
 | 73 | Upgrade Node.js 20→25 | high | bug | Open | — | Dependabot PR #57 closed (major) |
 | 77 | Security Audit — Critical findings | critical | devops | In Progress | — | Parent. All 4 P0s done (PRs #82–#84), all 6 P1s done (PR #85). 6 P2s remaining (1 P2 was done in P1 batch). |

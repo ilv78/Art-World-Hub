@@ -57,7 +57,7 @@ jobs:
 
             echo "Waiting for app to be healthy..."
             for i in $(seq 1 60); do
-              if docker compose exec -T app node -e "fetch('http://localhost:5000/api/artists').then(r => { if (!r.ok) process.exit(1) })" 2>/dev/null; then
+              if docker compose exec -T app node -e "fetch('http://localhost:5000/health').then(r => { if (!r.ok) process.exit(1) })" 2>/dev/null; then
                 echo "Production rolled back successfully after ${i}s"
                 exit 0
               fi
