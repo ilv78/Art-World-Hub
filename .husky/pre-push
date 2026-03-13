@@ -1,0 +1,23 @@
+#!/bin/sh
+
+# Block direct pushes to main.
+# All changes to main must go through a pull request.
+# See: docs/postmortems/2026-03-13-issue-8-direct-push-to-main.md
+
+remote="$1"
+
+while read local_ref local_sha remote_ref remote_sha; do
+  if echo "$remote_ref" | grep -qE "refs/heads/main$"; then
+    echo ""
+    echo "ERROR: Direct push to 'main' is blocked."
+    echo ""
+    echo "  Use a feature branch and pull request instead:"
+    echo "    git checkout -b feature/issue-N-description"
+    echo "    git push -u origin feature/issue-N-description"
+    echo "    gh pr create"
+    echo ""
+    exit 1
+  fi
+done
+
+exit 0
