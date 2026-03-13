@@ -29,6 +29,6 @@ A postmortem is required for any of:
 
 | Date | Title | Severity | Trigger | Status |
 |------|-------|----------|---------|--------|
-| — | No postmortems yet | — | — | — |
+| 2026-03-13 | [Admin section code pushed directly to main](./2026-03-13-issue-8-direct-push-to-main.md) | P2 | On-call intervention (rollback) | Draft |
 
 > Update this table when a new postmortem is added, or ask Claude Code to update it.
