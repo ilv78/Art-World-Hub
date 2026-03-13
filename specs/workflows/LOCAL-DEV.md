@@ -67,25 +67,20 @@ This triggers CI on the feature branch (lint, types, tests, build). No deploy ha
 
 ## 3. Getting Code to Staging
 
-### Option A: Direct push to main (solo development)
+### Pull request (required — direct push to main is blocked)
+
+> **Note:** Branch protection is enabled on `main`. Direct pushes are rejected by GitHub.
+> A pre-push hook also blocks this locally. All changes must go through a PR.
 
 ```bash
-git checkout main
-git merge feature/my-feature-name
-git push origin main
-```
-
-### Option B: Pull request (recommended for collaboration)
-
-```bash
-git push origin feature/my-feature-name
+git push -u origin feature/my-feature-name
 gh pr create --title "Add my feature" --body "Description of changes"
 ```
 
 Wait for CI to pass on the PR, then merge via GitHub UI or:
 
 ```bash
-gh pr merge --merge
+gh pr merge --merge --delete-branch
 ```
 
 ### What happens automatically after push to main
