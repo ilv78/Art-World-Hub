@@ -36,6 +36,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 74 | Upgrade react-resizable-panels 2→4 | high | bug | Open | — | Dependabot PR #68 closed (major) |
 | 75 | Upgrade recharts 2→3 | high | bug | Open | — | Dependabot PR #69 closed (major) |
 | 76 | Upgrade Vite 7→8 | high | bug | Open | — | Dependabot PR #70 closed (major) |
+| 89 | Auto-update issue tracker on issue/bug closure | low | devops | Open | — | Automate `issue-tracker.md` updates via GitHub Actions on issue close |
 
 ## Completed Issues
 
