@@ -4,7 +4,8 @@ import { storage } from "./storage";
 import { insertArtworkSchema, updateArtworkSchema, insertBidSchema, insertOrderSchema, insertBlogPostSchema, updateBlogPostSchema, updateArtistSchema, ORDER_TRANSITIONS, ORDER_STATUSES } from "@shared/schema";
 import type { Artist, ArtworkWithArtist, Order, InsertOrder } from "@shared/schema";
 import { z } from "zod";
-import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
+import { setupAuth, registerAuthRoutes, isAuthenticated, isAdmin } from "./replit_integrations/auth";
+import { USER_ROLES } from "@shared/models/auth";
 import https from "https";
 import http from "http";
 import { getResendClient, getFromEmail } from "./email";
@@ -839,6 +840,108 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Delete artwork error:", error);
       res.status(500).json({ error: "Failed to delete artwork" });
+    }
+  });
+
+  // ─── Admin routes ───
+
+  app.get("/api/admin/users", isAdmin, async (_req, res) => {
+    try {
+      const users = await storage.getUsers();
+      // Never send password hashes
+      const safeUsers = users.map(({ password: _, ...u }) => u);
+      res.json(safeUsers);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
+  app.patch("/api/admin/users/:id/role", isAdmin, async (req, res) => {
+    try {
+      const { role } = req.body;
+      if (!role || !(USER_ROLES as readonly string[]).includes(role)) {
+        return res.status(400).json({ error: `Invalid role. Must be one of: ${USER_ROLES.join(", ")}` });
+      }
+      const user = await storage.updateUserRole(req.params.id, role);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const { password: _, ...safeUser } = user;
+      res.json(safeUser);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update user role" });
+    }
+  });
+
+  app.get("/api/admin/artists", isAdmin, async (_req, res) => {
+    try {
+      const artists = await storage.getArtists();
+      res.json(artists);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch artists" });
+    }
+  });
+
+  app.delete("/api/admin/artists/:id", isAdmin, async (req, res) => {
+    try {
+      const artist = await storage.getArtist(req.params.id);
+      if (!artist) {
+        return res.status(404).json({ error: "Artist not found" });
+      }
+      await storage.deleteArtist(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Admin delete artist error:", error);
+      res.status(500).json({ error: "Failed to delete artist" });
+    }
+  });
+
+  app.get("/api/admin/artworks", isAdmin, async (_req, res) => {
+    try {
+      const artworks = await storage.getArtworks();
+      res.json(artworks);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch artworks" });
+    }
+  });
+
+  app.delete("/api/admin/artworks/:id", isAdmin, async (req, res) => {
+    try {
+      const artwork = await storage.getArtwork(req.params.id);
+      if (!artwork) {
+        return res.status(404).json({ error: "Artwork not found" });
+      }
+      await storage.deleteArtwork(req.params.id);
+      if (artwork.isReadyForExhibition) {
+        await storage.regenerateArtistGallery(artwork.artistId);
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error("Admin delete artwork error:", error);
+      res.status(500).json({ error: "Failed to delete artwork" });
+    }
+  });
+
+  app.get("/api/admin/exhibitions", isAdmin, async (_req, res) => {
+    try {
+      const exhibitions = await storage.getExhibitions();
+      res.json(exhibitions);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch exhibitions" });
+    }
+  });
+
+  app.delete("/api/admin/exhibitions/:id", isAdmin, async (req, res) => {
+    try {
+      const exhibition = await storage.getExhibition(req.params.id);
+      if (!exhibition) {
+        return res.status(404).json({ error: "Exhibition not found" });
+      }
+      await storage.deleteExhibition(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Admin delete exhibition error:", error);
+      res.status(500).json({ error: "Failed to delete exhibition" });
     }
   });
 
