@@ -15,6 +15,8 @@ RUN npm run build
 FROM node:20-bookworm-slim AS run
 WORKDIR /app
 ENV NODE_ENV=production
+ARG APP_VERSION=dev
+ENV APP_VERSION=$APP_VERSION
 COPY --from=build /app/package.json /app/package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts
 COPY --from=build /app/dist ./dist

@@ -34,7 +34,7 @@ Single unified workflow with two jobs. Triggers on every push (all branches) and
 | Checkout | Clones the repo |
 | Setup Docker Buildx | Enables advanced Docker builds |
 | Login to GHCR | Authenticates to GitHub Container Registry |
-| Build & push image | Multi-stage Docker build, pushes `latest` + `sha` tags |
+| Build & push image | Multi-stage Docker build, pushes `latest` + `sha` + `run_number` tags, passes `APP_VERSION` build arg |
 
 - **Gated on CI** — `needs: ci`, only runs if all CI checks pass
 - **Only on main push** — `if: github.ref == 'refs/heads/main' && github.event_name == 'push'`
@@ -374,6 +374,9 @@ By: username
 | `TELEGRAM_BOT_TOKEN` | Set | Deploy notifications | Telegram bot token from @BotFather |
 | `TELEGRAM_CHAT_ID` | Set | Deploy notifications | Telegram chat ID for notifications |
 
+| `STAGING_URL` | Needs setup | Staging smoke test | Full staging URL (`https://staging.artverse.idata.ro`) |
+| `PRODUCTION_URL` | Needs setup | Production smoke test | Full production URL (`https://artverse.idata.ro`) |
+
 DB passwords and session secrets are stored in `.env` files on the VPS (not in GitHub Secrets), since the docker-compose files read them locally.
 
 ---
@@ -466,6 +469,7 @@ DB passwords and session secrets are stored in `.env` files on the VPS (not in G
                │  Push to GHCR:           │
                │    :latest               │
                │    :<commit-sha>         │
+               │    :<run-number>         │
                └──────────┬───────────────┘
                           │
                           │ needs: docker job
@@ -477,6 +481,8 @@ DB passwords and session secrets are stored in `.env` files on the VPS (not in G
                │  docker pull <sha>       │
                │  docker compose up -d    │
                │  Health check (2 min)    │
+               │  Smoke test (external)   │
+               │  Git tag release-N       │
                │  📱 Telegram notify      │
                └──────────────────────────┘
 ```
@@ -497,6 +503,8 @@ DB passwords and session secrets are stored in `.env` files on the VPS (not in G
                │  docker compose up -d    │
                │  DB migrate (not push)   │
                │  Health check (2 min)    │
+               │  Smoke test (external)   │
+               │  Rollback (if: failure)  │
                │  📱 Telegram notify      │
                └──────────────────────────┘
 ```
@@ -538,6 +546,7 @@ DB passwords and session secrets are stored in `.env` files on the VPS (not in G
                     │  art-world-hub      │
                     │    :latest          │
                     │    :<sha>           │
+                    │    :<run-number>    │
                     └────────┬────────────┘
                              │ docker pull
                     ┌────────┴────────────┐
@@ -584,7 +593,7 @@ All third-party actions across all workflow files are **pinned to commit SHAs** 
 | `actions/setup-node` | `53b83947a5a98c8d113130e565377fae1a50d02f` |
 | `docker/setup-buildx-action` | `4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd` |
 | `docker/login-action` | `c94ce9fb468520275223c153574b00df6fe4bcc9` |
-| `docker/build-push-action` | `d08e5c354a6adb9ed34480a06d141179aa583294` |
+| `docker/build-push-action` | `d08e5c354a6adb9ed34480a06d141179aa583294` (+ `build-args: APP_VERSION`) |
 | `appleboy/scp-action` | `ff85246acaad7bdce478db94a363cd2bf7c90345` |
 | `appleboy/ssh-action` | `0ff4204d59e8e51228ff73bce53f80d53301dee2` |
 | `anthropics/claude-code-action` | `5d0cc745cd0cce4c0e9e0b3511de26c3bc285eb5` |
@@ -603,7 +612,7 @@ All workflow files now declare explicit `permissions:` blocks at the top level a
 
 | Workflow | Permissions |
 |----------|------------|
-| `ci.yml` | `contents: read`, `packages: write` (Docker job only) |
+| `ci.yml` | `contents: read` (CI), `packages: write` (Docker), `contents: write` (staging deploy — for git release tags) |
 | `deploy-production.yml` | `contents: read` |
 | `rollback-production.yml` | `contents: read` |
 | `doc-agent.yml` | `contents: read`, `pull-requests: write` (enforce), `issues: write` (audit) |
@@ -663,3 +672,4 @@ Commits and pushes directly to `main`. Skips issues labeled `docs-audit` (automa
 | 2026-03-11 | Updated Telegram notification format: added @racu8_bot header, repo name, environment URLs. Removed "View run" link. (Issue #26, PR #27) |
 | 2026-03-13 | Added Section 6: Security hardening — SHA-pinned actions, shell injection prevention, explicit permissions blocks, security scanning pipeline documentation. (Issue #77, PR #85) |
 | 2026-03-13 | Added Section 6.5: Issue Tracker Auto-Update workflow — auto-updates issue-tracker.md and creates bug docs on issue close. (Issue #89) |
+| 2026-03-13 | Release management (Issue #35): 3-tag Docker images (latest+sha+run_number), `/health` endpoint, APP_VERSION build arg, post-deploy smoke tests, production auto-rollback on failure, git release tags (`release-N`), CHANGELOG.md. Added `STAGING_URL` and `PRODUCTION_URL` to secrets inventory. |

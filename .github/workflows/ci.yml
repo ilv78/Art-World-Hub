@@ -101,6 +101,9 @@ jobs:
           tags: |
             ${{ steps.image.outputs.name }}:latest
             ${{ steps.image.outputs.name }}:${{ github.sha }}
+            ${{ steps.image.outputs.name }}:${{ github.run_number }}
+          build-args: |
+            APP_VERSION=${{ github.run_number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -110,7 +113,7 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: read
+      contents: write
 
     steps:
       - name: Checkout
@@ -144,7 +147,7 @@ jobs:
             docker compose up -d --remove-orphans
             echo "Waiting for app to be healthy..."
             for i in $(seq 1 60); do
-              if docker compose exec -T app node -e "fetch('http://localhost:5000/api/artists').then(r => { if (!r.ok) process.exit(1) })" 2>/dev/null; then
+              if docker compose exec -T app node -e "fetch('http://localhost:5000/health').then(r => { if (!r.ok) process.exit(1) })" 2>/dev/null; then
                 echo "Staging is healthy after ${i}s"
                 exit 0
               fi
@@ -153,6 +156,26 @@ jobs:
             echo "Health check failed"
             docker compose logs --tail=50 app
             exit 1
+
+      - name: Smoke test — health check
+        run: |
+          echo "Waiting for container to boot..."
+          sleep 15
+          HEALTH_URL="${{ secrets.STAGING_URL }}/health"
+          HTTP_STATUS=$(curl --silent --output /dev/null --write-out "%{http_code}" "$HEALTH_URL")
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "Health check failed — HTTP $HTTP_STATUS"
+            exit 1
+          fi
+          echo "Health check passed — staging deployment verified"
+
+      - name: Tag release in git
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "release-${{ github.run_number }}" "${{ github.sha }}"
+          git push origin "release-${{ github.run_number }}"
 
       - name: Notify Telegram
         if: always()
@@ -163,6 +186,7 @@ jobs:
           REPO_NAME: ${{ github.event.repository.name }}
           DEPLOY_SHA: ${{ github.sha }}
           TRIGGERED_BY: ${{ github.actor }}
+          RUN_NUMBER: ${{ github.run_number }}
         run: |
           if [ -z "$TELEGRAM_BOT_TOKEN" ]; then exit 0; fi
           if [ "$DEPLOY_STATUS" = "success" ]; then EMOJI="✅"; else EMOJI="❌"; fi
@@ -173,4 +197,5 @@ jobs:
           ${EMOJI} <b>Staging deployment: ${DEPLOY_STATUS}</b> [${REPO_NAME}]
           Staging address: https://staging.artverse.idata.ro
           Tag: <code>${DEPLOY_SHA}</code>
+          Release: <code>release-${RUN_NUMBER}</code>
           By: ${TRIGGERED_BY}"

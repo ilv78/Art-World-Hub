@@ -7,6 +7,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { seedDatabase } from "./seed";
 import { registerMcpRoutes } from "./mcp";
+import healthRouter from "./routes/health";
 
 const app = express();
 const httpServer = createServer(app);
@@ -37,6 +38,9 @@ app.use(
 );
 
 app.use(express.urlencoded({ extended: false }));
+
+// Health check endpoint (registered before auth/session middleware)
+app.use("/", healthRouter);
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
