@@ -42,15 +42,15 @@ It's fine to batch multiple features/fixes into a single release. A natural rhyt
 2. **Run the workflow** — GitHub Actions → "Release" → Run workflow
    - Leave bump override empty for auto-detect (MINOR if any `feature`/`enhancement`, else PATCH)
    - Select `minor` or `major` to override
-3. The workflow automatically:
-   - Detects version bump from issue labels
-   - Categorizes issues into CHANGELOG groups (Added, Fixed, Security, Changed)
-   - Updates `CHANGELOG.md`
-   - Creates git tag and GitHub Release
+3. The workflow creates a **release PR** (branch `release/vX.Y.Z`) with the updated `CHANGELOG.md`
+4. **Review and merge** the PR — CI runs normally, ensuring the CHANGELOG update passes all checks
+5. On merge, `release-finalize.yml` automatically:
+   - Creates git tag `vX.Y.Z` and GitHub Release
    - Removes `release: next` labels from processed issues
    - Sends Telegram notification
 
-**Workflow:** `.github/workflows/release.yml`
+**Prepare:** `.github/workflows/release.yml` (manual dispatch → creates PR)
+**Finalize:** `.github/workflows/release-finalize.yml` (runs on PR merge with `autorelease` label)
 **Script:** `.github/scripts/prepare-release.sh`
 
 ### Manual (fallback)
