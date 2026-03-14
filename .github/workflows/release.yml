@@ -34,12 +34,12 @@ jobs:
           ref: main
           fetch-depth: 0
           fetch-tags: true
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.RELEASE_PAT }}
 
       - name: Prepare release
         id: prep
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           BUMP_OVERRIDE: ${{ github.event.inputs.bump_override }}
         run: .github/scripts/prepare-release.sh
@@ -51,7 +51,7 @@ jobs:
       - name: Create release branch and PR
         if: steps.prep.outputs.skip != 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
           TAG: ${{ steps.prep.outputs.tag }}
           VERSION: ${{ steps.prep.outputs.version }}
           BUMP_TYPE: ${{ steps.prep.outputs.bump_type }}
