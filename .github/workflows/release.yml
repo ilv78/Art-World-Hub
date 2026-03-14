@@ -1,0 +1,124 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump_override:
+        description: "Version bump override (leave empty for auto-detect)"
+        required: false
+        type: choice
+        options:
+          - ""
+          - minor
+          - major
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      issues: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare release
+        id: prep
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          BUMP_OVERRIDE: ${{ github.event.inputs.bump_override }}
+        run: .github/scripts/prepare-release.sh
+
+      - name: Exit if nothing to release
+        if: steps.prep.outputs.skip == 'true'
+        run: echo "No issues to release — exiting."
+
+      - name: Job summary
+        if: steps.prep.outputs.skip != 'true'
+        env:
+          VERSION: ${{ steps.prep.outputs.version }}
+          TAG: ${{ steps.prep.outputs.tag }}
+          BUMP_TYPE: ${{ steps.prep.outputs.bump_type }}
+          CHANGELOG_BODY: ${{ steps.prep.outputs.changelog_body }}
+          ISSUE_NUMBERS: ${{ steps.prep.outputs.issue_numbers }}
+        run: |
+          {
+            echo "## Release $TAG"
+            echo ""
+            echo "**Version:** $VERSION"
+            echo "**Bump:** $BUMP_TYPE"
+            echo "**Issues:** $ISSUE_NUMBERS"
+            echo ""
+            echo "### Changelog"
+            echo ""
+            echo "$CHANGELOG_BODY"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit CHANGELOG
+        if: steps.prep.outputs.skip != 'true'
+        env:
+          TAG: ${{ steps.prep.outputs.tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git commit -m "release: $TAG"
+
+      - name: Push commit and tag
+        if: steps.prep.outputs.skip != 'true'
+        env:
+          TAG: ${{ steps.prep.outputs.tag }}
+        run: |
+          git tag "$TAG"
+          git push origin main "$TAG"
+
+      - name: Create GitHub Release
+        if: steps.prep.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.prep.outputs.tag }}
+          CHANGELOG_BODY: ${{ steps.prep.outputs.changelog_body }}
+        run: |
+          printf '%s\n' "$CHANGELOG_BODY" | gh release create "$TAG" --title "$TAG" --notes-file -
+
+      - name: 'Remove "release: next" labels'
+        if: steps.prep.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBERS: ${{ steps.prep.outputs.issue_numbers }}
+        run: |
+          for num in $ISSUE_NUMBERS; do
+            echo "Removing 'release: next' label from #$num"
+            gh issue edit "$num" --remove-label "release: next" || true
+          done
+
+      - name: Notify Telegram
+        if: always() && steps.prep.outputs.skip != 'true'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          RELEASE_STATUS: ${{ job.status }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          TAG: ${{ steps.prep.outputs.tag }}
+          TRIGGERED_BY: ${{ github.actor }}
+        run: |
+          if [ -z "$TELEGRAM_BOT_TOKEN" ]; then exit 0; fi
+          if [ "$RELEASE_STATUS" = "success" ]; then EMOJI="🏷️"; else EMOJI="❌"; fi
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            -d parse_mode="HTML" \
+            -d text="@racu8_bot
+          ${EMOJI} <b>New release: ${TAG}</b> [${REPO_NAME}]
+          By: ${TRIGGERED_BY}"

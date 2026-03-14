@@ -52,6 +52,34 @@ Root-level changelog following [Keep a Changelog](https://keepachangelog.com/en/
 
 Semantic versioning (`vX.Y.Z`) for milestone releases, separate from deployment tags (`release-{N}`). Full policy documented in `specs/workflows/VERSIONING.md`.
 
+### 8. Automated Release Workflow
+
+**Workflow:** `.github/workflows/release.yml` (manual dispatch)
+**Script:** `.github/scripts/prepare-release.sh`
+
+Label-driven release automation:
+1. Developer labels closed issues with `release: next`
+2. Trigger workflow via GitHub Actions UI (with optional bump override)
+3. Script collects labeled issues, detects version bump, generates CHANGELOG entries
+4. Workflow commits CHANGELOG, creates git tag + GitHub Release, removes labels
+
+**Version bump detection:**
+- Any issue with `feature` or `enhancement` label → MINOR bump
+- All other issues → PATCH bump
+- Manual override available for MAJOR bumps
+
+**CHANGELOG categorization:**
+
+| Label | CHANGELOG Section |
+|-------|------------------|
+| `feature`, `enhancement` | Added |
+| `bug` | Fixed |
+| `refactor`, `devops`, `ui/ux` | Changed |
+| Title/label contains "security" | Security |
+| `documentation` only | Skipped |
+
+**Does NOT trigger production deploy** — user runs `deploy-production.yml` separately after verifying the release.
+
 ## Required Secrets
 
 - `STAGING_URL` — e.g. `https://staging.artverse.idata.ro`
