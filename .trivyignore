@@ -1,0 +1,43 @@
+# Trivy ignore list for ArtVerse container scan
+# These CVEs are in dependencies we cannot directly update.
+# Review this file when upgrading Node base image or esbuild.
+# Last reviewed: 2026-03-14
+
+# ─── npm bundled dependencies (node:20-bookworm-slim) ───
+# These packages are bundled inside npm itself, not our project.
+# Our lockfile already has fixed versions; these come from the
+# Node.js base image's built-in npm 10.x.
+# Fix: upgrade Node base image or run `npm install -g npm@latest`
+# Tracked in: #73 (Node 25 upgrade)
+
+# cross-spawn 7.0.3 (our lockfile: 7.0.6)
+CVE-2024-21538
+
+# glob 10.4.2 (our lockfile: 10.5.0)
+CVE-2025-64756
+
+# minimatch 9.0.5 (our lockfile: 9.0.9)
+CVE-2026-26996
+CVE-2026-27903
+CVE-2026-27904
+
+# tar 6.2.1 (not used by our project directly)
+CVE-2026-23745
+CVE-2026-23950
+CVE-2026-24842
+CVE-2026-26960
+CVE-2026-29786
+CVE-2026-31802
+
+# ─── esbuild Go binary (Go stdlib 1.23.12) ───
+# The esbuild binary is compiled with Go 1.23.12 which has
+# known stdlib CVEs. Only esbuild maintainers can fix this
+# by recompiling with Go 1.24.13+/1.25.7+.
+# Fix: upgrade esbuild to a version compiled with newer Go
+# Tracked in: #73 (major dep upgrades)
+
+CVE-2025-68121
+CVE-2025-58183
+CVE-2025-61726
+CVE-2025-61728
+CVE-2025-61729
