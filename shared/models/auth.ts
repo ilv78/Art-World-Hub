@@ -1,6 +1,10 @@
 import { sql } from "drizzle-orm";
 import { boolean, index, jsonb, pgTable, timestamp, varchar } from "drizzle-orm/pg-core";
 
+// Role-based access control
+export const USER_ROLES = ["user", "curator", "admin"] as const;
+export type UserRole = (typeof USER_ROLES)[number];
+
 // Session storage table.
 export const sessions = pgTable(
   "sessions",
@@ -18,6 +22,7 @@ export const users = pgTable("users", {
   email: varchar("email").unique(),
   password: varchar("password"), // bcrypt hash, null for OIDC-only users
   emailVerified: boolean("email_verified").default(false),
+  role: varchar("role").default("user").notNull(), // user | curator | admin
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),

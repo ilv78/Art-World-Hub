@@ -15,6 +15,13 @@
       "when": 1773266117519,
       "tag": "0001_illegal_famine",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1773444813233,
+      "tag": "0002_noisy_iron_monger",
+      "breakpoints": true
     }
   ]
 }
