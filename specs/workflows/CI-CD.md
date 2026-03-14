@@ -650,6 +650,14 @@ Commits and pushes directly to `main`. Skips issues labeled `docs-audit` (automa
 
 **Script:** `.github/scripts/update-issue-tracker.sh`
 
+### 6.6 Automated Release Workflow
+
+`.github/workflows/release.yml` provides label-driven versioned releases (`vX.Y.Z`). Developer labels closed issues with `release: next`, then triggers the workflow via manual dispatch. The workflow auto-detects the version bump (MINOR for features/enhancements, PATCH for fixes), updates `CHANGELOG.md`, creates a git tag + GitHub Release, removes labels, and sends a Telegram notification.
+
+**Script:** `.github/scripts/prepare-release.sh`
+
+Does NOT trigger production deploy — that remains a separate manual step via `deploy-production.yml`.
+
 ---
 
 ## 7. Revision Log
@@ -673,3 +681,4 @@ Commits and pushes directly to `main`. Skips issues labeled `docs-audit` (automa
 | 2026-03-13 | Added Section 6: Security hardening — SHA-pinned actions, shell injection prevention, explicit permissions blocks, security scanning pipeline documentation. (Issue #77, PR #85) |
 | 2026-03-13 | Added Section 6.5: Issue Tracker Auto-Update workflow — auto-updates issue-tracker.md and creates bug docs on issue close. (Issue #89) |
 | 2026-03-13 | Release management (Issue #35): 3-tag Docker images (latest+sha+run_number), `/health` endpoint, APP_VERSION build arg, post-deploy smoke tests, production auto-rollback on failure, git release tags (`release-N`), CHANGELOG.md. Added `STAGING_URL` and `PRODUCTION_URL` to secrets inventory. |
+| 2026-03-14 | Added Section 6.6: Automated Release Workflow — label-driven versioned releases via `release.yml` + `prepare-release.sh`. Auto-detects PATCH/MINOR bump, updates CHANGELOG, creates git tag + GitHub Release, removes labels, Telegram notification. (Issue #110) |

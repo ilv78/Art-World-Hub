@@ -36,7 +36,24 @@ It's fine to batch multiple features/fixes into a single release. A natural rhyt
 
 ## Release Checklist
 
-When you're ready to declare a release:
+### Automated (recommended)
+
+1. **Label issues** — add `release: next` to closed issues that should be in the release
+2. **Run the workflow** — GitHub Actions → "Release" → Run workflow
+   - Leave bump override empty for auto-detect (MINOR if any `feature`/`enhancement`, else PATCH)
+   - Select `minor` or `major` to override
+3. The workflow automatically:
+   - Detects version bump from issue labels
+   - Categorizes issues into CHANGELOG groups (Added, Fixed, Security, Changed)
+   - Updates `CHANGELOG.md`
+   - Creates git tag and GitHub Release
+   - Removes `release: next` labels from processed issues
+   - Sends Telegram notification
+
+**Workflow:** `.github/workflows/release.yml`
+**Script:** `.github/scripts/prepare-release.sh`
+
+### Manual (fallback)
 
 1. **Verify production is healthy** — check `https://artverse.idata.ro/health`
 2. **Update `CHANGELOG.md`**:
