@@ -13,6 +13,19 @@ _Nothing yet — all recent work included in v2.1.0 below._
 ## [2.1.0] - 2026-03-14
 
 ### Added
+- Automated release workflow with label-based version detection ([#110](https://github.com/ilv78/Art-World-Hub/issues/110))
+- Release workflow ([#35](https://github.com/ilv78/Art-World-Hub/issues/35))
+- Create admin section ([#8](https://github.com/ilv78/Art-World-Hub/issues/8))
+
+### Fixed
+- CI/CD - minor failures ([#104](https://github.com/ilv78/Art-World-Hub/issues/104))
+
+### Changed
+- Role securitas - in CI/CD ([#36](https://github.com/ilv78/Art-World-Hub/issues/36))
+
+## [2.1.0] - 2026-03-14
+
+### Added
 - Email login: magic link signup (Resend) + email/password signin ([#6](https://github.com/ilv78/Art-World-Hub/issues/6))
 - Profile picture upload for artists ([#12](https://github.com/ilv78/Art-World-Hub/issues/12))
 - Release management system: Docker image tagging, health checks, smoke tests, git release tags ([#35](https://github.com/ilv78/Art-World-Hub/issues/35))
