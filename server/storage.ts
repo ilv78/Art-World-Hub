@@ -1,4 +1,4 @@
-import { 
+import {
   type Artist, type InsertArtist,
   type Artwork, type InsertArtwork,
   type Auction, type InsertAuction,
@@ -15,6 +15,7 @@ import {
   type MazeCell,
   artists, artworks, auctions, bids, orders, exhibitions, exhibitionArtworks, blogPosts
 } from "@shared/schema";
+import { type User, type UserRole, users } from "@shared/models/auth";
 import { db } from "./db";
 import { eq, desc, asc, and, sql } from "drizzle-orm";
 
@@ -71,6 +72,13 @@ export interface IStorage {
   // Gallery
   getExhibitionReadyArtworks(artistId: string): Promise<ArtworkWithArtist[]>;
   regenerateArtistGallery(artistId: string): Promise<MazeLayout>;
+
+  // Admin
+  getUsers(): Promise<User[]>;
+  updateUserRole(userId: string, role: UserRole): Promise<User | undefined>;
+  deleteArtist(id: string): Promise<boolean>;
+  deleteExhibition(id: string): Promise<boolean>;
+  getAllBlogPosts(): Promise<BlogPostWithArtist[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -383,6 +391,52 @@ export class DatabaseStorage implements IStorage {
     const layout = generateWhiteRoomLayout(readyArtworks.length);
     await db.update(artists).set({ galleryLayout: layout }).where(eq(artists.id, artistId));
     return layout;
+  }
+
+  // Admin
+  async getUsers(): Promise<User[]> {
+    return db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async updateUserRole(userId: string, role: UserRole): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ role, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async deleteArtist(id: string): Promise<boolean> {
+    // Delete all related data in dependency order
+    const artistArtworks = await db.select({ id: artworks.id }).from(artworks).where(eq(artworks.artistId, id));
+    for (const aw of artistArtworks) {
+      await this.deleteArtwork(aw.id);
+    }
+    // Delete blog posts by this artist
+    await db.delete(blogPosts).where(eq(blogPosts.artistId, id));
+    // Delete the artist
+    const result = await db.delete(artists).where(eq(artists.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getAllBlogPosts(): Promise<BlogPostWithArtist[]> {
+    const result = await db
+      .select()
+      .from(blogPosts)
+      .innerJoin(artists, eq(blogPosts.artistId, artists.id))
+      .orderBy(desc(blogPosts.createdAt));
+
+    return result.map(({ blog_posts: post, artists: artist }) => ({
+      ...post,
+      artist,
+    }));
+  }
+
+  async deleteExhibition(id: string): Promise<boolean> {
+    await db.delete(exhibitionArtworks).where(eq(exhibitionArtworks.exhibitionId, id));
+    const result = await db.delete(exhibitions).where(eq(exhibitions.id, id)).returning();
+    return result.length > 0;
   }
 }
 
