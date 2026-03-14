@@ -150,6 +150,19 @@ fi
 # Build the new version section (header + body)
 NEW_SECTION="## [${NEW_VERSION}] - ${DATE}"$'\n\n'"${BODY}"
 
+# Remove any existing section for this version (prevents duplicates if re-releasing)
+if grep -q "^## \[${NEW_VERSION}\]" "$CHANGELOG"; then
+  echo "Removing existing [${NEW_VERSION}] section to prevent duplicates..."
+  export _RM_VERSION="$NEW_VERSION"
+  awk '
+    /^## \[/ && index($0, "[" ENVIRON["_RM_VERSION"] "]") > 0 {skip=1; next}
+    /^## \[/ && skip {skip=0}
+    !skip {print}
+  ' "$CHANGELOG" > "${CHANGELOG}.tmp"
+  mv "${CHANGELOG}.tmp" "$CHANGELOG"
+  unset _RM_VERSION
+fi
+
 # Use awk with ENVIRON to avoid escape sequence issues:
 # - After [Unreleased], insert reset placeholder + new version section
 # - Skip old unreleased content until next version header

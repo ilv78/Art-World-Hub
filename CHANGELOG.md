@@ -13,6 +13,8 @@ _Nothing yet — all recent work included in v2.1.0 below._
 ## [2.1.0] - 2026-03-14
 
 ### Added
+- Automated release workflow with label-based version detection ([#110](https://github.com/ilv78/Art-World-Hub/issues/110))
+- Create admin section ([#8](https://github.com/ilv78/Art-World-Hub/issues/8))
 - Email login: magic link signup (Resend) + email/password signin ([#6](https://github.com/ilv78/Art-World-Hub/issues/6))
 - Profile picture upload for artists ([#12](https://github.com/ilv78/Art-World-Hub/issues/12))
 - Release management system: Docker image tagging, health checks, smoke tests, git release tags ([#35](https://github.com/ilv78/Art-World-Hub/issues/35))
@@ -23,6 +25,7 @@ _Nothing yet — all recent work included in v2.1.0 below._
 - Documentation agent spec, backfill, and restructured specs directory ([#5](https://github.com/ilv78/Art-World-Hub/issues/5), [#40](https://github.com/ilv78/Art-World-Hub/issues/40), [#41](https://github.com/ilv78/Art-World-Hub/issues/41), [#42](https://github.com/ilv78/Art-World-Hub/issues/42))
 
 ### Fixed
+- CI/CD - minor failures ([#104](https://github.com/ilv78/Art-World-Hub/issues/104))
 - Magic link emails not being sent ([#34](https://github.com/ilv78/Art-World-Hub/issues/34))
 - Resend sender address — changed from sandbox to gallery@idata.ro ([#37](https://github.com/ilv78/Art-World-Hub/issues/37))
 
@@ -34,6 +37,7 @@ _Nothing yet — all recent work included in v2.1.0 below._
 - P1 hardening: Helmet headers, email HTML escaping, Zod PATCH validation, magic byte upload validation, Actions SHA pinning, shell injection fixes ([#77](https://github.com/ilv78/Art-World-Hub/issues/77))
 
 ### Changed
+- Role securitas - in CI/CD ([#36](https://github.com/ilv78/Art-World-Hub/issues/36))
 - Refactored auth, email, and frontend code to consolidate duplications ([#53](https://github.com/ilv78/Art-World-Hub/issues/53))
 - Google OAuth moved from `/api/login` to `/api/login/google`
 - Resend email integration refactored to use `RESEND_API_KEY` env var
