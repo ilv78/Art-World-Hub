@@ -652,11 +652,14 @@ Commits and pushes directly to `main`. Skips issues labeled `docs-audit` (automa
 
 ### 6.6 Automated Release Workflow
 
-`.github/workflows/release.yml` provides label-driven versioned releases (`vX.Y.Z`). Developer labels closed issues with `release: next`, then triggers the workflow via manual dispatch. The workflow auto-detects the version bump (MINOR for features/enhancements, PATCH for fixes), updates `CHANGELOG.md`, creates a git tag + GitHub Release, removes labels, and sends a Telegram notification.
+Two-phase label-driven versioned releases (`vX.Y.Z`):
+
+1. **Prepare** (`.github/workflows/release.yml`, manual dispatch): Developer labels closed issues with `release: next`, triggers the workflow. Script auto-detects the version bump (MINOR for features/enhancements, PATCH for fixes), updates `CHANGELOG.md`, and creates a release PR with the `autorelease` label.
+2. **Finalize** (`.github/workflows/release-finalize.yml`, automatic on PR merge): When the release PR is merged, creates the git tag + GitHub Release, removes `release: next` labels from issues, and sends a Telegram notification.
 
 **Script:** `.github/scripts/prepare-release.sh`
 
-Does NOT trigger production deploy — that remains a separate manual step via `deploy-production.yml`.
+Changes go through a PR, so CI validates the CHANGELOG update before it reaches main. Does NOT trigger production deploy — that remains a separate manual step via `deploy-production.yml`.
 
 ---
 

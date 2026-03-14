@@ -1,0 +1,111 @@
+name: Release Finalize
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  finalize:
+    name: Finalize Release
+    if: >-
+      github.event.pull_request.merged == true &&
+      contains(github.event.pull_request.labels.*.name, 'autorelease')
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      issues: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract release metadata
+        id: meta
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          # Extract tag from PR title (format: "release: vX.Y.Z")
+          TAG="${PR_TITLE#release: }"
+          VERSION="${TAG#v}"
+
+          # Validate tag format
+          if ! echo "$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "ERROR: Invalid tag format: $TAG (expected vX.Y.Z)"
+            exit 1
+          fi
+
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Release tag: ${TAG}"
+
+          # Extract issue numbers from PR body (hidden comment)
+          ISSUE_NUMBERS=$(echo "$PR_BODY" | grep '<!-- RELEASE_ISSUES:' | sed 's/.*<!-- RELEASE_ISSUES: //' | sed 's/ -->.*//')
+          echo "issue_numbers=${ISSUE_NUMBERS}" >> "$GITHUB_OUTPUT"
+          echo "Issues: ${ISSUE_NUMBERS}"
+
+          # Extract changelog body from CHANGELOG.md for this version
+          CHANGELOG_BODY=$(awk -v ver="$VERSION" '
+            /^## \[/ && index($0, "[" ver "]") > 0 {found=1; next}
+            /^## \[/ && found {exit}
+            found {print}
+          ' CHANGELOG.md)
+
+          {
+            echo "changelog_body<<CHANGELOG_EOF"
+            echo "$CHANGELOG_BODY"
+            echo "CHANGELOG_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create and push tag
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          git tag "$TAG"
+          git push origin "$TAG"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          CHANGELOG_BODY: ${{ steps.meta.outputs.changelog_body }}
+        run: |
+          printf '%s\n' "$CHANGELOG_BODY" | gh release create "$TAG" --title "$TAG" --notes-file -
+
+      - name: 'Remove "release: next" labels'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBERS: ${{ steps.meta.outputs.issue_numbers }}
+        run: |
+          for num in $ISSUE_NUMBERS; do
+            echo "Removing 'release: next' label from #$num"
+            gh issue edit "$num" --remove-label "release: next" || true
+          done
+
+      - name: Notify Telegram
+        if: always()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          RELEASE_STATUS: ${{ job.status }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          TRIGGERED_BY: ${{ github.actor }}
+        run: |
+          if [ -z "$TELEGRAM_BOT_TOKEN" ]; then exit 0; fi
+          if [ "$RELEASE_STATUS" = "success" ]; then EMOJI="🏷️"; else EMOJI="❌"; fi
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            -d parse_mode="HTML" \
+            -d text="@racu8_bot
+          ${EMOJI} <b>New release: ${TAG}</b> [${REPO_NAME}]
+          By: ${TRIGGERED_BY}"

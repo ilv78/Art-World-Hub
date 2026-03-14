@@ -54,14 +54,17 @@ Semantic versioning (`vX.Y.Z`) for milestone releases, separate from deployment 
 
 ### 8. Automated Release Workflow
 
-**Workflow:** `.github/workflows/release.yml` (manual dispatch)
+**Prepare:** `.github/workflows/release.yml` (manual dispatch → creates PR)
+**Finalize:** `.github/workflows/release-finalize.yml` (runs on PR merge with `autorelease` label)
 **Script:** `.github/scripts/prepare-release.sh`
 
-Label-driven release automation:
+Two-phase label-driven release automation:
 1. Developer labels closed issues with `release: next`
-2. Trigger workflow via GitHub Actions UI (with optional bump override)
+2. Trigger "Release" workflow via GitHub Actions UI (with optional bump override)
 3. Script collects labeled issues, detects version bump, generates CHANGELOG entries
-4. Workflow commits CHANGELOG, creates git tag + GitHub Release, removes labels
+4. Workflow creates a release PR (`release/vX.Y.Z` branch, `autorelease` label)
+5. Developer reviews and merges the PR (CI validates the CHANGELOG update)
+6. On merge, `release-finalize.yml` creates git tag + GitHub Release, removes labels, sends Telegram notification
 
 **Version bump detection:**
 - Any issue with `feature` or `enhancement` label → MINOR bump
