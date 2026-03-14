@@ -13,7 +13,7 @@ import connectPg from "connect-pg-simple";
 import { authStorage } from "./storage";
 import { sendMagicLinkEmail } from "../../email";
 import { z } from "zod";
-import type { User } from "@shared/models/auth";
+import type { User, UserRole } from "@shared/models/auth";
 
 function buildSessionUser(user: { id: string; email: string | null; firstName: string | null; lastName: string | null }) {
   return {
@@ -387,6 +387,26 @@ export async function setupAuth(app: Express) {
     });
   });
 }
+
+export const isAdmin: RequestHandler = async (req, res, next) => {
+  const user = req.user as any;
+
+  if (typeof (req as any).isAuthenticated !== "function" || !req.isAuthenticated()) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const userId = user?.claims?.sub;
+  if (!userId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const dbUser = await authStorage.getUser(userId);
+  if (!dbUser || dbUser.role !== "admin") {
+    return res.status(403).json({ message: "Forbidden — admin access required" });
+  }
+
+  return next();
+};
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const user = req.user as any;

@@ -53,5 +53,12 @@ export function createMockStorage(): IStorage {
     // Gallery
     getExhibitionReadyArtworks: vi.fn().mockResolvedValue([]),
     regenerateArtistGallery: vi.fn().mockResolvedValue({ width: 3, height: 3, cells: [], spawnPoint: { x: 1, z: 1 } }),
+
+    // Admin
+    getUsers: vi.fn().mockResolvedValue([]),
+    updateUserRole: vi.fn().mockResolvedValue(undefined),
+    deleteArtist: vi.fn().mockResolvedValue(false),
+    deleteExhibition: vi.fn().mockResolvedValue(false),
+    getAllBlogPosts: vi.fn().mockResolvedValue([]),
   };
 }
