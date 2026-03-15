@@ -169,6 +169,28 @@ jobs:
           fi
           echo "Health check passed — staging deployment verified"
 
+      - name: Smoke test — logging infrastructure
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: staging
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd ~/app
+            echo "Checking log file exists..."
+            docker compose exec -T app test -f /app/logs/app.log || { echo "FAIL: /app/logs/app.log not found"; exit 1; }
+            echo "Checking log file has entries..."
+            LOG_LINES=$(docker compose exec -T app wc -l < /app/logs/app.log)
+            if [ "$LOG_LINES" -lt 1 ]; then
+              echo "FAIL: log file is empty"
+              exit 1
+            fi
+            echo "Checking logs are valid JSON..."
+            docker compose exec -T app tail -1 /app/logs/app.log | python3 -c "import sys,json; json.load(sys.stdin)" || { echo "FAIL: last log line is not valid JSON"; exit 1; }
+            echo "Checking startup log entries..."
+            docker compose exec -T app grep -c '"msg":"Server listening"' /app/logs/app.log > /dev/null || { echo "FAIL: no Server listening entry"; exit 1; }
+            echo "Logging smoke test passed — $LOG_LINES log entries, valid JSON"
+
       - name: Tag release in git
         if: success()
         run: |
