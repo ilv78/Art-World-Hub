@@ -7,7 +7,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowRight, Image, ShoppingBag, Sparkles } from "lucide-react";
 import type { ArtworkWithArtist } from "@shared/schema";
 
+interface VersionResponse {
+  version: string;
+}
+
 export default function Home() {
+  const { data: versionData } = useQuery<VersionResponse>({
+    queryKey: ["/api/version"],
+  });
+
   const { data: featuredArtworks, isLoading: artworksLoading } = useQuery<ArtworkWithArtist[]>({
     queryKey: ["/api/artists", "4493f600-2619-47f9-979c-abc5b45ba92d", "artworks"],
     queryFn: async () => {
@@ -173,6 +181,17 @@ export default function Home() {
           </Link>
         </div>
       </section>
+
+      {/* Footer */}
+      <footer className="border-t py-4 px-6">
+        <div className="max-w-6xl mx-auto flex items-center justify-center gap-4 text-xs text-muted-foreground">
+          {versionData?.version && <span>{versionData.version}</span>}
+          <span>·</span>
+          <Link href="/changelog">
+            <span className="hover:text-foreground transition-colors cursor-pointer">Changelog</span>
+          </Link>
+        </div>
+      </footer>
     </div>
   );
 }
