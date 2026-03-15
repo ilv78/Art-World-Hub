@@ -21,6 +21,7 @@ import BlogPost from "@/pages/blog-post";
 import AuthPage from "@/pages/auth-page";
 import SetPassword from "@/pages/set-password";
 import AdminPage from "@/pages/admin";
+import Changelog from "@/pages/changelog";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -38,6 +39,7 @@ function Router() {
       <Route path="/admin" component={AdminPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/auth/set-password" component={SetPassword} />
+      <Route path="/changelog" component={Changelog} />
       <Route component={NotFound} />
     </Switch>
   );

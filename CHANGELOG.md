@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to ArtVerse will be documented in this file.
+All notable changes to [ArtVerse](https://github.com/ilv78/Art-World-Hub) will be documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and this project adheres to [Semantic Versioning](https://semver.org/). See `specs/workflows/VERSIONING.md` for the full versioning policy.
 
@@ -8,7 +8,13 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
-_Nothing yet — all recent work included in v2.1.0 below._
+### Added
+- Release version and changelog link in homepage footer ([#121](https://github.com/ilv78/Art-World-Hub/issues/121))
+- Public `/changelog` page rendering full changelog with markdown formatting ([#121](https://github.com/ilv78/Art-World-Hub/issues/121))
+- `GET /api/version` and `GET /api/changelog` endpoints ([#121](https://github.com/ilv78/Art-World-Hub/issues/121))
+
+### Fixed
+- Removed stale GitHub authentication reference from artist dashboard ([#95](https://github.com/ilv78/Art-World-Hub/issues/95))
 
 ## [2.1.0] - 2026-03-14
 
