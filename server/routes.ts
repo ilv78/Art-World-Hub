@@ -13,6 +13,8 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
+import { logger, logFilePath } from "./logger";
+import readline from "readline";
 
 function escapeHtml(str: string): string {
   return str
@@ -35,7 +37,7 @@ async function sendOrderNotificationEmail(
   try {
     client = getResendClient();
   } catch (e) {
-    console.log("Resend not configured, skipping email notification:", (e as Error).message);
+    logger.warn({ err: e }, "Resend not configured, skipping email notification");
     return;
   }
 
@@ -91,7 +93,7 @@ async function sendBuyerConfirmationEmail(
   try {
     client = getResendClient();
   } catch (e) {
-    console.log("Resend not configured, skipping buyer confirmation:", (e as Error).message);
+    logger.warn({ err: e }, "Resend not configured, skipping buyer confirmation");
     return;
   }
 
@@ -560,7 +562,7 @@ export async function registerRoutes(
           }
         }
       } catch (emailError) {
-        console.error("Failed to send order emails:", emailError);
+        logger.error({ err: emailError }, "Failed to send order emails");
       }
       
       res.status(201).json(order);
@@ -838,7 +840,7 @@ export async function registerRoutes(
       }
       res.status(204).send();
     } catch (error) {
-      console.error("Delete artwork error:", error);
+      logger.error({ err: error }, "Delete artwork error");
       res.status(500).json({ error: "Failed to delete artwork" });
     }
   });
@@ -960,6 +962,59 @@ export async function registerRoutes(
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete blog post" });
+    }
+  });
+
+  // ── Admin logs endpoint (structured log viewer) ─────────────────
+  app.get("/api/admin/logs", isAdmin, async (req: any, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit as string) || 200, 2000);
+      const level = req.query.level as string | undefined; // e.g. "error", "warn"
+      const module = req.query.module as string | undefined;
+      const search = req.query.search as string | undefined;
+      const since = req.query.since as string | undefined; // ISO timestamp
+
+      const pinoLevels: Record<string, number> = {
+        fatal: 60,
+        error: 50,
+        warn: 40,
+        info: 30,
+        debug: 20,
+        trace: 10,
+      };
+      const minLevel = level ? (pinoLevels[level] ?? 0) : 0;
+      const sinceMs = since ? new Date(since).getTime() : 0;
+
+      if (!fs.existsSync(logFilePath)) {
+        return res.json({ entries: [], total: 0 });
+      }
+
+      // Read log file lines (NDJSON) — collect all then return the last `limit`
+      const entries: object[] = [];
+      const fileStream = fs.createReadStream(logFilePath, { encoding: "utf-8" });
+      const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
+
+      for await (const line of rl) {
+        if (!line.trim()) continue;
+        try {
+          const entry = JSON.parse(line);
+          // Apply filters
+          if (minLevel && (entry.level ?? 0) < minLevel) continue;
+          if (module && entry.module !== module) continue;
+          if (sinceMs && new Date(entry.time).getTime() < sinceMs) continue;
+          if (search && !line.toLowerCase().includes(search.toLowerCase())) continue;
+          entries.push(entry);
+        } catch {
+          // skip malformed lines
+        }
+      }
+
+      // Return the most recent entries (tail)
+      const tail = entries.slice(-limit);
+      res.json({ entries: tail, total: entries.length });
+    } catch (error) {
+      logger.error({ err: error }, "Failed to read logs");
+      res.status(500).json({ error: "Failed to read logs" });
     }
   });
 

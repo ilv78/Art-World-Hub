@@ -14,6 +14,7 @@ import { authStorage } from "./storage";
 import { sendMagicLinkEmail } from "../../email";
 import { z } from "zod";
 import type { User, UserRole } from "@shared/models/auth";
+import { authLogger as logger } from "../../logger";
 
 function buildSessionUser(user: { id: string; email: string | null; firstName: string | null; lastName: string | null }) {
   return {
@@ -208,7 +209,7 @@ export async function setupAuth(app: Express) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: error.errors[0].message });
       }
-      console.error("Signup error:", error);
+      logger.error({ err: error }, "Signup error");
       res.status(500).json({ message: "Failed to send verification email" });
     }
   });
@@ -234,7 +235,7 @@ export async function setupAuth(app: Express) {
 
       req.login(buildSessionUser(user), (err) => {
         if (err) {
-          console.error("Login after verify error:", err);
+          logger.error({ err }, "Login after verify error");
           return res.redirect("/auth?error=login_failed");
         }
         // Redirect to set-password page if no password yet
@@ -244,7 +245,7 @@ export async function setupAuth(app: Express) {
         res.redirect("/");
       });
     } catch (error) {
-      console.error("Verify email error:", error);
+      logger.error({ err: error }, "Verify email error");
       res.redirect("/auth?error=verification_failed");
     }
   });
@@ -267,7 +268,7 @@ export async function setupAuth(app: Express) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: error.errors[0].message });
       }
-      console.error("Set password error:", error);
+      logger.error({ err: error }, "Set password error");
       res.status(500).json({ message: "Failed to set password" });
     }
   });
@@ -309,9 +310,7 @@ export async function setupAuth(app: Express) {
   });
 
   if (!googleEnabled) {
-    console.warn(
-      "[auth] OIDC_CLIENT_ID / OIDC_CLIENT_SECRET not set; Google login will be disabled"
-    );
+    logger.warn("OIDC_CLIENT_ID / OIDC_CLIENT_SECRET not set; Google login will be disabled");
   } else {
     const config = await getOidcConfig();
 

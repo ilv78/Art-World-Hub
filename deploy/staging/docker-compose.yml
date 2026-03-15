@@ -39,7 +39,9 @@ services:
       - 127.0.0.1:5003:5000
     volumes:
       - uploads:/app/uploads
+      - logs:/app/logs
 
 volumes:
   pgdata:
   uploads:
+  logs:

@@ -6,6 +6,9 @@ import type { Express, Request, Response } from "express";
 import { isAuthenticated } from "./replit_integrations/auth";
 import { DatabaseStorage } from "./storage";
 import { ORDER_TRANSITIONS, ORDER_STATUSES } from "@shared/schema";
+import { mcpLogger as logger, logFilePath } from "./logger";
+import fs from "fs";
+import readline from "readline";
 
 const storage = new DatabaseStorage();
 
@@ -673,6 +676,58 @@ export function createMcpServer(): McpServer {
     }
   );
 
+  // @ts-expect-error MCP SDK type instantiation too deep with complex Zod schemas
+  mcp.tool(
+    "get_logs",
+    "Query application logs with optional filters. Returns structured JSON log entries.",
+    {
+      limit: z.number().optional().default(100).describe("Max entries to return (default 100, max 2000)"),
+      level: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).optional().describe("Minimum log level"),
+      module: z.string().optional().describe("Filter by module (e.g. auth, mcp, seed)"),
+      search: z.string().optional().describe("Text search across log entries"),
+      since: z.string().optional().describe("ISO timestamp — only return entries after this time"),
+    },
+    async (args) => {
+      try {
+        const maxEntries = Math.min(args.limit ?? 100, 2000);
+        const pinoLevels: Record<string, number> = {
+          fatal: 60, error: 50, warn: 40, info: 30, debug: 20, trace: 10,
+        };
+        const minLevel = args.level ? (pinoLevels[args.level] ?? 0) : 0;
+        const sinceMs = args.since ? new Date(args.since).getTime() : 0;
+
+        if (!fs.existsSync(logFilePath)) {
+          return { content: [{ type: "text", text: JSON.stringify({ entries: [], total: 0 }) }] };
+        }
+
+        const entries: object[] = [];
+        const fileStream = fs.createReadStream(logFilePath, { encoding: "utf-8" });
+        const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
+
+        for await (const line of rl) {
+          if (!line.trim()) continue;
+          try {
+            const entry = JSON.parse(line);
+            if (minLevel && (entry.level ?? 0) < minLevel) continue;
+            if (args.module && entry.module !== args.module) continue;
+            if (sinceMs && new Date(entry.time).getTime() < sinceMs) continue;
+            if (args.search && !line.toLowerCase().includes(args.search.toLowerCase())) continue;
+            entries.push(entry);
+          } catch {
+            // skip malformed lines
+          }
+        }
+
+        const tail = entries.slice(-maxEntries);
+        return {
+          content: [{ type: "text", text: JSON.stringify({ entries: tail, total: entries.length }, null, 2) }],
+        };
+      } catch (e: any) {
+        return { content: [{ type: "text", text: `Error: ${e.message}` }], isError: true };
+      }
+    }
+  );
+
   // ─── PROMPTS ─────────────────────────────────────────────────
 
   mcp.prompt(
@@ -828,7 +883,7 @@ export function registerMcpRoutes(app: Express) {
       try {
         await session.transport.handleRequest(req, res, req.body);
       } catch (e: any) {
-        console.error("MCP session error:", e);
+        logger.error({ err: e }, "MCP session error");
         if (!res.headersSent) {
           res.status(500).json({ jsonrpc: "2.0", error: { code: -32603, message: "Internal error" } });
         }
@@ -859,7 +914,7 @@ export function registerMcpRoutes(app: Express) {
       await mcpServer.connect(transport);
       await transport.handleRequest(req, res, req.body);
     } catch (e: any) {
-      console.error("MCP init error:", e);
+      logger.error({ err: e }, "MCP init error");
       if (!res.headersSent) {
         res.status(500).json({ jsonrpc: "2.0", error: { code: -32603, message: "Initialization failed" } });
       }
@@ -875,7 +930,7 @@ export function registerMcpRoutes(app: Express) {
     try {
       await sessions.get(sessionId)!.transport.handleRequest(req, res);
     } catch (e: any) {
-      console.error("MCP GET error:", e);
+      logger.error({ err: e }, "MCP GET error");
       if (!res.headersSent) {
         res.status(500).json({ jsonrpc: "2.0", error: { code: -32603, message: "Internal error" } });
       }
@@ -892,7 +947,7 @@ export function registerMcpRoutes(app: Express) {
       const session = sessions.get(sessionId)!;
       await session.transport.handleRequest(req, res);
     } catch (e: any) {
-      console.error("MCP DELETE error:", e);
+      logger.error({ err: e }, "MCP DELETE error");
       if (!res.headersSent) {
         res.status(200).end();
       }
