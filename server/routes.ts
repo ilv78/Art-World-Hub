@@ -1021,7 +1021,7 @@ export async function registerRoutes(
   // Version & changelog (public)
   app.get("/api/version", (_req, res) => {
     try {
-      const changelog = fs.readFileSync(path.resolve(import.meta.dirname, "../CHANGELOG.md"), "utf-8");
+      const changelog = fs.readFileSync(path.resolve(process.cwd(), "CHANGELOG.md"), "utf-8");
       const match = changelog.match(/^## \[(\d+\.\d+\.\d+)\]/m);
       res.json({ version: match ? `v${match[1]}` : "unknown" });
     } catch {
@@ -1031,7 +1031,7 @@ export async function registerRoutes(
 
   app.get("/api/changelog", (_req, res) => {
     try {
-      const changelog = fs.readFileSync(path.resolve(import.meta.dirname, "../CHANGELOG.md"), "utf-8");
+      const changelog = fs.readFileSync(path.resolve(process.cwd(), "CHANGELOG.md"), "utf-8");
       res.type("text/plain").send(changelog);
     } catch {
       res.status(404).json({ error: "Changelog not found" });
