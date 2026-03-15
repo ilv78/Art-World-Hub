@@ -8,6 +8,7 @@ uploads/
 dist/
 *.key
 *.md
+!CHANGELOG.md
 !package.json
 !package-lock.json
 .github/
