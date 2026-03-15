@@ -82,6 +82,28 @@ vi.mock("../../storage", () => ({
   generateWhiteRoomLayout: vi.fn(),
 }));
 
+// Mock logger — no-op logger + testable logFilePath
+const { testLogDir } = vi.hoisted(() => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const tmpdir = require("os").tmpdir();
+  return { testLogDir: `${tmpdir}/artverse-test-logs-${process.pid}` };
+});
+
+vi.mock("../../logger", () => {
+  const noopLogger = {
+    info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(),
+    fatal: vi.fn(), trace: vi.fn(), child: vi.fn().mockReturnThis(),
+  };
+  return {
+    logger: noopLogger,
+    authLogger: noopLogger,
+    mcpLogger: noopLogger,
+    seedLogger: noopLogger,
+    logFilePath: `${testLogDir}/app.log`,
+    LOG_DIR: testLogDir,
+  };
+});
+
 import express from "express";
 import { createServer } from "http";
 import { registerRoutes } from "../../routes";
