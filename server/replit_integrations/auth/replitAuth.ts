@@ -11,6 +11,7 @@ import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { authStorage } from "./storage";
+import { storage } from "../../storage";
 import { sendMagicLinkEmail } from "../../email";
 import { z } from "zod";
 import type { User, UserRole } from "@shared/models/auth";
@@ -113,13 +114,27 @@ function updateUserSession(
 
 async function upsertUser(claims: any) {
   // Google OIDC claims: sub, email, given_name, family_name, picture
-  await authStorage.upsertUser({
+  const user = await authStorage.upsertUser({
     id: claims["sub"],
     email: claims["email"],
     firstName: claims["given_name"] ?? claims["first_name"],
     lastName: claims["family_name"] ?? claims["last_name"],
     profileImageUrl: claims["picture"] ?? claims["profile_image_url"],
   });
+
+  // Auto-create artist profile if none exists
+  const existingArtist = await storage.getArtistByUserId(user.id);
+  if (!existingArtist) {
+    const firstName = claims["given_name"] ?? claims["first_name"] ?? "";
+    const lastName = claims["family_name"] ?? claims["last_name"] ?? "";
+    const displayName = `${firstName} ${lastName}`.trim() || "New Artist";
+    await storage.createArtist({
+      name: displayName,
+      bio: "Welcome to my gallery! I'm a new artist on ArtVerse.",
+      userId: user.id,
+      email: claims["email"] || undefined,
+    });
+  }
 }
 
 // Build the origin (protocol + host + port) for callback URLs
@@ -232,6 +247,18 @@ export async function setupAuth(app: Express) {
         email: link.email,
         emailVerified: true,
       });
+
+      // Auto-create artist profile if none exists
+      const existingArtist = await storage.getArtistByUserId(user.id);
+      if (!existingArtist) {
+        const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ") || "New Artist";
+        await storage.createArtist({
+          name: displayName,
+          bio: "Welcome to my gallery! I'm a new artist on ArtVerse.",
+          userId: user.id,
+          email: user.email || undefined,
+        });
+      }
 
       req.login(buildSessionUser(user), (err) => {
         if (err) {

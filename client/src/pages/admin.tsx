@@ -126,9 +126,26 @@ export default function AdminPage() {
     },
   });
 
+  const deleteUserMutation = useMutation({
+    mutationFn: (id: string) => apiFetch(`/api/admin/users/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/artists"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/artworks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/artists"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/artworks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/gallery/hallway"] });
+      toast({ title: "User deleted" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Failed to delete user", description: err.message, variant: "destructive" });
+    },
+  });
+
   const deleteArtistMutation = useMutation({
     mutationFn: (id: string) => apiFetch(`/api/admin/artists/${id}`, { method: "DELETE" }),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/artists"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/artworks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/artists"] });
@@ -264,6 +281,7 @@ export default function AdminPage() {
                       <TableHead>Role</TableHead>
                       <TableHead>Verified</TableHead>
                       <TableHead>Created</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -294,6 +312,31 @@ export default function AdminPage() {
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—"}
+                        </TableCell>
+                        <TableCell>
+                          {u.id !== user.id && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="destructive" size="sm">
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete User</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This will permanently delete {u.email || "this user"} and their associated artist profile, artworks, blog posts, and all related data.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => deleteUserMutation.mutate(u.id)}>
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
