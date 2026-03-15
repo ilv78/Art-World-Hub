@@ -874,6 +874,28 @@ export async function registerRoutes(
     }
   });
 
+  app.delete("/api/admin/users/:id", isAdmin, async (req: any, res) => {
+    try {
+      // Prevent admin from deleting themselves
+      if (req.params.id === req.user?.claims?.sub) {
+        return res.status(400).json({ error: "Cannot delete your own account" });
+      }
+      // Also delete the artist linked to this user, if any
+      const artist = await storage.getArtistByUserId(req.params.id);
+      if (artist) {
+        await storage.deleteArtist(artist.id);
+      } else {
+        const deleted = await storage.deleteUser(req.params.id);
+        if (!deleted) {
+          return res.status(404).json({ error: "User not found" });
+        }
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete user" });
+    }
+  });
+
   app.get("/api/admin/artists", isAdmin, async (req: any, res) => {
     try {
       const artists = await storage.getArtists();

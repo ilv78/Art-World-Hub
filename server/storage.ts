@@ -16,6 +16,7 @@ import {
   artists, artworks, auctions, bids, orders, exhibitions, exhibitionArtworks, blogPosts
 } from "@shared/schema";
 import { type User, type UserRole, users } from "@shared/models/auth";
+import { sessions } from "@shared/models/auth";
 import { db } from "./db";
 import { eq, desc, asc, and, sql } from "drizzle-orm";
 
@@ -77,6 +78,7 @@ export interface IStorage {
   getUsers(): Promise<User[]>;
   updateUserRole(userId: string, role: UserRole): Promise<User | undefined>;
   deleteArtist(id: string): Promise<boolean>;
+  deleteUser(id: string): Promise<boolean>;
   deleteExhibition(id: string): Promise<boolean>;
   getAllBlogPosts(): Promise<BlogPostWithArtist[]>;
 }
@@ -408,6 +410,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteArtist(id: string): Promise<boolean> {
+    // Look up the artist to find the linked user before deletion
+    const [artist] = await db.select().from(artists).where(eq(artists.id, id));
+    if (!artist) return false;
+
     // Delete all related data in dependency order
     const artistArtworks = await db.select({ id: artworks.id }).from(artworks).where(eq(artworks.artistId, id));
     for (const aw of artistArtworks) {
@@ -416,7 +422,26 @@ export class DatabaseStorage implements IStorage {
     // Delete blog posts by this artist
     await db.delete(blogPosts).where(eq(blogPosts.artistId, id));
     // Delete the artist
-    const result = await db.delete(artists).where(eq(artists.id, id)).returning();
+    await db.delete(artists).where(eq(artists.id, id));
+
+    // Cascade: delete the associated user (and their sessions)
+    if (artist.userId) {
+      await this.deleteUser(artist.userId);
+    }
+    return true;
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    // Delete user sessions (connect-pg-simple stores userId in sess JSON)
+    const allSessions = await db.select().from(sessions);
+    for (const s of allSessions) {
+      const sess = s.sess as any;
+      if (sess?.passport?.user?.claims?.sub === id) {
+        await db.delete(sessions).where(eq(sessions.sid, s.sid));
+      }
+    }
+    // Delete the user record
+    const result = await db.delete(users).where(eq(users.id, id)).returning();
     return result.length > 0;
   }
 

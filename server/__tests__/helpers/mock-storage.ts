@@ -58,6 +58,7 @@ export function createMockStorage(): IStorage {
     getUsers: vi.fn().mockResolvedValue([]),
     updateUserRole: vi.fn().mockResolvedValue(undefined),
     deleteArtist: vi.fn().mockResolvedValue(false),
+    deleteUser: vi.fn().mockResolvedValue(false),
     deleteExhibition: vi.fn().mockResolvedValue(false),
     getAllBlogPosts: vi.fn().mockResolvedValue([]),
   };
