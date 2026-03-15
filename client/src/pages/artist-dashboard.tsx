@@ -470,7 +470,7 @@ export default function ArtistDashboard() {
         <Palette className="h-16 w-16 text-muted-foreground mb-6" />
         <h1 className="font-serif text-3xl font-bold mb-2">Artist Dashboard</h1>
         <p className="text-muted-foreground mb-6 max-w-md">
-          Log in to manage your artworks and blog posts. Use your Google, GitHub, or email account.
+          Log in to manage your artworks and blog posts. Use your Google or email account.
         </p>
         <Button asChild size="lg" data-testid="button-login">
           <a href="/api/login">
