@@ -4,31 +4,24 @@ import fs from "fs";
 
 const LOG_DIR = process.env.LOG_DIR || path.join(process.cwd(), "logs");
 const LOG_LEVEL = process.env.LOG_LEVEL || "info";
-const isDev = process.env.NODE_ENV !== "production";
 
 // Ensure log directory exists
 fs.mkdirSync(LOG_DIR, { recursive: true });
 
 export const logFilePath = path.join(LOG_DIR, "app.log");
 
-// Build transport targets: always log JSON to file; pretty-print to stdout
-// in dev (pino-pretty is a devDependency), raw JSON to stdout in production.
-const targets: pino.TransportTargetOptions[] = [
-  { target: "pino/file", options: { destination: logFilePath, mkdir: true } },
-];
-
-if (isDev) {
-  targets.push({ target: "pino-pretty", options: { colorize: true } });
-} else {
-  targets.push({ target: "pino/file", options: { destination: 1 } }); // stdout
-}
-
+// Use pino.multistream (no worker threads) — compatible with esbuild bundling.
+// pino.transport() spawns worker threads that can't resolve modules inside a
+// single-file CJS bundle, so we use direct streams instead.
 export const logger = pino(
   {
     level: LOG_LEVEL,
     timestamp: pino.stdTimeFunctions.isoTime,
   },
-  pino.transport({ targets }),
+  pino.multistream([
+    { level: "trace", stream: process.stdout },
+    { level: "trace", stream: pino.destination({ dest: logFilePath, sync: false, mkdir: true }) },
+  ]),
 );
 
 // Child loggers for different modules
