@@ -253,7 +253,9 @@ export default function ArtistProfile() {
                       <CardContent className="p-4">
                         <h3 className="font-semibold">{artwork.title}</h3>
                         <div className="flex items-center justify-between mt-2">
-                          <span className="text-lg font-bold text-primary">{parseInt(artwork.price).toLocaleString()}</span>
+                          {artwork.isForSale && (
+                            <span className="text-lg font-bold text-primary">{parseInt(artwork.price).toLocaleString()} &euro;</span>
+                          )}
                           {artwork.year && (
                             <span className="text-sm text-muted-foreground">{artwork.year}</span>
                           )}

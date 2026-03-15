@@ -123,12 +123,14 @@ export function ArtworkDetailDialog({
             <Separator className="my-4" />
 
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Price</span>
-                <span className="text-2xl font-bold text-primary" data-testid="text-detail-price">
-                  {parseInt(artwork.price).toLocaleString()}
-                </span>
-              </div>
+              {artwork.isForSale && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Price</span>
+                  <span className="text-2xl font-bold text-primary" data-testid="text-detail-price">
+                    {parseInt(artwork.price).toLocaleString()} &euro;
+                  </span>
+                </div>
+              )}
 
               {artwork.isForSale ? (
                 <Button

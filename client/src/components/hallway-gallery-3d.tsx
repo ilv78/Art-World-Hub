@@ -1130,7 +1130,9 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
             <p className="text-xs text-muted-foreground flex-1">{selectedArtwork.description}</p>
             <div className="pt-2 border-t space-y-2">
               <div>
-                <p className="text-lg font-bold text-primary">{parseInt(selectedArtwork.price).toLocaleString()}</p>
+                {selectedArtwork.isForSale && (
+                  <p className="text-lg font-bold text-primary">{parseInt(selectedArtwork.price).toLocaleString()} &euro;</p>
+                )}
                 {selectedArtwork.dimensions && <p className="text-xs text-muted-foreground">{selectedArtwork.dimensions}</p>}
               </div>
               {selectedArtwork.isForSale && (

@@ -592,7 +592,7 @@ export default function ArtistDashboard() {
                         id="price"
                         value={artworkForm.price}
                         onChange={(e) => setArtworkForm({ ...artworkForm, price: e.target.value })}
-                        placeholder="$1,000"
+                        placeholder="1000"
                         data-testid="input-artwork-price"
                       />
                     </div>
@@ -716,7 +716,9 @@ export default function ArtistDashboard() {
                   </div>
                   <CardContent className="p-4">
                     <h3 className="font-semibold truncate">{artwork.title}</h3>
-                    <p className="text-sm text-muted-foreground">{artwork.price}</p>
+                    {artwork.isForSale && (
+                      <p className="text-sm text-muted-foreground">{parseInt(artwork.price).toLocaleString()} &euro;</p>
+                    )}
                   </CardContent>
                   <CardFooter className="p-4 pt-0 gap-2">
                     <Button 

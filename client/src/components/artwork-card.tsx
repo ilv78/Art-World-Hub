@@ -94,9 +94,11 @@ export function ArtworkCard({ artwork, onViewDetails, showAddToCart = true }: Ar
             <Badge variant="outline" className="text-xs">
               {artwork.medium}
             </Badge>
-            <span className="font-semibold text-primary" data-testid={`text-price-${artwork.id}`}>
-              {parseInt(artwork.price).toLocaleString()}
-            </span>
+            {artwork.isForSale && (
+              <span className="font-semibold text-primary" data-testid={`text-price-${artwork.id}`}>
+                {parseInt(artwork.price).toLocaleString()} &euro;
+              </span>
+            )}
           </div>
         </div>
       </CardContent>
