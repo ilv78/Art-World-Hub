@@ -308,12 +308,14 @@ export default function Gallery() {
                     </div>
                     <Card>
                       <CardContent className="p-4">
-                        <div className="flex items-center justify-between gap-2 mb-4">
-                          <span className="text-sm text-muted-foreground">Price</span>
-                          <span className="text-2xl font-bold text-primary">
-                            {parseInt(currentArtwork.price).toLocaleString()}
-                          </span>
-                        </div>
+                        {currentArtwork.isForSale && (
+                          <div className="flex items-center justify-between gap-2 mb-4">
+                            <span className="text-sm text-muted-foreground">Price</span>
+                            <span className="text-2xl font-bold text-primary">
+                              {parseInt(currentArtwork.price).toLocaleString()} &euro;
+                            </span>
+                          </div>
+                        )}
                         {currentArtwork.isForSale ? (
                           <Button className="w-full" onClick={handleAddToCart} disabled={isInCart} data-testid="button-gallery-add-cart">
                             <ShoppingCart className="h-4 w-4 mr-2" />

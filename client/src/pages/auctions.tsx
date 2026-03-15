@@ -101,7 +101,7 @@ function AuctionCard({
               {status === "active" ? "Current Bid" : status === "upcoming" ? "Starting Price" : "Final Bid"}
             </span>
             <span className="font-bold text-primary" data-testid={`text-bid-${auction.id}`}>
-              ${currentBid.toLocaleString()}
+              {currentBid.toLocaleString()} &euro;
             </span>
           </div>
           {status === "active" && (
@@ -201,7 +201,7 @@ export default function Auctions() {
 
     if (data.amount < currentBid + minIncrement) {
       form.setError("amount", {
-        message: `Minimum bid is $${(currentBid + minIncrement).toLocaleString()}`,
+        message: `Minimum bid is ${(currentBid + minIncrement).toLocaleString()} \u20AC`,
       });
       return;
     }
@@ -268,13 +268,12 @@ export default function Auctions() {
             </div>
             <div>
               <p className="text-2xl font-bold">
-                $
                 {auctions
                   ?.reduce(
                     (sum, a) => sum + parseFloat(a.currentBid || a.startingPrice),
                     0
                   )
-                  .toLocaleString() || "0"}
+                  .toLocaleString() || "0"} &euro;
               </p>
               <p className="text-sm text-muted-foreground">Total Value</p>
             </div>
@@ -380,16 +379,14 @@ export default function Auctions() {
                     <div>
                       <p className="text-sm text-muted-foreground">Current Bid</p>
                       <p className="text-2xl font-bold text-primary">
-                        $
                         {parseFloat(
                           selectedAuction.currentBid || selectedAuction.startingPrice
-                        ).toLocaleString()}
+                        ).toLocaleString()} &euro;
                       </p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">
-                        Minimum increment: $
-                        {parseFloat(selectedAuction.minimumIncrement).toLocaleString()}
+                        Minimum increment: {parseFloat(selectedAuction.minimumIncrement).toLocaleString()} &euro;
                       </p>
                     </div>
                   </div>
@@ -420,11 +417,11 @@ export default function Auctions() {
                       name="amount"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Your Bid ($)</FormLabel>
+                          <FormLabel>Your Bid (&euro;)</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
-                              step="0.01"
+                              step="1"
                               {...field}
                               data-testid="input-bid-amount"
                             />
@@ -488,7 +485,7 @@ export default function Auctions() {
                               <span>{bid.bidderName}</span>
                             </div>
                             <span className="font-medium">
-                              ${parseFloat(bid.amount).toLocaleString()}
+                              {parseFloat(bid.amount).toLocaleString()} &euro;
                             </span>
                           </div>
                         ))}

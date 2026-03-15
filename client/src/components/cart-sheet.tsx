@@ -81,7 +81,7 @@ export function CartSheet() {
                           by {item.artwork.artist.name}
                         </p>
                         <p className="text-sm font-semibold text-primary mt-1">
-                          {parseInt(item.artwork.price).toLocaleString()}
+                          {parseInt(item.artwork.price).toLocaleString()} &euro;
                         </p>
                       </div>
                       <Button
@@ -101,7 +101,7 @@ export function CartSheet() {
                 <Separator />
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Subtotal</span>
-                  <span className="font-semibold">{total.toLocaleString()}</span>
+                  <span className="font-semibold">{total.toLocaleString()} &euro;</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Shipping</span>
@@ -111,7 +111,7 @@ export function CartSheet() {
                 <div className="flex justify-between items-center">
                   <span className="font-semibold">Total</span>
                   <span className="text-xl font-bold text-primary" data-testid="text-cart-total">
-                    ${total.toLocaleString()}
+                    {total.toLocaleString()} &euro;
                   </span>
                 </div>
                 <SheetFooter className="gap-2 sm:gap-2">

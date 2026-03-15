@@ -124,7 +124,7 @@ export function CheckoutDialog({
               <DialogTitle className="font-serif text-xl">Checkout</DialogTitle>
               <DialogDescription>
                 Complete your order for {items.length} item
-                {items.length > 1 ? "s" : ""} - Total: ${total.toLocaleString()}
+                {items.length > 1 ? "s" : ""} - Total: {total.toLocaleString()} &euro;
               </DialogDescription>
             </DialogHeader>
 
