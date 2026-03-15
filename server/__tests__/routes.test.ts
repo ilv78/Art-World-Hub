@@ -1,8 +1,11 @@
-import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from "vitest";
 import request from "supertest";
 import type express from "express";
 import type { IStorage } from "../storage";
 import { createTestApp, mockStorage } from "./helpers/test-app";
+import fs from "fs";
+import path from "path";
+import os from "os";
 
 let app: express.Express;
 
@@ -462,5 +465,91 @@ describe("PATCH /api/artworks/:id", () => {
       .send({ title: "Hacked" });
 
     expect(res.status).toBe(403);
+  });
+});
+
+// ----- Admin logs endpoint -----
+
+describe("GET /api/admin/logs", () => {
+  // The logger mock in test-app.ts sets logFilePath to a temp dir.
+  // We write test NDJSON there before hitting the endpoint.
+  const logDir = path.join(os.tmpdir(), `artverse-test-logs-${process.pid}`);
+  const logFile = path.join(logDir, "app.log");
+
+  const testEntries = [
+    { level: 30, time: "2026-03-15T10:00:00.000Z", module: "seed", msg: "Database seeded" },
+    { level: 30, time: "2026-03-15T10:01:00.000Z", module: "mcp", msg: "MCP registered" },
+    { level: 40, time: "2026-03-15T10:02:00.000Z", module: "auth", msg: "Token expired" },
+    { level: 50, time: "2026-03-15T10:03:00.000Z", module: "auth", msg: "Login failed", err: { message: "bad password" } },
+    { level: 30, time: "2026-03-15T10:04:00.000Z", req: { method: "GET", url: "/api/artists" }, res: { statusCode: 200 }, responseTime: 15, msg: "request completed" },
+  ];
+
+  beforeAll(() => {
+    fs.mkdirSync(logDir, { recursive: true });
+    fs.writeFileSync(logFile, testEntries.map((e) => JSON.stringify(e)).join("\n") + "\n");
+  });
+
+  afterAll(() => {
+    fs.rmSync(logDir, { recursive: true, force: true });
+  });
+
+  it("returns all log entries with default params", async () => {
+    const res = await request(app).get("/api/admin/logs");
+    expect(res.status).toBe(200);
+    expect(res.body.entries).toHaveLength(5);
+    expect(res.body.total).toBe(5);
+  });
+
+  it("filters by log level", async () => {
+    const res = await request(app).get("/api/admin/logs?level=warn");
+    expect(res.status).toBe(200);
+    expect(res.body.entries).toHaveLength(2);
+    expect(res.body.entries.every((e: any) => e.level >= 40)).toBe(true);
+  });
+
+  it("filters by module", async () => {
+    const res = await request(app).get("/api/admin/logs?module=auth");
+    expect(res.status).toBe(200);
+    expect(res.body.entries).toHaveLength(2);
+    expect(res.body.entries.every((e: any) => e.module === "auth")).toBe(true);
+  });
+
+  it("filters by text search", async () => {
+    const res = await request(app).get("/api/admin/logs?search=artists");
+    expect(res.status).toBe(200);
+    expect(res.body.entries).toHaveLength(1);
+    expect(res.body.entries[0].req.url).toBe("/api/artists");
+  });
+
+  it("filters by since timestamp", async () => {
+    const res = await request(app).get("/api/admin/logs?since=2026-03-15T10:03:00.000Z");
+    expect(res.status).toBe(200);
+    expect(res.body.entries).toHaveLength(2);
+  });
+
+  it("respects limit parameter", async () => {
+    const res = await request(app).get("/api/admin/logs?limit=2");
+    expect(res.status).toBe(200);
+    expect(res.body.entries).toHaveLength(2);
+    expect(res.body.total).toBe(5);
+  });
+
+  it("combines filters", async () => {
+    const res = await request(app).get("/api/admin/logs?level=error&module=auth");
+    expect(res.status).toBe(200);
+    expect(res.body.entries).toHaveLength(1);
+    expect(res.body.entries[0].msg).toBe("Login failed");
+  });
+
+  it("returns empty when log file does not exist", async () => {
+    const tmpPath = logFile + ".bak";
+    fs.renameSync(logFile, tmpPath);
+    try {
+      const res = await request(app).get("/api/admin/logs");
+      expect(res.status).toBe(200);
+      expect(res.body.entries).toHaveLength(0);
+    } finally {
+      fs.renameSync(tmpPath, logFile);
+    }
   });
 });

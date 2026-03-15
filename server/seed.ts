@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { artists, artworks, auctions, bids, orders, exhibitions, exhibitionArtworks, blogPosts } from "@shared/schema";
 import { sql, eq } from "drizzle-orm";
+import { seedLogger as logger } from "./logger";
 
 const ARTIST_ID = "4493f600-2619-47f9-979c-abc5b45ba92d";
 
@@ -297,12 +298,12 @@ export async function seedDatabase() {
     const hasCorrectData = existingArtists.some(a => a.id === ARTIST_ID);
 
     if (existingArtists.length > 0 && hasCorrectData) {
-      console.log("Database already seeded, skipping...");
+      logger.info("Database already seeded, skipping");
       return;
     }
 
     if (existingArtists.length > 0 && !hasCorrectData) {
-      console.log("Stale seed data detected, clearing and reseeding...");
+      logger.info("Stale seed data detected, clearing and reseeding");
       await db.delete(exhibitionArtworks);
       await db.delete(bids);
       await db.delete(auctions);
@@ -311,10 +312,10 @@ export async function seedDatabase() {
       await db.delete(artworks);
       await db.delete(exhibitions);
       await db.delete(artists);
-      console.log("Cleared stale data.");
+      logger.info("Cleared stale data");
     }
 
-    console.log("Seeding database...");
+    logger.info("Seeding database");
 
     const [insertedArtist] = await db.insert(artists).values({
       id: artistData.id,
@@ -327,7 +328,7 @@ export async function seedDatabase() {
       socialLinks: artistData.socialLinks,
       galleryLayout: artistData.galleryLayout,
     }).returning();
-    console.log(`Inserted artist: ${insertedArtist.name}`);
+    logger.info({ artist: insertedArtist.name }, "Inserted artist");
 
     const artworksWithArtist = artworksData.map((artwork) => ({
       ...artwork,
@@ -335,7 +336,7 @@ export async function seedDatabase() {
     }));
 
     const insertedArtworks = await db.insert(artworks).values(artworksWithArtist).returning();
-    console.log(`Inserted ${insertedArtworks.length} artworks`);
+    logger.info({ count: insertedArtworks.length }, "Inserted artworks");
 
     const [exhibition] = await db.insert(exhibitions).values({
       name: "Grand Opening Exhibition",
@@ -343,14 +344,14 @@ export async function seedDatabase() {
       layout: JSON.stringify(artistData.galleryLayout),
       isActive: true,
     }).returning();
-    console.log(`Created exhibition: ${exhibition.name}`);
+    logger.info({ exhibition: exhibition.name }, "Created exhibition");
 
     await db.insert(blogPosts).values(blogPostData);
-    console.log("Inserted blog post");
+    logger.info("Inserted blog post");
 
-    console.log("Database seeded successfully!");
+    logger.info("Database seeded successfully");
   } catch (error) {
-    console.error("Error seeding database:", error);
+    logger.error({ err: error }, "Error seeding database");
     throw error;
   }
 }
