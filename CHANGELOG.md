@@ -8,11 +8,24 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
+_Nothing yet — all recent work included in v2.2.0 below._
+
+## [2.2.0] - 2026-03-15
+
+### Added
+- Add in the website details about changelog / release number ([#121](https://github.com/ilv78/Art-World-Hub/issues/121))
+- Logging infrastructure ([#39](https://github.com/ilv78/Art-World-Hub/issues/39))
+
+### Fixed
+- Prices adjustments in UI. ([#130](https://github.com/ilv78/Art-World-Hub/issues/130))
+- Artwork missing in museum gallery ([#128](https://github.com/ilv78/Art-World-Hub/issues/128))
+- users vs artists in ArtVerse ([#122](https://github.com/ilv78/Art-World-Hub/issues/122))
+- Remove GitHub authentication inside ArtVerse ([#95](https://github.com/ilv78/Art-World-Hub/issues/95))
+
 ### Added
 - Release version and changelog link in homepage footer ([#121](https://github.com/ilv78/Art-World-Hub/issues/121))
 - Public `/changelog` page rendering full changelog with markdown formatting ([#121](https://github.com/ilv78/Art-World-Hub/issues/121))
 - `GET /api/version` and `GET /api/changelog` endpoints ([#121](https://github.com/ilv78/Art-World-Hub/issues/121))
-
 ### Fixed
 - Removed stale GitHub authentication reference from artist dashboard ([#95](https://github.com/ilv78/Art-World-Hub/issues/95))
 
