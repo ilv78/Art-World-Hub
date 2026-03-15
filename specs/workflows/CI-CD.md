@@ -22,7 +22,7 @@ Single unified workflow with two jobs. Triggers on every push (all branches) and
 | Install dependencies | `npm ci` |
 | Lint | `npm run lint` (ESLint 9 + TypeScript + React hooks) |
 | Type check | `npm run check` (tsc with 6GB heap) |
-| Run tests | `npm test` (Vitest, 32 tests) |
+| Run tests | `npm test` (Vitest, 52 tests — routes, storage, logger) |
 | Build | `npm run build` (Vite client + esbuild server) |
 
 - Uses a PostgreSQL 16 Alpine service container (needed for the build to succeed)
@@ -452,7 +452,7 @@ DB passwords and session secrets are stored in `.env` files on the VPS (not in G
                │  └────────┬───────────┘  │
                │           ▼              │
                │  ┌────────────────────┐  │
-               │  │  npm test          │  │  ← Vitest (32 tests)
+               │  │  npm test          │  │  ← Vitest (52 tests)
                │  └────────┬───────────┘  │
                │           ▼              │
                │  ┌────────────────────┐  │
@@ -482,6 +482,7 @@ DB passwords and session secrets are stored in `.env` files on the VPS (not in G
                │  docker compose up -d    │
                │  Health check (2 min)    │
                │  Smoke test (external)   │
+               │  Smoke test (logging)    │  ← Verifies log file exists, valid JSON
                │  Git tag release-N       │
                │  📱 Telegram notify      │
                └──────────────────────────┘
@@ -685,3 +686,4 @@ Changes go through a PR, so CI validates the CHANGELOG update before it reaches 
 | 2026-03-13 | Added Section 6.5: Issue Tracker Auto-Update workflow — auto-updates issue-tracker.md and creates bug docs on issue close. (Issue #89) |
 | 2026-03-13 | Release management (Issue #35): 3-tag Docker images (latest+sha+run_number), `/health` endpoint, APP_VERSION build arg, post-deploy smoke tests, production auto-rollback on failure, git release tags (`release-N`), CHANGELOG.md. Added `STAGING_URL` and `PRODUCTION_URL` to secrets inventory. |
 | 2026-03-14 | Added Section 6.6: Automated Release Workflow — label-driven versioned releases via `release.yml` + `prepare-release.sh`. Auto-detects PATCH/MINOR bump, updates CHANGELOG, creates git tag + GitHub Release, removes labels, Telegram notification. (Issue #110) |
+| 2026-03-15 | Added logging smoke test to staging deploy — verifies log file exists, has entries, valid JSON, and contains startup message. Updated test count from 32 to 52. (Issue [#39](https://github.com/ilv78/Art-World-Hub/issues/39)) |
