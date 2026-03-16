@@ -14,7 +14,7 @@ jobs:
 
     permissions:
       contents: write
-      pull-requests: read
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -32,17 +32,28 @@ jobs:
           ISSUE_CLOSED_AT: ${{ github.event.issue.closed_at }}
         run: .github/scripts/update-issue-tracker.sh
 
-      - name: Commit and push
+      - name: Create PR with changes
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add specs/issue-tracker.md specs/bugs/
-          # Only commit if there are changes
+          # Only proceed if there are changes
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
-            git commit -m "Auto-update issue tracker: close #${{ github.event.issue.number }}
+            BRANCH="auto/issue-tracker-close-${{ github.event.issue.number }}"
+            git checkout -b "$BRANCH"
+            git commit -m "docs: auto-update issue tracker for #${{ github.event.issue.number }}"
+            git push origin "$BRANCH"
+            PR_URL=$(gh pr create \
+              --title "docs: auto-update issue tracker (close #${{ github.event.issue.number }})" \
+              --body "Automated update from issue tracker workflow.
 
-            Automated by issue-tracker workflow."
-            git push origin main
+          Closes tracker entry for #${{ github.event.issue.number }}." \
+              --base main \
+              --head "$BRANCH")
+            echo "Created PR: $PR_URL"
+            gh pr merge "$PR_URL" --auto --squash
           fi
