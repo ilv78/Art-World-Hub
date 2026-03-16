@@ -32,6 +32,9 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    hmr: process.env.VITE_HMR_HOST
+      ? { host: process.env.VITE_HMR_HOST, protocol: "wss" }
+      : undefined,
     fs: {
       strict: true,
       deny: ["**/.*"],

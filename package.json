@@ -8,7 +8,7 @@
     "build": "tsx script/build.ts",
     "start": "NODE_ENV=production node dist/index.cjs",
     "lint": "eslint client/src server shared",
-    "check": "tsc",
+    "check": "NODE_OPTIONS='--max-old-space-size=6144' tsc",
     "test": "vitest run",
     "test:watch": "vitest",
     "db:push": "drizzle-kit push",

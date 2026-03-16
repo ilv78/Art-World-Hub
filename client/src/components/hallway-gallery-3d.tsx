@@ -399,6 +399,107 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
       return mesh;
     };
 
+    const addHangingSign = (name: string, doorWorldZ: number) => {
+      const cw = 1024, ch = 256;
+      const canvas = document.createElement("canvas");
+      canvas.width = cw;
+      canvas.height = ch;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      ctx.fillStyle = "#3a2a18";
+      ctx.fillRect(0, 0, cw, ch);
+      ctx.strokeStyle = "#d4a854";
+      ctx.lineWidth = 6;
+      ctx.strokeRect(8, 8, cw - 16, ch - 16);
+
+      ctx.fillStyle = "#d4a854";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      const padding = 60;
+      const targetW = cw - padding * 2;
+      ctx.font = "bold 80px Georgia, serif";
+      const measuredW = ctx.measureText(name).width;
+      const scale = Math.min(targetW / measuredW, 1.5);
+      const finalSize = Math.floor(80 * scale);
+      ctx.font = `bold ${finalSize}px Georgia, serif`;
+      ctx.fillText(name, cw / 2, ch / 2);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      const signGeo = new THREE.PlaneGeometry(2.0, 0.5);
+      const signMat = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.4 });
+
+      const frontSign = new THREE.Mesh(signGeo, signMat);
+      frontSign.position.set(0, 2.25, doorWorldZ + 0.005);
+      scene.add(frontSign);
+
+      const backSign = new THREE.Mesh(signGeo, signMat.clone());
+      backSign.material.map = texture.clone();
+      backSign.material.map.needsUpdate = true;
+      backSign.position.set(0, 2.25, doorWorldZ - 0.005);
+      backSign.rotation.y = Math.PI;
+      scene.add(backSign);
+
+      const rodGeo = new THREE.BoxGeometry(0.02, 0.5, 0.02);
+      const leftRod = new THREE.Mesh(rodGeo, accentMat);
+      leftRod.position.set(-0.85, 2.75, doorWorldZ);
+      scene.add(leftRod);
+      const rightRod = new THREE.Mesh(rodGeo, accentMat);
+      rightRod.position.set(0.85, 2.75, doorWorldZ);
+      scene.add(rightRod);
+
+      const bracketGeo = new THREE.BoxGeometry(0.08, 0.03, 0.08);
+      const leftBracket = new THREE.Mesh(bracketGeo, accentMat);
+      leftBracket.position.set(-0.85, 2.985, doorWorldZ);
+      scene.add(leftBracket);
+      const rightBracket = new THREE.Mesh(bracketGeo, accentMat);
+      rightBracket.position.set(0.85, 2.985, doorWorldZ);
+      scene.add(rightBracket);
+    };
+
+    const addDirectionalArrow = (name: string, wallX: number, doorWorldZ: number, isLeft: boolean) => {
+      const cw = 512, ch = 128;
+      const canvas = document.createElement("canvas");
+      canvas.width = cw;
+      canvas.height = ch;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      ctx.fillStyle = "#faf8f5";
+      ctx.fillRect(0, 0, cw, ch);
+
+      ctx.fillStyle = "#d4a854";
+      ctx.beginPath();
+      if (isLeft) {
+        ctx.moveTo(70, ch / 2);
+        ctx.lineTo(30, ch / 2 - 20);
+        ctx.lineTo(30, ch / 2 + 20);
+      } else {
+        ctx.moveTo(cw - 70, ch / 2);
+        ctx.lineTo(cw - 30, ch / 2 - 20);
+        ctx.lineTo(cw - 30, ch / 2 + 20);
+      }
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "#5c3a1e";
+      ctx.font = "bold 28px Georgia, serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(name, cw / 2, ch / 2);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      const arrowGeo = new THREE.PlaneGeometry(1.2, 0.4);
+      const arrowMat = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.5 });
+      const arrowMesh = new THREE.Mesh(arrowGeo, arrowMat);
+      const arrowZ = Math.max(0.5, doorWorldZ - 3.0);
+      arrowMesh.position.set(wallX + (isLeft ? 0.12 : -0.12), 1.5, arrowZ);
+      arrowMesh.rotation.y = isLeft ? -Math.PI / 2 : Math.PI / 2;
+      scene.add(arrowMesh);
+    };
+
     const hallEnd = hallwayLen;
 
     const corridorFloorGeo = new THREE.PlaneGeometry(HALLWAY_W, hallEnd);
@@ -417,7 +518,17 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
     addWallMesh(HALLWAY_W + 2, WALL_H, WALL_T, 0, WALL_H / 2, 0);
     addWallMesh(HALLWAY_W + 2, WALL_H, WALL_T, 0, WALL_H / 2, hallEnd);
 
-    type DoorInfo = { centerZ: number; halfWidth: number };
+    type DoorInfo = { centerZ: number; halfWidth: number; color: string };
+    const doorColors = [
+      "#c0392b", "#2980b9", "#27ae60", "#8e44ad",
+      "#d35400", "#16a085", "#e84393", "#0984e3",
+      "#6c5ce7", "#fdcb6e", "#e17055", "#00b894",
+    ];
+    const artistColor = (id: string) => {
+      let hash = 0;
+      for (let i = 0; i < id.length; i++) hash = ((hash << 5) - hash + id.charCodeAt(i)) | 0;
+      return doorColors[((hash % doorColors.length) + doorColors.length) % doorColors.length];
+    };
     const leftDoors: DoorInfo[] = [];
     const rightDoors: DoorInfo[] = [];
 
@@ -426,7 +537,8 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
       const doorCenterInRoom = doorCenterX * CELL_SIZE + CELL_SIZE / 2;
       const doorWorldZ = p.corridorZ + doorCenterInRoom;
       const halfW = CELL_SIZE * 0.25;
-      (p.isLeft ? leftDoors : rightDoors).push({ centerZ: doorWorldZ, halfWidth: halfW });
+      const color = artistColor(artistRooms[p.artistIndex].artist.id);
+      (p.isLeft ? leftDoors : rightDoors).push({ centerZ: doorWorldZ, halfWidth: halfW, color });
     }
 
     const buildCorridorSideWall = (wallX: number, doors: DoorInfo[]) => {
@@ -474,6 +586,118 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
 
     buildCorridorSideWall(hallLeft, leftDoors);
     buildCorridorSideWall(hallRight, rightDoors);
+
+    // Brown gradient stripe with colored accents near doors
+    {
+      const stripeH = 0.06;
+      const stripeY = 1.1;
+      const fadeLen = 0.8; // world units of color fade near each door
+
+      const brownAtZ = (z: number) => {
+        const t = z / hallEnd;
+        const r = [245, 196, 139, 92, 26];
+        const g = [240, 168, 105, 58, 14];
+        const b = [235, 130, 20, 30, 5];
+        const stops = [0, 0.3, 0.5, 0.7, 1.0];
+        let i = 0;
+        while (i < stops.length - 2 && t > stops[i + 1]) i++;
+        const st = (t - stops[i]) / (stops[i + 1] - stops[i]);
+        const cr = Math.round(r[i] + (r[i + 1] - r[i]) * st);
+        const cg = Math.round(g[i] + (g[i + 1] - g[i]) * st);
+        const cb = Math.round(b[i] + (b[i + 1] - b[i]) * st);
+        return [cr, cg, cb];
+      };
+
+      const hexToRgb = (hex: string) => {
+        const v = parseInt(hex.slice(1), 16);
+        return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+      };
+
+      const createSegTex = (start: number, end: number, startColor: string | null, endColor: string | null) => {
+        const cw = 1024, ch = 32;
+        const c = document.createElement("canvas");
+        c.width = cw; c.height = ch;
+        const cx = c.getContext("2d")!;
+        const len = end - start;
+
+        for (let px = 0; px < cw; px++) {
+          const worldZ = start + (px / cw) * len;
+          let [r, g, b] = brownAtZ(worldZ);
+
+          const distFromStart = (px / cw) * len;
+          const distFromEnd = len - distFromStart;
+
+          if (startColor && distFromStart < fadeLen) {
+            const blend = 1 - distFromStart / fadeLen;
+            const [sr, sg, sb] = hexToRgb(startColor);
+            r = Math.round(r + (sr - r) * blend * 0.6);
+            g = Math.round(g + (sg - g) * blend * 0.6);
+            b = Math.round(b + (sb - b) * blend * 0.6);
+          }
+          if (endColor && distFromEnd < fadeLen) {
+            const blend = 1 - distFromEnd / fadeLen;
+            const [er, eg, eb] = hexToRgb(endColor);
+            r = Math.round(r + (er - r) * blend * 0.6);
+            g = Math.round(g + (eg - g) * blend * 0.6);
+            b = Math.round(b + (eb - b) * blend * 0.6);
+          }
+
+          cx.fillStyle = `rgb(${r},${g},${b})`;
+          cx.fillRect(px, 0, 1, ch);
+        }
+
+        // Soft vertical edge fade
+        const edgeFade = cx.createLinearGradient(0, 0, 0, ch);
+        edgeFade.addColorStop(0, "rgba(0,0,0,0.5)");
+        edgeFade.addColorStop(0.35, "rgba(0,0,0,0)");
+        edgeFade.addColorStop(0.65, "rgba(0,0,0,0)");
+        edgeFade.addColorStop(1, "rgba(0,0,0,0.5)");
+        cx.fillStyle = edgeFade;
+        cx.fillRect(0, 0, cw, ch);
+
+        const tex = new THREE.CanvasTexture(c);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        return tex;
+      };
+
+      const addStripeSegments = (wallX: number, doors: DoorInfo[]) => {
+        const sorted = [...doors].sort((a, b) => a.centerZ - b.centerZ);
+        const inward = wallX === hallLeft ? WALL_T / 2 + 0.01 : -(WALL_T / 2 + 0.01);
+        const rotY = wallX === hallLeft ? Math.PI / 2 : -Math.PI / 2;
+        const flipU = wallX === hallLeft;
+
+        const addSeg = (start: number, end: number, startColor: string | null, endColor: string | null) => {
+          const len = end - start;
+          if (len < 0.05) return;
+          const tex = createSegTex(start, end, flipU ? endColor : startColor, flipU ? startColor : endColor);
+          const geo = new THREE.PlaneGeometry(len, stripeH);
+          const mat = new THREE.MeshStandardMaterial({
+            map: tex,
+            roughness: 0.4,
+            emissive: new THREE.Color(0xffffff),
+            emissiveIntensity: 0.08,
+            emissiveMap: tex,
+          });
+          const mesh = new THREE.Mesh(geo, mat);
+          mesh.position.set(wallX + inward, stripeY, start + len / 2);
+          mesh.rotation.y = rotY;
+          scene.add(mesh);
+        };
+
+        let cursor = 0;
+        for (let i = 0; i < sorted.length; i++) {
+          const door = sorted[i];
+          const prevColor = i > 0 ? sorted[i - 1].color : null;
+          addSeg(cursor, door.centerZ - door.halfWidth, prevColor, door.color);
+          cursor = door.centerZ + door.halfWidth;
+        }
+        const lastColor = sorted.length > 0 ? sorted[sorted.length - 1].color : null;
+        addSeg(cursor, hallEnd, lastColor, null);
+      };
+
+      addStripeSegments(hallLeft, leftDoors);
+      addStripeSegments(hallRight, rightDoors);
+    }
 
     const parquetTexture = createParquetTexture();
 
@@ -642,8 +866,11 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
         });
       }
 
-      addNamePlaque(scene, room.artist.name, p.isLeft ? hallLeft + 0.2 : hallRight - 0.2,
-        roomStartZ + layout.width * CELL_SIZE / 2, p.isLeft);
+      const doorWorldZ = p.corridorZ + doorCenterX * CELL_SIZE + CELL_SIZE / 2;
+      const doorHalfW = CELL_SIZE * 0.25;
+
+      addHangingSign(room.artist.name, doorWorldZ);
+      addDirectionalArrow(room.artist.name, p.isLeft ? hallLeft : hallRight, doorWorldZ, p.isLeft);
 
       const roomLight = new THREE.PointLight(0xffffff, 1.0, 15);
       roomLight.position.set(floorCenter.wx, WALL_H - 0.3, floorCenter.wz);
@@ -802,30 +1029,6 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
         avatarImg.src = artist.avatarUrl;
       }
     }
-  }
-
-  function addNamePlaque(scene: THREE.Scene, name: string, x: number, z: number, isLeft: boolean) {
-    const canvas = document.createElement("canvas");
-    canvas.width = 512;
-    canvas.height = 128;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    ctx.fillStyle = "#2c2418";
-    ctx.fillRect(0, 0, 512, 128);
-    ctx.fillStyle = "#f0ece4";
-    ctx.font = "bold 36px serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(name, 256, 64);
-
-    const texture = new THREE.CanvasTexture(canvas);
-    const geo = new THREE.PlaneGeometry(1.6, 0.4);
-    const mat = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.4 });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(x, WALL_H - 0.6, z);
-    mesh.rotation.y = isLeft ? -Math.PI / 2 : Math.PI / 2;
-    scene.add(mesh);
   }
 
   const checkCollision = useCallback((pos: THREE.Vector3): boolean => {
