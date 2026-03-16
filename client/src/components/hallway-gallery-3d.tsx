@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { X, ShoppingCart, Move, Mouse, Keyboard, Maximize2, Minimize2, ZoomIn, Box, Map as MapIcon } from "lucide-react";
 import type { ArtworkWithArtist, MazeLayout, MazeCell } from "@shared/schema";
 import { useCartStore } from "@/lib/cart-store";
+import { formatPrice } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 interface ArtistRoom {
@@ -1131,7 +1132,7 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
             <div className="pt-2 border-t space-y-2">
               <div>
                 {selectedArtwork.isForSale && (
-                  <p className="text-lg font-bold text-primary">{parseInt(selectedArtwork.price).toLocaleString()} &euro;</p>
+                  <p className="text-lg font-bold text-primary">{formatPrice(selectedArtwork.price)}</p>
                 )}
                 {selectedArtwork.dimensions && <p className="text-xs text-muted-foreground">{selectedArtwork.dimensions}</p>}
               </div>

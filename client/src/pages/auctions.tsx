@@ -32,6 +32,7 @@ import { formatDistanceToNow, format, isPast, isFuture } from "date-fns";
 import type { AuctionWithArtwork, Bid } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { formatPrice } from "@/lib/utils";
 
 const bidSchema = z.object({
   bidderName: z.string().min(2, "Name must be at least 2 characters"),
@@ -101,7 +102,7 @@ function AuctionCard({
               {status === "active" ? "Current Bid" : status === "upcoming" ? "Starting Price" : "Final Bid"}
             </span>
             <span className="font-bold text-primary" data-testid={`text-bid-${auction.id}`}>
-              {currentBid.toLocaleString()} &euro;
+              {formatPrice(currentBid)}
             </span>
           </div>
           {status === "active" && (
@@ -201,7 +202,7 @@ export default function Auctions() {
 
     if (data.amount < currentBid + minIncrement) {
       form.setError("amount", {
-        message: `Minimum bid is ${(currentBid + minIncrement).toLocaleString()} \u20AC`,
+        message: `Minimum bid is ${formatPrice(currentBid + minIncrement)}`,
       });
       return;
     }
@@ -268,12 +269,11 @@ export default function Auctions() {
             </div>
             <div>
               <p className="text-2xl font-bold">
-                {auctions
+                {formatPrice(auctions
                   ?.reduce(
                     (sum, a) => sum + parseFloat(a.currentBid || a.startingPrice),
                     0
-                  )
-                  .toLocaleString() || "0"} &euro;
+                  ) ?? 0)}
               </p>
               <p className="text-sm text-muted-foreground">Total Value</p>
             </div>
@@ -379,14 +379,12 @@ export default function Auctions() {
                     <div>
                       <p className="text-sm text-muted-foreground">Current Bid</p>
                       <p className="text-2xl font-bold text-primary">
-                        {parseFloat(
-                          selectedAuction.currentBid || selectedAuction.startingPrice
-                        ).toLocaleString()} &euro;
+                        {formatPrice(selectedAuction.currentBid || selectedAuction.startingPrice)}
                       </p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">
-                        Minimum increment: {parseFloat(selectedAuction.minimumIncrement).toLocaleString()} &euro;
+                        Minimum increment: {formatPrice(selectedAuction.minimumIncrement)}
                       </p>
                     </div>
                   </div>
@@ -485,7 +483,7 @@ export default function Auctions() {
                               <span>{bid.bidderName}</span>
                             </div>
                             <span className="font-medium">
-                              {parseFloat(bid.amount).toLocaleString()} &euro;
+                              {formatPrice(bid.amount)}
                             </span>
                           </div>
                         ))}

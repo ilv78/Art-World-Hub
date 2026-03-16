@@ -16,6 +16,10 @@ import crypto from "crypto";
 import { logger, logFilePath } from "./logger";
 import readline from "readline";
 
+function formatPrice(amount: string | number): string {
+  return `${parseInt(String(amount)).toLocaleString()} \u20AC`;
+}
+
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, "&amp;")
@@ -55,7 +59,7 @@ async function sendOrderNotificationEmail(
           <tr><td style="padding: 8px 0; color: #666;">Artwork:</td><td style="padding: 8px 0; font-weight: bold;">${escapeHtml(artwork.title)}</td></tr>
           <tr><td style="padding: 8px 0; color: #666;">Medium:</td><td style="padding: 8px 0;">${escapeHtml(artwork.medium)}</td></tr>
           ${artwork.dimensions ? `<tr><td style="padding: 8px 0; color: #666;">Dimensions:</td><td style="padding: 8px 0;">${escapeHtml(artwork.dimensions)}</td></tr>` : ""}
-          <tr><td style="padding: 8px 0; color: #666;">Price:</td><td style="padding: 8px 0; font-weight: bold; color: #F97316;">${parseInt(order.totalAmount).toLocaleString()} &euro;</td></tr>
+          <tr><td style="padding: 8px 0; color: #666;">Price:</td><td style="padding: 8px 0; font-weight: bold; color: #F97316;">${formatPrice(order.totalAmount)}</td></tr>
         </table>
       </div>
 
@@ -112,7 +116,7 @@ async function sendBuyerConfirmationEmail(
           <tr><td style="padding: 8px 0; color: #666;">Artist:</td><td style="padding: 8px 0;">${escapeHtml(artist.name)}</td></tr>
           <tr><td style="padding: 8px 0; color: #666;">Medium:</td><td style="padding: 8px 0;">${escapeHtml(artwork.medium)}</td></tr>
           ${artwork.dimensions ? `<tr><td style="padding: 8px 0; color: #666;">Dimensions:</td><td style="padding: 8px 0;">${escapeHtml(artwork.dimensions)}</td></tr>` : ""}
-          <tr><td style="padding: 8px 0; color: #666;">Total:</td><td style="padding: 8px 0; font-weight: bold; color: #F97316;">${parseInt(order.totalAmount).toLocaleString()} &euro;</td></tr>
+          <tr><td style="padding: 8px 0; color: #666;">Total:</td><td style="padding: 8px 0; font-weight: bold; color: #F97316;">${formatPrice(order.totalAmount)}</td></tr>
         </table>
       </div>
 
@@ -310,19 +314,11 @@ export async function registerRoutes(
     try {
       const userId = req.user?.claims?.sub;
       const claims = req.user?.claims;
-      let artist = await storage.getArtistByUserId(userId);
-      if (!artist) {
-        const firstName = claims?.first_name || "";
-        const lastName = claims?.last_name || "";
-        const displayName = `${firstName} ${lastName}`.trim() || "New Artist";
-        const email = claims?.email || "";
-        artist = await storage.createArtist({
-          name: displayName,
-          bio: "Welcome to my gallery! I'm a new artist on ArtVerse.",
-          userId,
-          email: email || undefined,
-        });
-      }
+      const artist = await storage.ensureArtistProfile(userId, {
+        firstName: claims?.first_name,
+        lastName: claims?.last_name,
+        email: claims?.email,
+      });
       res.json(artist);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch artist profile" });
@@ -1040,24 +1036,22 @@ export async function registerRoutes(
     }
   });
 
-  // Version & changelog (public)
+  // Version & changelog (public) — cached at startup since content only changes on redeploy
+  let cachedChangelog: string | null = null;
+  let cachedVersion = "unknown";
+  try {
+    cachedChangelog = fs.readFileSync(path.resolve(process.cwd(), "CHANGELOG.md"), "utf-8");
+    const match = cachedChangelog.match(/^## \[(\d+\.\d+\.\d+)\]/m);
+    cachedVersion = match ? `v${match[1]}` : "unknown";
+  } catch { /* CHANGELOG.md not present */ }
+
   app.get("/api/version", (_req, res) => {
-    try {
-      const changelog = fs.readFileSync(path.resolve(process.cwd(), "CHANGELOG.md"), "utf-8");
-      const match = changelog.match(/^## \[(\d+\.\d+\.\d+)\]/m);
-      res.json({ version: match ? `v${match[1]}` : "unknown" });
-    } catch {
-      res.json({ version: "unknown" });
-    }
+    res.json({ version: cachedVersion });
   });
 
   app.get("/api/changelog", (_req, res) => {
-    try {
-      const changelog = fs.readFileSync(path.resolve(process.cwd(), "CHANGELOG.md"), "utf-8");
-      res.type("text/plain").send(changelog);
-    } catch {
-      res.status(404).json({ error: "Changelog not found" });
-    }
+    if (!cachedChangelog) return res.status(404).json({ error: "Changelog not found" });
+    res.type("text/plain").send(cachedChangelog);
   });
 
   return httpServer;

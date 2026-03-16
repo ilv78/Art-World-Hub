@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { formatPrice } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -717,7 +718,7 @@ export default function ArtistDashboard() {
                   <CardContent className="p-4">
                     <h3 className="font-semibold truncate">{artwork.title}</h3>
                     {artwork.isForSale && (
-                      <p className="text-sm text-muted-foreground">{parseInt(artwork.price).toLocaleString()} &euro;</p>
+                      <p className="text-sm text-muted-foreground">{formatPrice(artwork.price)}</p>
                     )}
                   </CardContent>
                   <CardFooter className="p-4 pt-0 gap-2">

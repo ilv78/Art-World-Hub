@@ -25,6 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { ArtworkWithArtist } from "@shared/schema";
 import { CheckCircle, Loader2 } from "lucide-react";
+import { formatPrice } from "@/lib/utils";
 
 interface CartItem {
   artwork: ArtworkWithArtist;
@@ -124,7 +125,7 @@ export function CheckoutDialog({
               <DialogTitle className="font-serif text-xl">Checkout</DialogTitle>
               <DialogDescription>
                 Complete your order for {items.length} item
-                {items.length > 1 ? "s" : ""} - Total: {total.toLocaleString()} &euro;
+                {items.length > 1 ? "s" : ""} - Total: {formatPrice(total)}
               </DialogDescription>
             </DialogHeader>
 
