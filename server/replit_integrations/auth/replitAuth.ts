@@ -122,19 +122,11 @@ async function upsertUser(claims: any) {
     profileImageUrl: claims["picture"] ?? claims["profile_image_url"],
   });
 
-  // Auto-create artist profile if none exists
-  const existingArtist = await storage.getArtistByUserId(user.id);
-  if (!existingArtist) {
-    const firstName = claims["given_name"] ?? claims["first_name"] ?? "";
-    const lastName = claims["family_name"] ?? claims["last_name"] ?? "";
-    const displayName = `${firstName} ${lastName}`.trim() || "New Artist";
-    await storage.createArtist({
-      name: displayName,
-      bio: "Welcome to my gallery! I'm a new artist on ArtVerse.",
-      userId: user.id,
-      email: claims["email"] || undefined,
-    });
-  }
+  await storage.ensureArtistProfile(user.id, {
+    firstName: claims["given_name"] ?? claims["first_name"],
+    lastName: claims["family_name"] ?? claims["last_name"],
+    email: claims["email"],
+  });
 }
 
 // Build the origin (protocol + host + port) for callback URLs
@@ -248,17 +240,11 @@ export async function setupAuth(app: Express) {
         emailVerified: true,
       });
 
-      // Auto-create artist profile if none exists
-      const existingArtist = await storage.getArtistByUserId(user.id);
-      if (!existingArtist) {
-        const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ") || "New Artist";
-        await storage.createArtist({
-          name: displayName,
-          bio: "Welcome to my gallery! I'm a new artist on ArtVerse.",
-          userId: user.id,
-          email: user.email || undefined,
-        });
-      }
+      await storage.ensureArtistProfile(user.id, {
+        firstName: user.firstName || undefined,
+        lastName: user.lastName || undefined,
+        email: user.email || undefined,
+      });
 
       req.login(buildSessionUser(user), (err) => {
         if (err) {

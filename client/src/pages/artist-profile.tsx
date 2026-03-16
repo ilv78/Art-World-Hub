@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { SiInstagram, SiX, SiFacebook, SiYoutube, SiTiktok, SiLinkedin, SiBehance, SiDribbble, SiDeviantart, SiPinterest } from "react-icons/si";
 import { useCartStore } from "@/lib/cart-store";
+import { formatPrice } from "@/lib/utils";
 import { MazeGallery3D } from "@/components/maze-gallery-3d";
 import { ArtworkDetailDialog } from "@/components/artwork-detail-dialog";
 import type { Artist, ArtworkWithArtist, BlogPostWithArtist, MazeLayout } from "@shared/schema";
@@ -254,7 +255,7 @@ export default function ArtistProfile() {
                         <h3 className="font-semibold">{artwork.title}</h3>
                         <div className="flex items-center justify-between mt-2">
                           {artwork.isForSale && (
-                            <span className="text-lg font-bold text-primary">{parseInt(artwork.price).toLocaleString()} &euro;</span>
+                            <span className="text-lg font-bold text-primary">{formatPrice(artwork.price)}</span>
                           )}
                           {artwork.year && (
                             <span className="text-sm text-muted-foreground">{artwork.year}</span>

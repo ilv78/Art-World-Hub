@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { AlertTriangle, Shield, Trash2, Users, Palette, Image, Calendar, BookOpen } from "lucide-react";
+import { formatPrice } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -416,7 +417,7 @@ export default function AdminPage() {
                         <TableCell className="font-medium">{aw.title}</TableCell>
                         <TableCell>{aw.artist.name}</TableCell>
                         <TableCell>{aw.medium}</TableCell>
-                        <TableCell>${parseInt(aw.price).toLocaleString()}</TableCell>
+                        <TableCell>{formatPrice(aw.price)}</TableCell>
                         <TableCell>
                           <Badge variant={aw.isForSale ? "default" : "secondary"}>
                             {aw.isForSale ? "Yes" : "No"}

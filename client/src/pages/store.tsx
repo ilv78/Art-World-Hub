@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Search, SlidersHorizontal, Grid3X3, LayoutList, X } from "lucide-react";
 import { ArtworkCard } from "@/components/artwork-card";
+import { formatPrice } from "@/lib/utils";
 import { ArtworkDetailDialog } from "@/components/artwork-detail-dialog";
 import type { ArtworkWithArtist } from "@shared/schema";
 
@@ -248,7 +249,7 @@ export default function Store() {
               </div>
               <div className="text-right flex-shrink-0">
                 <p className="font-bold text-primary text-lg">
-                  {parseInt(artwork.price).toLocaleString()} &euro;
+                  {formatPrice(artwork.price)}
                 </p>
                 <Badge variant="outline" className="mt-2">
                   {artwork.medium}

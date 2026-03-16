@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import type { ArtworkWithArtist } from "@shared/schema";
 import { useCartStore } from "@/lib/cart-store";
+import { formatPrice } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { HallwayGallery3D } from "@/components/hallway-gallery-3d";
 
@@ -312,7 +313,7 @@ export default function Gallery() {
                           <div className="flex items-center justify-between gap-2 mb-4">
                             <span className="text-sm text-muted-foreground">Price</span>
                             <span className="text-2xl font-bold text-primary">
-                              {parseInt(currentArtwork.price).toLocaleString()} &euro;
+                              {formatPrice(currentArtwork.price)}
                             </span>
                           </div>
                         )}

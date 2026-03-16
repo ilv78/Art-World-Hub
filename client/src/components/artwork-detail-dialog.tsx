@@ -13,6 +13,7 @@ import { ShoppingCart, Calendar, Ruler, Palette, MapPin } from "lucide-react";
 import type { ArtworkWithArtist } from "@shared/schema";
 import { useCartStore } from "@/lib/cart-store";
 import { useToast } from "@/hooks/use-toast";
+import { formatPrice } from "@/lib/utils";
 
 interface ArtworkDetailDialogProps {
   artwork: ArtworkWithArtist | null;
@@ -127,7 +128,7 @@ export function ArtworkDetailDialog({
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Price</span>
                   <span className="text-2xl font-bold text-primary" data-testid="text-detail-price">
-                    {parseInt(artwork.price).toLocaleString()} &euro;
+                    {formatPrice(artwork.price)}
                   </span>
                 </div>
               )}

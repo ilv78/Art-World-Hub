@@ -5,6 +5,7 @@ import { ShoppingCart, Eye } from "lucide-react";
 import type { ArtworkWithArtist } from "@shared/schema";
 import { useCartStore } from "@/lib/cart-store";
 import { useToast } from "@/hooks/use-toast";
+import { formatPrice } from "@/lib/utils";
 
 interface ArtworkCardProps {
   artwork: ArtworkWithArtist;
@@ -96,7 +97,7 @@ export function ArtworkCard({ artwork, onViewDetails, showAddToCart = true }: Ar
             </Badge>
             {artwork.isForSale && (
               <span className="font-semibold text-primary" data-testid={`text-price-${artwork.id}`}>
-                {parseInt(artwork.price).toLocaleString()} &euro;
+                {formatPrice(artwork.price)}
               </span>
             )}
           </div>

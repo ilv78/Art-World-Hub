@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useCartStore } from "@/lib/cart-store";
+import { formatPrice } from "@/lib/utils";
 import { useState } from "react";
 import { CheckoutDialog } from "./checkout-dialog";
 
@@ -81,7 +82,7 @@ export function CartSheet() {
                           by {item.artwork.artist.name}
                         </p>
                         <p className="text-sm font-semibold text-primary mt-1">
-                          {parseInt(item.artwork.price).toLocaleString()} &euro;
+                          {formatPrice(item.artwork.price)}
                         </p>
                       </div>
                       <Button
@@ -101,7 +102,7 @@ export function CartSheet() {
                 <Separator />
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Subtotal</span>
-                  <span className="font-semibold">{total.toLocaleString()} &euro;</span>
+                  <span className="font-semibold">{formatPrice(total)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Shipping</span>
@@ -111,7 +112,7 @@ export function CartSheet() {
                 <div className="flex justify-between items-center">
                   <span className="font-semibold">Total</span>
                   <span className="text-xl font-bold text-primary" data-testid="text-cart-total">
-                    {total.toLocaleString()} &euro;
+                    {formatPrice(total)}
                   </span>
                 </div>
                 <SheetFooter className="gap-2 sm:gap-2">

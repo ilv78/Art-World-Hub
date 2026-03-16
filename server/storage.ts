@@ -26,7 +26,8 @@ export interface IStorage {
   getArtist(id: string): Promise<Artist | undefined>;
   getArtistByUserId(userId: string): Promise<Artist | undefined>;
   createArtist(artist: InsertArtist): Promise<Artist>;
-  
+  ensureArtistProfile(userId: string, opts: { firstName?: string; lastName?: string; email?: string }): Promise<Artist>;
+
   // Artworks
   getArtworks(): Promise<ArtworkWithArtist[]>;
   getArtwork(id: string): Promise<ArtworkWithArtist | undefined>;
@@ -102,6 +103,18 @@ export class DatabaseStorage implements IStorage {
   async createArtist(insertArtist: InsertArtist): Promise<Artist> {
     const [artist] = await db.insert(artists).values(insertArtist).returning();
     return artist;
+  }
+
+  async ensureArtistProfile(userId: string, opts: { firstName?: string; lastName?: string; email?: string }): Promise<Artist> {
+    const existing = await this.getArtistByUserId(userId);
+    if (existing) return existing;
+    const displayName = [opts.firstName, opts.lastName].filter(Boolean).join(" ") || "New Artist";
+    return this.createArtist({
+      name: displayName,
+      bio: "Welcome to my gallery! I'm a new artist on ArtVerse.",
+      userId,
+      email: opts.email || undefined,
+    });
   }
 
   // Artworks
@@ -416,9 +429,7 @@ export class DatabaseStorage implements IStorage {
 
     // Delete all related data in dependency order
     const artistArtworks = await db.select({ id: artworks.id }).from(artworks).where(eq(artworks.artistId, id));
-    for (const aw of artistArtworks) {
-      await this.deleteArtwork(aw.id);
-    }
+    await Promise.all(artistArtworks.map(aw => this.deleteArtwork(aw.id)));
     // Delete blog posts by this artist
     await db.delete(blogPosts).where(eq(blogPosts.artistId, id));
     // Delete the artist
@@ -432,14 +443,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteUser(id: string): Promise<boolean> {
-    // Delete user sessions (connect-pg-simple stores userId in sess JSON)
-    const allSessions = await db.select().from(sessions);
-    for (const s of allSessions) {
-      const sess = s.sess as any;
-      if (sess?.passport?.user?.claims?.sub === id) {
-        await db.delete(sessions).where(eq(sessions.sid, s.sid));
-      }
-    }
+    // Delete user sessions using JSONB query (connect-pg-simple stores userId in sess JSON)
+    await db.delete(sessions).where(
+      sql`${sessions.sess}->'passport'->'user'->'claims'->>'sub' = ${id}`
+    );
     // Delete the user record
     const result = await db.delete(users).where(eq(users.id, id)).returning();
     return result.length > 0;

@@ -8,6 +8,7 @@ const { mockStorage } = vi.hoisted(() => {
     getArtists: fn().mockResolvedValue([]),
     getArtist: fn().mockResolvedValue(undefined),
     getArtistByUserId: fn().mockResolvedValue(undefined),
+    ensureArtistProfile: fn().mockResolvedValue({ id: "artist-1", name: "Test Artist" }),
     createArtist: fn().mockResolvedValue({}),
     updateArtist: fn().mockResolvedValue(undefined),
     getArtworks: fn().mockResolvedValue([]),
