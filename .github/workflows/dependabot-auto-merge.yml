@@ -1,0 +1,73 @@
+name: Dependabot Auto-Merge
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    name: Auto-Approve & Merge
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+
+    steps:
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine if auto-merge is allowed
+        id: decision
+        env:
+          UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
+          ECOSYSTEM: ${{ steps.metadata.outputs.package-ecosystem }}
+        run: |
+          echo "ecosystem=$ECOSYSTEM, update-type=$UPDATE_TYPE"
+          if [ "$ECOSYSTEM" = "github_actions" ]; then
+            echo "auto_merge=true" >> "$GITHUB_OUTPUT"
+            echo "reason=GitHub Actions update" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          case "$UPDATE_TYPE" in
+            version-update:semver-patch|version-update:semver-minor)
+              echo "auto_merge=true" >> "$GITHUB_OUTPUT"
+              echo "reason=$ECOSYSTEM $UPDATE_TYPE" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "auto_merge=false" >> "$GITHUB_OUTPUT"
+              echo "reason=Major update ($ECOSYSTEM $UPDATE_TYPE) — requires manual review" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
+      - name: Approve PR
+        if: steps.decision.outputs.auto_merge == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          REASON: ${{ steps.decision.outputs.reason }}
+        run: |
+          gh pr review "$PR_URL" --approve \
+            --body "Auto-approved by Dependabot workflow ($REASON)."
+
+      - name: Enable auto-merge
+        if: steps.decision.outputs.auto_merge == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          gh pr merge "$PR_URL" --auto --squash
+
+      - name: Comment on skipped PR
+        if: steps.decision.outputs.auto_merge == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          REASON: ${{ steps.decision.outputs.reason }}
+        run: |
+          gh pr comment "$PR_URL" \
+            --body "> **Dependabot Auto-Merge**: Skipped — $REASON"
