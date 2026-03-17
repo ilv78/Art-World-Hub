@@ -8,7 +8,12 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
-_Nothing yet — all recent work included in v2.2.0 below._
+_Nothing yet — all recent work included in v2.2.1 below._
+
+## [2.2.1] - 2026-03-17
+
+### Fixed
+- in the museum gallery correct names ([#32](https://github.com/ilv78/Art-World-Hub/issues/32))
 
 ## [2.2.0] - 2026-03-15
 
