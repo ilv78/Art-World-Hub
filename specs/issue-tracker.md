@@ -32,7 +32,6 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 73 | Upgrade Node.js 20→25 | high | bug | Open | — | Dependabot PR #57 closed (major) |
 | 77 | Security Audit — Critical findings | critical | devops | In Progress | — | Parent. All 4 P0s done (PRs #82–#84), all 6 P1s done (PR #85). 6 P2s remaining (1 P2 was done in P1 batch). |
 | 74 | Upgrade react-resizable-panels 2→4 | high | bug | Open | — | Dependabot PR #68 closed (major) |
-| 75 | Upgrade recharts 2→3 | high | bug | Open | — | Dependabot PR #69 closed (major) |
 | 76 | Upgrade Vite 7→8 | high | bug | Open | — | Dependabot PR #70 closed (major) |
 | 97 | Post-mortem: Issue #8 admin section pushed directly to main | critical | bug | Open | — | Parent postmortem issue. Action items: #100 (done), #101 (done), #102 (in progress). |
 
@@ -72,6 +71,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 101 | Add pre-push hook to block direct pushes to main | high | devops | 2026-03-13 | `feature/issue-101-pre-push-hook` | #105 |
 | 102 | Document postmortem in issue tracker and README index | low | documentation | 2026-03-14 | `docs/issue-102-postmortem-tracker` | — |
 | 4 | Bug hunter | medium | devops | 2026-03-17 | `fix/issue-25-gallery-slot-count` | #30 |
+| 75 | Upgrade recharts from 2.x to 3.x | high | bug | 2026-03-17 | `fix/issue-75-recharts-upgrade` | #159 |
 ---
 
 ## Revision Log
@@ -100,3 +100,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-13 | Auto-closed #35 (Release workflow). Moved from Active to Completed. PR #96. |
 | 2026-03-14 | Added postmortem-related issues: #97 (Active), #100, #101, #102 (Completed). Postmortem action items from 2026-03-13 incident. |
 | 2026-03-17 | Auto-closed #4 (Bug hunter). Moved from Active to Completed. PR #30. |
+| 2026-03-17 | Auto-closed #75 (Upgrade recharts from 2.x to 3.x). Moved from Active to Completed. PR #159. |
