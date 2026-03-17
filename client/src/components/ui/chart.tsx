@@ -18,6 +18,16 @@ export type ChartConfig = {
   )
 }
 
+type TooltipPayloadItem = {
+  dataKey?: string | number
+  name?: string
+  value?: number | string
+  color?: string
+  fill?: string
+  payload?: Record<string, unknown>
+  [key: string]: unknown
+}
+
 type ChartContextProps = {
   config: ChartConfig
 }
@@ -104,14 +114,20 @@ const ChartTooltip = RechartsPrimitive.Tooltip
 
 const ChartTooltipContent = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<typeof RechartsPrimitive.Tooltip> &
-    React.ComponentProps<"div"> & {
-      hideLabel?: boolean
-      hideIndicator?: boolean
-      indicator?: "line" | "dot" | "dashed"
-      nameKey?: string
-      labelKey?: string
-    }
+  React.ComponentProps<"div"> & {
+    active?: boolean
+    payload?: TooltipPayloadItem[]
+    label?: string
+    labelFormatter?: (value: unknown, payload: TooltipPayloadItem[]) => React.ReactNode
+    labelClassName?: string
+    formatter?: (value: unknown, name: unknown, item: TooltipPayloadItem, index: number, payload: unknown) => React.ReactNode
+    color?: string
+    hideLabel?: boolean
+    hideIndicator?: boolean
+    indicator?: "line" | "dot" | "dashed"
+    nameKey?: string
+    labelKey?: string
+  }
 >(
   (
     {
@@ -188,7 +204,7 @@ const ChartTooltipContent = React.forwardRef<
           {payload.map((item, index) => {
             const key = `${nameKey || item.name || item.dataKey || "value"}`
             const itemConfig = getPayloadConfigFromPayload(config, item, key)
-            const indicatorColor = color || item.payload.fill || item.color
+            const indicatorColor = color || (item.payload?.fill as string) || item.color
 
             return (
               <div
@@ -238,9 +254,9 @@ const ChartTooltipContent = React.forwardRef<
                           {itemConfig?.label || item.name}
                         </span>
                       </div>
-                      {item.value && (
+                      {item.value != null && (
                         <span className="font-mono font-medium tabular-nums text-foreground">
-                          {item.value.toLocaleString()}
+                          {String(item.value).toLocaleString()}
                         </span>
                       )}
                     </div>
@@ -260,11 +276,12 @@ const ChartLegend = RechartsPrimitive.Legend
 
 const ChartLegendContent = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<"div"> &
-    Pick<RechartsPrimitive.LegendProps, "payload" | "verticalAlign"> & {
-      hideIcon?: boolean
-      nameKey?: string
-    }
+  React.ComponentProps<"div"> & {
+    payload?: Array<{ value?: string; dataKey?: string; color?: string }>
+    verticalAlign?: "top" | "bottom" | "middle"
+    hideIcon?: boolean
+    nameKey?: string
+  }
 >(
   (
     { className, hideIcon = false, payload, verticalAlign = "bottom", nameKey },
