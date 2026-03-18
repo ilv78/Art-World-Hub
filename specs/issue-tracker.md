@@ -24,7 +24,6 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 
 | # | Title | Priority | Category | Status | Branch | Notes |
 |---|-------|----------|----------|--------|--------|-------|
-| 7 | Role gallery curator | medium | feature | Open | — | Curator role for gallery management |
 | 8 | Create admin section | high | feature | Open | — | Admin panel for platform management |
 | 14 | Multiple gallery templates | low | enhancement | Open | — | Support different gallery room layouts |
 | 32 | Correct names in museum gallery | medium | bug | Open | — | Artist room names incorrect |
@@ -72,6 +71,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 102 | Document postmortem in issue tracker and README index | low | documentation | 2026-03-14 | `docs/issue-102-postmortem-tracker` | — |
 | 4 | Bug hunter | medium | devops | 2026-03-17 | `fix/issue-25-gallery-slot-count` | #30 |
 | 75 | Upgrade recharts from 2.x to 3.x | high | bug | 2026-03-17 | `fix/issue-75-recharts-upgrade` | #159 |
+| 7 | Role gallery curator | medium | feature | 2026-03-18 | `feature/issue-42-backfill-docs` | #48 |
 ---
 
 ## Revision Log
@@ -101,3 +101,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-14 | Added postmortem-related issues: #97 (Active), #100, #101, #102 (Completed). Postmortem action items from 2026-03-13 incident. |
 | 2026-03-17 | Auto-closed #4 (Bug hunter). Moved from Active to Completed. PR #30. |
 | 2026-03-17 | Auto-closed #75 (Upgrade recharts from 2.x to 3.x). Moved from Active to Completed. PR #159. |
+| 2026-03-18 | Auto-closed #7 (Role gallery curator). Moved from Active to Completed. PR #48. |
