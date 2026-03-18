@@ -44,7 +44,7 @@ export default function CuratorGalleryPage() {
       if (!byArtist.has(aw.artist.id)) byArtist.set(aw.artist.id, { name: aw.artist.name, titles: [] });
       byArtist.get(aw.artist.id)!.titles.push(aw.title);
     }
-    for (const { name, titles } of byArtist.values()) {
+    for (const { name, titles } of Array.from(byArtist.values())) {
       parts.push(`${name}: ${titles.join(", ")}`);
     }
     return parts.join("\n");
@@ -65,7 +65,7 @@ export default function CuratorGalleryPage() {
             artworks={gallery.artworks}
             layout={layout}
             whiteRoom={true}
-            artist={{ id: gallery.id, name: gallery.name, avatarUrl: null, specialization: `Curated by ${curatorName}`, bio: posterBio }}
+            artist={{ id: gallery.id, name: gallery.name, avatarUrl: null, specialization: `Curated by ${curatorName}`, bio: posterBio, email: null, country: null, userId: null, galleryLayout: null, socialLinks: null }}
           />
         ) : (
           <div className="flex items-center justify-center h-full">
