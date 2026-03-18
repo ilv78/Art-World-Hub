@@ -194,8 +194,8 @@ describe("DatabaseStorage", () => {
 
       await storage.deleteArtwork("a1");
 
-      // Should have called delete 5 times (exhibition_artworks, bids, auctions, orders, artworks)
-      expect(deleteMock).toHaveBeenCalledTimes(5);
+      // Should have called delete 6 times (curator_gallery_artworks, exhibition_artworks, bids, auctions, orders, artworks)
+      expect(deleteMock).toHaveBeenCalledTimes(6);
     });
   });
 

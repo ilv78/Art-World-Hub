@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { insertArtworkSchema, updateArtworkSchema, insertBidSchema, insertOrderSchema, insertBlogPostSchema, updateBlogPostSchema, updateArtistSchema, ORDER_TRANSITIONS, ORDER_STATUSES } from "@shared/schema";
 import type { Artist, ArtworkWithArtist, Order, InsertOrder } from "@shared/schema";
 import { z } from "zod";
-import { setupAuth, registerAuthRoutes, isAuthenticated, isAdmin } from "./replit_integrations/auth";
+import { setupAuth, registerAuthRoutes, isAuthenticated, isAdmin, isCurator, authStorage } from "./replit_integrations/auth";
 import { USER_ROLES, type UserRole } from "@shared/models/auth";
 import https from "https";
 import http from "http";
@@ -313,6 +313,10 @@ export async function registerRoutes(
   app.get("/api/artists/me", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
+      const dbUser = await authStorage.getUser(userId);
+      if (dbUser?.role === "curator") {
+        return res.status(404).json({ error: "Curators do not have artist profiles" });
+      }
       const claims = req.user?.claims;
       const artist = await storage.ensureArtistProfile(userId, {
         firstName: claims?.first_name,
@@ -838,6 +842,126 @@ export async function registerRoutes(
     } catch (error) {
       logger.error({ err: error }, "Delete artwork error");
       res.status(500).json({ error: "Failed to delete artwork" });
+    }
+  });
+
+  // ── Curator routes (require curator role) ─────────────────────────
+  // Public: exhibitions listing (active + upcoming)
+  app.get("/api/curated-exhibitions", async (_req, res) => {
+    try {
+      const galleries = await storage.getActiveAndUpcomingCuratorGalleries();
+      res.json(galleries);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch exhibitions" });
+    }
+  });
+
+  // Public: curated galleries for hallway
+  app.get("/api/gallery/curated", async (_req, res) => {
+    try {
+      const galleries = await storage.getPublishedCuratorGalleries();
+      res.json(galleries.map(g => ({
+        gallery: { id: g.id, name: g.name, description: g.description, galleryLayout: g.galleryLayout, curator: g.curator },
+        artworks: g.artworks,
+      })));
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch curated galleries" });
+    }
+  });
+
+  // Public: single curator gallery
+  app.get("/api/curator-galleries/:id", async (req, res) => {
+    try {
+      const gallery = await storage.getCuratorGallery(req.params.id);
+      if (!gallery || !gallery.isPublished) return res.status(404).json({ error: "Gallery not found" });
+      const now = new Date();
+      if (gallery.startDate && now < new Date(gallery.startDate)) return res.status(404).json({ error: "Gallery not found" });
+      if (gallery.endDate && now > new Date(gallery.endDate)) return res.status(404).json({ error: "Gallery not found" });
+      res.json(gallery);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch gallery" });
+    }
+  });
+
+  // Curator: available artworks
+  app.get("/api/curator/artworks/available", isCurator, async (_req, res) => {
+    try {
+      const artworks = await storage.getAllExhibitionReadyArtworks();
+      res.json(artworks);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch artworks" });
+    }
+  });
+
+  // Curator: list own galleries
+  app.get("/api/curator/galleries", isCurator, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const galleries = await storage.getCuratorGalleriesByCurator(userId);
+      res.json(galleries);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch galleries" });
+    }
+  });
+
+  // Curator: create gallery
+  app.post("/api/curator/galleries", isCurator, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const data = { ...req.body, curatorId: userId };
+      const gallery = await storage.createCuratorGallery(data);
+      res.status(201).json(gallery);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create gallery" });
+    }
+  });
+
+  // Curator: update gallery
+  app.patch("/api/curator/galleries/:id", isCurator, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const gallery = await storage.getCuratorGallery(req.params.id);
+      if (!gallery) return res.status(404).json({ error: "Gallery not found" });
+      if (gallery.curatorId !== userId) return res.status(403).json({ error: "Not your gallery" });
+      const data = { ...req.body };
+      if (data.startDate !== undefined) data.startDate = data.startDate ? new Date(data.startDate) : null;
+      if (data.endDate !== undefined) data.endDate = data.endDate ? new Date(data.endDate) : null;
+      const updated = await storage.updateCuratorGallery(req.params.id, data);
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update gallery" });
+    }
+  });
+
+  // Curator: delete gallery
+  app.delete("/api/curator/galleries/:id", isCurator, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const gallery = await storage.getCuratorGallery(req.params.id);
+      if (!gallery) return res.status(404).json({ error: "Gallery not found" });
+      if (gallery.curatorId !== userId) return res.status(403).json({ error: "Not your gallery" });
+      await storage.deleteCuratorGallery(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete gallery" });
+    }
+  });
+
+  // Curator: set gallery artworks (replace all)
+  app.put("/api/curator/galleries/:id/artworks", isCurator, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const gallery = await storage.getCuratorGallery(req.params.id);
+      if (!gallery) return res.status(404).json({ error: "Gallery not found" });
+      if (gallery.curatorId !== userId) return res.status(403).json({ error: "Not your gallery" });
+      const { artworkIds } = req.body;
+      if (!Array.isArray(artworkIds)) return res.status(400).json({ error: "artworkIds must be an array" });
+      await storage.setCuratorGalleryArtworks(req.params.id, artworkIds);
+      const layout = await storage.regenerateCuratorGalleryLayout(req.params.id);
+      const updated = await storage.getCuratorGallery(req.params.id);
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update gallery artworks" });
     }
   });
 

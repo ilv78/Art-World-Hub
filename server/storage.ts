@@ -7,13 +7,15 @@ import {
   type Exhibition, type InsertExhibition,
   type ExhibitionArtwork, type InsertExhibitionArtwork,
   type BlogPost, type InsertBlogPost,
+  type CuratorGallery, type InsertCuratorGallery, type CuratorGalleryWithArtworks,
   type ArtworkWithArtist,
   type AuctionWithArtwork,
   type ExhibitionWithArtworks,
   type BlogPostWithArtist,
   type MazeLayout,
   type MazeCell,
-  artists, artworks, auctions, bids, orders, exhibitions, exhibitionArtworks, blogPosts
+  artists, artworks, auctions, bids, orders, exhibitions, exhibitionArtworks, blogPosts,
+  curatorGalleries, curatorGalleryArtworks,
 } from "@shared/schema";
 import { type User, type UserRole, users } from "@shared/models/auth";
 import { sessions } from "@shared/models/auth";
@@ -74,6 +76,18 @@ export interface IStorage {
   // Gallery
   getExhibitionReadyArtworks(artistId: string): Promise<ArtworkWithArtist[]>;
   regenerateArtistGallery(artistId: string): Promise<MazeLayout>;
+
+  // Curator Galleries
+  getCuratorGalleriesByCurator(curatorId: string): Promise<CuratorGalleryWithArtworks[]>;
+  getCuratorGallery(id: string): Promise<CuratorGalleryWithArtworks | undefined>;
+  getPublishedCuratorGalleries(): Promise<CuratorGalleryWithArtworks[]>;
+  getActiveAndUpcomingCuratorGalleries(): Promise<CuratorGalleryWithArtworks[]>;
+  createCuratorGallery(gallery: InsertCuratorGallery): Promise<CuratorGallery>;
+  updateCuratorGallery(id: string, data: Partial<InsertCuratorGallery>): Promise<CuratorGallery | undefined>;
+  deleteCuratorGallery(id: string): Promise<boolean>;
+  setCuratorGalleryArtworks(galleryId: string, artworkIds: string[]): Promise<void>;
+  regenerateCuratorGalleryLayout(galleryId: string): Promise<MazeLayout>;
+  getAllExhibitionReadyArtworks(): Promise<ArtworkWithArtist[]>;
 
   // Admin
   getUsers(): Promise<User[]>;
@@ -377,6 +391,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteArtwork(id: string): Promise<boolean> {
+    await db.delete(curatorGalleryArtworks).where(eq(curatorGalleryArtworks.artworkId, id));
     await db.delete(exhibitionArtworks).where(eq(exhibitionArtworks.artworkId, id));
     await db.delete(bids).where(
       sql`${bids.auctionId} IN (SELECT id FROM auctions WHERE artwork_id = ${id})`
@@ -443,6 +458,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteUser(id: string): Promise<boolean> {
+    // Delete curator galleries owned by this user
+    const userGalleries = await db.select({ id: curatorGalleries.id }).from(curatorGalleries).where(eq(curatorGalleries.curatorId, id));
+    for (const g of userGalleries) {
+      await this.deleteCuratorGallery(g.id);
+    }
     // Delete user sessions using JSONB query (connect-pg-simple stores userId in sess JSON)
     await db.delete(sessions).where(
       sql`${sessions.sess}->'passport'->'user'->'claims'->>'sub' = ${id}`
@@ -469,6 +489,112 @@ export class DatabaseStorage implements IStorage {
     await db.delete(exhibitionArtworks).where(eq(exhibitionArtworks.exhibitionId, id));
     const result = await db.delete(exhibitions).where(eq(exhibitions.id, id)).returning();
     return result.length > 0;
+  }
+
+  // Curator Galleries
+  private async hydrateCuratorGallery(gallery: CuratorGallery): Promise<CuratorGalleryWithArtworks> {
+    const [curator] = await db.select({ id: users.id, firstName: users.firstName, lastName: users.lastName })
+      .from(users).where(eq(users.id, gallery.curatorId));
+
+    const galleryArtworkRows = await db.select()
+      .from(curatorGalleryArtworks)
+      .innerJoin(artworks, eq(curatorGalleryArtworks.artworkId, artworks.id))
+      .innerJoin(artists, eq(artworks.artistId, artists.id))
+      .where(eq(curatorGalleryArtworks.galleryId, gallery.id))
+      .orderBy(asc(curatorGalleryArtworks.displayOrder));
+
+    return {
+      ...gallery,
+      curator: curator || { id: gallery.curatorId, firstName: null, lastName: null },
+      artworks: galleryArtworkRows.map(r => ({ ...r.artworks, artist: r.artists })),
+    };
+  }
+
+  async getCuratorGalleriesByCurator(curatorId: string): Promise<CuratorGalleryWithArtworks[]> {
+    const galleries = await db.select().from(curatorGalleries)
+      .where(eq(curatorGalleries.curatorId, curatorId))
+      .orderBy(asc(curatorGalleries.createdAt));
+    return Promise.all(galleries.map(g => this.hydrateCuratorGallery(g)));
+  }
+
+  async getCuratorGallery(id: string): Promise<CuratorGalleryWithArtworks | undefined> {
+    const [gallery] = await db.select().from(curatorGalleries).where(eq(curatorGalleries.id, id));
+    if (!gallery) return undefined;
+    return this.hydrateCuratorGallery(gallery);
+  }
+
+  async getPublishedCuratorGalleries(): Promise<CuratorGalleryWithArtworks[]> {
+    const now = new Date();
+    const galleries = await db.select().from(curatorGalleries)
+      .where(eq(curatorGalleries.isPublished, true))
+      .orderBy(asc(curatorGalleries.startDate));
+    // Active: startDate <= now <= endDate
+    const active = galleries.filter(g => {
+      if (g.startDate && now < g.startDate) return false;
+      if (g.endDate && now > g.endDate) return false;
+      return true;
+    });
+    return Promise.all(active.map(g => this.hydrateCuratorGallery(g)));
+  }
+
+  async getActiveAndUpcomingCuratorGalleries(): Promise<CuratorGalleryWithArtworks[]> {
+    const now = new Date();
+    const galleries = await db.select().from(curatorGalleries)
+      .where(eq(curatorGalleries.isPublished, true))
+      .orderBy(asc(curatorGalleries.startDate));
+    // Include active (now between dates) and upcoming (start date in the future), exclude expired
+    const relevant = galleries.filter(g => {
+      if (g.endDate && now > g.endDate) return false;
+      return true;
+    });
+    return Promise.all(relevant.map(g => this.hydrateCuratorGallery(g)));
+  }
+
+  async createCuratorGallery(gallery: InsertCuratorGallery): Promise<CuratorGallery> {
+    const [created] = await db.insert(curatorGalleries).values(gallery).returning();
+    return created;
+  }
+
+  async updateCuratorGallery(id: string, data: Partial<InsertCuratorGallery>): Promise<CuratorGallery | undefined> {
+    const [updated] = await db.update(curatorGalleries)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(curatorGalleries.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteCuratorGallery(id: string): Promise<boolean> {
+    await db.delete(curatorGalleryArtworks).where(eq(curatorGalleryArtworks.galleryId, id));
+    const result = await db.delete(curatorGalleries).where(eq(curatorGalleries.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async setCuratorGalleryArtworks(galleryId: string, artworkIds: string[]): Promise<void> {
+    await db.delete(curatorGalleryArtworks).where(eq(curatorGalleryArtworks.galleryId, galleryId));
+    if (artworkIds.length > 0) {
+      await db.insert(curatorGalleryArtworks).values(
+        artworkIds.map((artworkId, i) => ({ galleryId, artworkId, displayOrder: i }))
+      );
+    }
+  }
+
+  async regenerateCuratorGalleryLayout(galleryId: string): Promise<MazeLayout> {
+    const rows = await db.select().from(curatorGalleryArtworks)
+      .where(eq(curatorGalleryArtworks.galleryId, galleryId))
+      .orderBy(asc(curatorGalleryArtworks.displayOrder));
+    const layout = generateWhiteRoomLayout(rows.length);
+    await db.update(curatorGalleries).set({ galleryLayout: layout, updatedAt: new Date() })
+      .where(eq(curatorGalleries.id, galleryId));
+    return layout;
+  }
+
+  async getAllExhibitionReadyArtworks(): Promise<ArtworkWithArtist[]> {
+    const result = await db.select()
+      .from(artworks)
+      .innerJoin(artists, eq(artworks.artistId, artists.id))
+      .where(eq(artworks.isReadyForExhibition, true))
+      .orderBy(asc(artists.name), asc(artworks.title));
+    return result.map(({ artworks: artwork, artists: artist }) => ({ ...artwork, artist }));
   }
 }
 

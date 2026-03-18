@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowRight, Image, ShoppingBag, Sparkles } from "lucide-react";
+import { ArrowRight, Image, ShoppingBag, Sparkles, Calendar } from "lucide-react";
 import type { ArtworkWithArtist } from "@shared/schema";
 
 interface VersionResponse {
@@ -68,16 +68,16 @@ export default function Home() {
             <Card className="hover-elevate">
               <CardContent className="pt-6 text-center space-y-4">
                 <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                  <Image className="h-7 w-7 text-primary" />
+                  <Calendar className="h-7 w-7 text-primary" />
                 </div>
-                <h3 className="font-serif text-xl font-semibold">Virtual Gallery</h3>
+                <h3 className="font-serif text-xl font-semibold">Exhibitions</h3>
                 <p className="text-sm text-muted-foreground">
-                  Immerse yourself in our 3D virtual gallery. Walk through curated exhibitions
-                  and experience art in a whole new dimension.
+                  Explore curated exhibitions — immersive 3D rooms with handpicked artworks
+                  from across our gallery. See what's on now and coming soon.
                 </p>
-                <Link href="/gallery">
-                  <Button variant="ghost" className="mt-2" data-testid="button-feature-gallery">
-                    Explore Gallery
+                <Link href="/exhibitions">
+                  <Button variant="ghost" className="mt-2" data-testid="button-feature-exhibitions">
+                    View Exhibitions
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </Link>
