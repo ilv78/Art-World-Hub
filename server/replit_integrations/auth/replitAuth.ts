@@ -122,11 +122,14 @@ async function upsertUser(claims: any) {
     profileImageUrl: claims["picture"] ?? claims["profile_image_url"],
   });
 
-  await storage.ensureArtistProfile(user.id, {
-    firstName: claims["given_name"] ?? claims["first_name"],
-    lastName: claims["family_name"] ?? claims["last_name"],
-    email: claims["email"],
-  });
+  // Only create artist profile for regular users (not curators/admins)
+  if (user.role === "user") {
+    await storage.ensureArtistProfile(user.id, {
+      firstName: claims["given_name"] ?? claims["first_name"],
+      lastName: claims["family_name"] ?? claims["last_name"],
+      email: claims["email"],
+    });
+  }
 }
 
 // Build the origin (protocol + host + port) for callback URLs
@@ -240,11 +243,14 @@ export async function setupAuth(app: Express) {
         emailVerified: true,
       });
 
-      await storage.ensureArtistProfile(user.id, {
-        firstName: user.firstName || undefined,
-        lastName: user.lastName || undefined,
-        email: user.email || undefined,
-      });
+      // Only create artist profile for regular users (not curators/admins)
+      if (user.role === "user") {
+        await storage.ensureArtistProfile(user.id, {
+          firstName: user.firstName || undefined,
+          lastName: user.lastName || undefined,
+          email: user.email || undefined,
+        });
+      }
 
       req.login(buildSessionUser(user), (err) => {
         if (err) {
@@ -415,6 +421,26 @@ export const isAdmin: RequestHandler = async (req, res, next) => {
   const dbUser = await authStorage.getUser(userId);
   if (!dbUser || dbUser.role !== "admin") {
     return res.status(403).json({ message: "Forbidden — admin access required" });
+  }
+
+  return next();
+};
+
+export const isCurator: RequestHandler = async (req, res, next) => {
+  const user = req.user as any;
+
+  if (typeof (req as any).isAuthenticated !== "function" || !req.isAuthenticated()) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const userId = user?.claims?.sub;
+  if (!userId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const dbUser = await authStorage.getUser(userId);
+  if (!dbUser || (dbUser.role !== "curator" && dbUser.role !== "admin")) {
+    return res.status(403).json({ message: "Forbidden — curator access required" });
   }
 
   return next();

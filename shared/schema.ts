@@ -163,6 +163,40 @@ export type ArtistWithStats = Artist & {
   blogPostCount: number;
 };
 
+// Curator galleries - curated collections of artworks from any artist
+export const curatorGalleries = pgTable("curator_galleries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  curatorId: varchar("curator_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  galleryLayout: jsonb("gallery_layout"),
+  isPublished: boolean("is_published").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertCuratorGallerySchema = createInsertSchema(curatorGalleries).omit({ id: true, createdAt: true, updatedAt: true });
+export const updateCuratorGallerySchema = insertCuratorGallerySchema.partial().omit({ curatorId: true });
+export type InsertCuratorGallery = z.infer<typeof insertCuratorGallerySchema>;
+export type CuratorGallery = typeof curatorGalleries.$inferSelect;
+
+// Curator gallery artworks - which artworks are in which curator gallery
+export const curatorGalleryArtworks = pgTable("curator_gallery_artworks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  galleryId: varchar("gallery_id").references(() => curatorGalleries.id).notNull(),
+  artworkId: varchar("artwork_id").references(() => artworks.id).notNull(),
+  displayOrder: integer("display_order").notNull(),
+});
+
+export const insertCuratorGalleryArtworkSchema = createInsertSchema(curatorGalleryArtworks).omit({ id: true });
+export type InsertCuratorGalleryArtwork = z.infer<typeof insertCuratorGalleryArtworkSchema>;
+export type CuratorGalleryArtwork = typeof curatorGalleryArtworks.$inferSelect;
+
+export type CuratorGalleryWithArtworks = CuratorGallery & {
+  artworks: ArtworkWithArtist[];
+  curator: { id: string; firstName: string | null; lastName: string | null };
+};
+
 // Layout types for the 3D maze
 export interface MazeCell {
   x: number;

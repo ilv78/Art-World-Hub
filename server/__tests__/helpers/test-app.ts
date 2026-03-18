@@ -47,6 +47,15 @@ const { mockStorage } = vi.hoisted(() => {
     deleteUser: fn().mockResolvedValue(false),
     deleteExhibition: fn().mockResolvedValue(false),
     getAllBlogPosts: fn().mockResolvedValue([]),
+    getCuratorGalleriesByCurator: fn().mockResolvedValue([]),
+    getCuratorGallery: fn().mockResolvedValue(undefined),
+    getPublishedCuratorGalleries: fn().mockResolvedValue([]),
+    createCuratorGallery: fn().mockResolvedValue({}),
+    updateCuratorGallery: fn().mockResolvedValue(undefined),
+    deleteCuratorGallery: fn().mockResolvedValue(false),
+    setCuratorGalleryArtworks: fn().mockResolvedValue(undefined),
+    regenerateCuratorGalleryLayout: fn().mockResolvedValue({ width: 3, height: 3, cells: [], spawnPoint: { x: 1, z: 1 } }),
+    getAllExhibitionReadyArtworks: fn().mockResolvedValue([]),
   };
   return { mockStorage };
 });
@@ -75,6 +84,21 @@ vi.mock("../../replit_integrations/auth", () => ({
       },
     };
     next();
+  },
+  isCurator: (req: any, _res: any, next: any) => {
+    req.user = {
+      claims: {
+        sub: "test-user-id",
+        first_name: "Test",
+        last_name: "User",
+        email: "test@example.com",
+      },
+    };
+    next();
+  },
+  authStorage: {
+    getUser: vi.fn().mockResolvedValue({ id: "test-user-id", role: "user" }),
+    upsertUser: vi.fn(),
   },
 }));
 
