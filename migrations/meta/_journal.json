@@ -22,6 +22,13 @@
       "when": 1773444813233,
       "tag": "0002_noisy_iron_monger",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1773847317718,
+      "tag": "0003_whole_grandmaster",
+      "breakpoints": true
     }
   ]
 }
