@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: artverse_dev
+      POSTGRES_USER: artverse
+      POSTGRES_PASSWORD: devpassword
+    volumes:
+      - artverse_dev_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U artverse -d artverse_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  artverse_dev_data:
