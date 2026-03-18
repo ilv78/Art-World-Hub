@@ -22,8 +22,20 @@ interface ArtistRoom {
   artworks: ArtworkWithArtist[];
 }
 
+interface CuratorRoom {
+  gallery: {
+    id: string;
+    name: string;
+    description?: string | null;
+    galleryLayout?: MazeLayout | null;
+    curator: { id: string; firstName: string | null; lastName: string | null };
+  };
+  artworks: ArtworkWithArtist[];
+}
+
 interface HallwayGallery3DProps {
   artistRooms: ArtistRoom[];
+  curatorRooms?: CuratorRoom[];
 }
 
 const CELL_SIZE = 2.5;
@@ -160,13 +172,16 @@ interface RoomPlacement {
   corridorZ: number;
   isLeft: boolean;
   artistIndex: number;
+  isCuratorRoom?: boolean;
+  curatorIndex?: number;
 }
 
-function computeRoomPlacements(artistRooms: ArtistRoom[]): { placements: RoomPlacement[]; hallwayLen: number } {
+function computeRoomPlacements(artistRooms: ArtistRoom[], curatorRooms?: CuratorRoom[]): { placements: RoomPlacement[]; hallwayLen: number; curatorStartZ: number } {
   const placements: RoomPlacement[] = [];
   let cursor = 1.5;
   const gap = 1.0;
 
+  // Artist rooms
   const numPairs = Math.ceil(artistRooms.length / 2);
   for (let p = 0; p < numPairs; p++) {
     const leftIdx = p * 2;
@@ -204,7 +219,55 @@ function computeRoomPlacements(artistRooms: ArtistRoom[]): { placements: RoomPla
     cursor += pairWidth + gap;
   }
 
-  return { placements, hallwayLen: Math.max(cursor + 0.5, 4) };
+  // Curator rooms section
+  const curatorStartZ = cursor;
+  const cRooms = curatorRooms || [];
+  if (cRooms.length > 0) {
+    cursor += 2.0; // gap before curator section
+
+    const numCuratorPairs = Math.ceil(cRooms.length / 2);
+    for (let p = 0; p < numCuratorPairs; p++) {
+      const leftIdx = p * 2;
+      const rightIdx = p * 2 + 1;
+
+      const leftLayout = cRooms[leftIdx].gallery.galleryLayout || generateDefaultLayout(cRooms[leftIdx].artworks.length);
+      const rightLayout = rightIdx < cRooms.length
+        ? (cRooms[rightIdx].gallery.galleryLayout || generateDefaultLayout(cRooms[rightIdx].artworks.length))
+        : null;
+
+      const leftWidthWorld = leftLayout.width * CELL_SIZE;
+      const rightWidthWorld = rightLayout ? rightLayout.width * CELL_SIZE : 0;
+      const pairWidth = Math.max(leftWidthWorld, rightWidthWorld);
+
+      placements.push({
+        layout: leftLayout,
+        roomWidthWorld: leftLayout.width * CELL_SIZE,
+        roomHeightWorld: leftLayout.height * CELL_SIZE,
+        corridorZ: cursor,
+        isLeft: true,
+        artistIndex: 0,
+        isCuratorRoom: true,
+        curatorIndex: leftIdx,
+      });
+
+      if (rightLayout && rightIdx < cRooms.length) {
+        placements.push({
+          layout: rightLayout,
+          roomWidthWorld: rightLayout.width * CELL_SIZE,
+          roomHeightWorld: rightLayout.height * CELL_SIZE,
+          corridorZ: cursor,
+          isLeft: false,
+          artistIndex: 0,
+          isCuratorRoom: true,
+          curatorIndex: rightIdx,
+        });
+      }
+
+      cursor += pairWidth + gap;
+    }
+  }
+
+  return { placements, hallwayLen: Math.max(cursor + 0.5, 4), curatorStartZ };
 }
 
 function transformLeftRoom(localX: number, localZ: number, corridorLeftX: number, roomStartZ: number): { wx: number; wz: number } {
@@ -221,8 +284,9 @@ function transformRightRoom(localX: number, localZ: number, corridorRightX: numb
   };
 }
 
-function Minimap({ artistRooms, placements, hallLeft, hallRight, hallwayLen, playerPosition }: {
+function Minimap({ artistRooms, curatorRooms, placements, hallLeft, hallRight, hallwayLen, playerPosition }: {
   artistRooms: ArtistRoom[];
+  curatorRooms?: CuratorRoom[];
   placements: RoomPlacement[];
   hallLeft: number;
   hallRight: number;
@@ -268,14 +332,14 @@ function Minimap({ artistRooms, placements, hallLeft, hallRight, hallwayLen, pla
             rH = roomW;
           }
           return (
-            <g key={artistRooms[p.artistIndex]?.artist.id ?? i}>
+            <g key={p.isCuratorRoom ? `c-${p.curatorIndex}` : (artistRooms[p.artistIndex]?.artist.id ?? i)}>
               <rect
                 x={ox + rX * mapScale}
                 y={oz + rZ * mapScale}
                 width={rW * mapScale}
                 height={rH * mapScale}
-                fill="rgba(249, 115, 22, 0.3)"
-                stroke="rgba(249, 115, 22, 0.5)"
+                fill={p.isCuratorRoom ? "rgba(59, 130, 246, 0.3)" : "rgba(249, 115, 22, 0.3)"}
+                stroke={p.isCuratorRoom ? "rgba(59, 130, 246, 0.5)" : "rgba(249, 115, 22, 0.5)"}
                 strokeWidth={0.5}
               />
               <text
@@ -286,7 +350,7 @@ function Minimap({ artistRooms, placements, hallLeft, hallRight, hallwayLen, pla
                 textAnchor="middle"
                 dominantBaseline="middle"
               >
-                {artistRooms[p.artistIndex]?.artist.name.split(" ").pop()}
+                {p.isCuratorRoom && curatorRooms ? curatorRooms[p.curatorIndex!]?.gallery.name.split(" ").pop() : artistRooms[p.artistIndex]?.artist.name.split(" ").pop()}
               </text>
             </g>
           );
@@ -301,7 +365,7 @@ function Minimap({ artistRooms, placements, hallLeft, hallRight, hallwayLen, pla
   );
 }
 
-export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
+export function HallwayGallery3D({ artistRooms, curatorRooms }: HallwayGallery3DProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -335,7 +399,7 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
     }
   }, [selectedArtwork, isInCart, addItem, toast]);
 
-  const { placements, hallwayLen } = useMemo(() => computeRoomPlacements(artistRooms), [artistRooms]);
+  const { placements, hallwayLen } = useMemo(() => computeRoomPlacements(artistRooms, curatorRooms), [artistRooms, curatorRooms]);
   const hallLeft = -HALLWAY_W / 2;
   const hallRight = HALLWAY_W / 2;
 
@@ -537,7 +601,8 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
       const doorCenterInRoom = doorCenterX * CELL_SIZE + CELL_SIZE / 2;
       const doorWorldZ = p.corridorZ + doorCenterInRoom;
       const halfW = CELL_SIZE * 0.25;
-      const color = artistColor(artistRooms[p.artistIndex].artist.id);
+      const colorId = p.isCuratorRoom && curatorRooms ? curatorRooms[p.curatorIndex!].gallery.id : artistRooms[p.artistIndex].artist.id;
+      const color = artistColor(colorId);
       (p.isLeft ? leftDoors : rightDoors).push({ centerZ: doorWorldZ, halfWidth: halfW, color });
     }
 
@@ -703,7 +768,8 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
 
     for (const p of placements) {
       const layout = p.layout;
-      const room = artistRooms[p.artistIndex];
+      const cRoom = p.isCuratorRoom && curatorRooms ? curatorRooms[p.curatorIndex!] : null;
+      const room = cRoom ? { artist: { id: cRoom.gallery.id, name: cRoom.gallery.name, avatarUrl: null, specialization: null, bio: cRoom.gallery.description }, artworks: cRoom.artworks } : artistRooms[p.artistIndex];
       const corridorEdgeX = p.isLeft ? hallLeft : hallRight;
       const roomStartZ = p.corridorZ;
       const transform = p.isLeft ? transformLeftRoom : transformRightRoom;
@@ -869,8 +935,9 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
       const doorWorldZ = p.corridorZ + doorCenterX * CELL_SIZE + CELL_SIZE / 2;
       const doorHalfW = CELL_SIZE * 0.25;
 
-      addHangingSign(room.artist.name, doorWorldZ);
-      addDirectionalArrow(room.artist.name, p.isLeft ? hallLeft : hallRight, doorWorldZ, p.isLeft);
+      const signName = p.isCuratorRoom && cRoom ? cRoom.gallery.name : room.artist.name;
+      addHangingSign(signName, doorWorldZ);
+      addDirectionalArrow(signName, p.isLeft ? hallLeft : hallRight, doorWorldZ, p.isLeft);
 
       const roomLight = new THREE.PointLight(0xffffff, 1.0, 15);
       roomLight.position.set(floorCenter.wx, WALL_H - 0.3, floorCenter.wz);
@@ -1305,6 +1372,7 @@ export function HallwayGallery3D({ artistRooms }: HallwayGallery3DProps) {
       {showMinimap && isPointerLocked && (
         <Minimap
           artistRooms={artistRooms}
+          curatorRooms={curatorRooms}
           placements={placements}
           hallLeft={hallLeft}
           hallRight={hallRight}

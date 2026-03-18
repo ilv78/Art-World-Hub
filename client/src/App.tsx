@@ -21,6 +21,7 @@ import BlogPost from "@/pages/blog-post";
 import AuthPage from "@/pages/auth-page";
 import SetPassword from "@/pages/set-password";
 import AdminPage from "@/pages/admin";
+import CuratorDashboard from "@/pages/curator-dashboard";
 import Changelog from "@/pages/changelog";
 import NotFound from "@/pages/not-found";
 
@@ -36,6 +37,7 @@ function Router() {
       <Route path="/dashboard" component={ArtistDashboard} />
       <Route path="/blog" component={Blog} />
       <Route path="/blog/:id" component={BlogPost} />
+      <Route path="/curator" component={CuratorDashboard} />
       <Route path="/admin" component={AdminPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/auth/set-password" component={SetPassword} />

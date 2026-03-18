@@ -46,6 +46,10 @@ export default function Gallery() {
     queryKey: ["/api/gallery/hallway"],
   });
 
+  const { data: curatedData } = useQuery<{ gallery: { id: string; name: string; description?: string | null; galleryLayout?: any; curator: { id: string; firstName: string | null; lastName: string | null } }; artworks: ArtworkWithArtist[] }[]>({
+    queryKey: ["/api/gallery/curated"],
+  });
+
   const { addItem, items } = useCartStore();
   const { toast } = useToast();
 
@@ -130,7 +134,7 @@ export default function Gallery() {
           <h1 className="font-serif text-2xl font-bold">Virtual Gallery</h1>
           <p className="text-sm text-muted-foreground">
             {viewMode === "3d"
-              ? `Museum hallway with ${hallwayData?.length || 0} artist rooms`
+              ? `Museum hallway with ${hallwayData?.length || 0} artist rooms${curatedData?.length ? ` + ${curatedData.length} curated` : ""}`
               : `Artwork ${currentIndex + 1} of ${galleryArtworks.length}`}
           </p>
         </div>
@@ -163,7 +167,7 @@ export default function Gallery() {
       {viewMode === "3d" && (
         <div className="flex-1 relative">
           {hallwayData && hallwayData.length > 0 ? (
-            <HallwayGallery3D artistRooms={hallwayData} />
+            <HallwayGallery3D artistRooms={hallwayData} curatorRooms={curatedData} />
           ) : (
             <div className="h-full flex items-center justify-center">
               <div className="text-center space-y-4">

@@ -1,4 +1,4 @@
-import { Home, Image, ShoppingBag, Users, LayoutDashboard, BookOpen, LogIn, LogOut, Shield } from "lucide-react";
+import { Home, Image, ShoppingBag, Users, LayoutDashboard, BookOpen, LogIn, LogOut, Shield, Brush } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -84,6 +84,19 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              {isAuthenticated && (user?.role === "curator" || user?.role === "admin") && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location === "/curator"}
+                  >
+                    <Link href="/curator">
+                      <Brush className="w-4 h-4" />
+                      <span>Curator</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
               {isAuthenticated && user?.role === "admin" && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
