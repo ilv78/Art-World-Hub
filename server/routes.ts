@@ -846,6 +846,16 @@ export async function registerRoutes(
   });
 
   // ── Curator routes (require curator role) ─────────────────────────
+  // Public: exhibitions listing (active + upcoming)
+  app.get("/api/curated-exhibitions", async (_req, res) => {
+    try {
+      const galleries = await storage.getActiveAndUpcomingCuratorGalleries();
+      res.json(galleries);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch exhibitions" });
+    }
+  });
+
   // Public: curated galleries for hallway
   app.get("/api/gallery/curated", async (_req, res) => {
     try {
@@ -864,6 +874,9 @@ export async function registerRoutes(
     try {
       const gallery = await storage.getCuratorGallery(req.params.id);
       if (!gallery || !gallery.isPublished) return res.status(404).json({ error: "Gallery not found" });
+      const now = new Date();
+      if (gallery.startDate && now < new Date(gallery.startDate)) return res.status(404).json({ error: "Gallery not found" });
+      if (gallery.endDate && now > new Date(gallery.endDate)) return res.status(404).json({ error: "Gallery not found" });
       res.json(gallery);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch gallery" });
@@ -910,7 +923,10 @@ export async function registerRoutes(
       const gallery = await storage.getCuratorGallery(req.params.id);
       if (!gallery) return res.status(404).json({ error: "Gallery not found" });
       if (gallery.curatorId !== userId) return res.status(403).json({ error: "Not your gallery" });
-      const updated = await storage.updateCuratorGallery(req.params.id, req.body);
+      const data = { ...req.body };
+      if (data.startDate !== undefined) data.startDate = data.startDate ? new Date(data.startDate) : null;
+      if (data.endDate !== undefined) data.endDate = data.endDate ? new Date(data.endDate) : null;
+      const updated = await storage.updateCuratorGallery(req.params.id, data);
       res.json(updated);
     } catch (error) {
       res.status(500).json({ error: "Failed to update gallery" });

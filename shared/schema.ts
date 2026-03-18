@@ -171,6 +171,9 @@ export const curatorGalleries = pgTable("curator_galleries", {
   description: text("description"),
   galleryLayout: jsonb("gallery_layout"),
   isPublished: boolean("is_published").default(false),
+  timezone: text("timezone").default("UTC"),
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

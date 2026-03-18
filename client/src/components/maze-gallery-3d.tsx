@@ -407,27 +407,31 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
         ctx.font = "bold 26px sans-serif";
         ctx.textAlign = "left";
         const maxWidth = cw - 100;
-        const words = artist.bio.split(" ");
-        let line = "";
-        const lines: string[] = [];
-        for (const word of words) {
-          const test = line + (line ? " " : "") + word;
-          if (ctx.measureText(test).width > maxWidth && line) {
-            lines.push(line);
-            line = word;
-          } else {
-            line = test;
+        const maxY = ch - 40;
+        const paragraphs = artist.bio.split("\n");
+        for (const para of paragraphs) {
+          if (y > maxY) break;
+          if (para.trim() === "") {
+            y += 16;
+            continue;
           }
-        }
-        if (line) lines.push(line);
-        const maxLines = 10;
-        const displayLines = lines.slice(0, maxLines);
-        if (lines.length > maxLines) {
-          displayLines[maxLines - 1] = displayLines[maxLines - 1].replace(/\s*\S*$/, "...");
-        }
-        for (const l of displayLines) {
-          ctx.fillText(l, 50, y);
-          y += 30;
+          const words = para.split(" ");
+          let line = "";
+          for (const word of words) {
+            const test = line + (line ? " " : "") + word;
+            if (ctx.measureText(test).width > maxWidth && line) {
+              if (y > maxY) { ctx.fillText(line.replace(/\s*\S*$/, "..."), 50, y); y += 30; break; }
+              ctx.fillText(line, 50, y);
+              y += 30;
+              line = word;
+            } else {
+              line = test;
+            }
+          }
+          if (line && y <= maxY) {
+            ctx.fillText(line, 50, y);
+            y += 30;
+          }
         }
       }
     };

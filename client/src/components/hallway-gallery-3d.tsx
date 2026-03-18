@@ -769,7 +769,18 @@ export function HallwayGallery3D({ artistRooms, curatorRooms }: HallwayGallery3D
     for (const p of placements) {
       const layout = p.layout;
       const cRoom = p.isCuratorRoom && curatorRooms ? curatorRooms[p.curatorIndex!] : null;
-      const room = cRoom ? { artist: { id: cRoom.gallery.id, name: cRoom.gallery.name, avatarUrl: null, specialization: null, bio: cRoom.gallery.description }, artworks: cRoom.artworks } : artistRooms[p.artistIndex];
+      const room = cRoom ? (() => {
+        const curator = cRoom.gallery.curator;
+        const cName = [curator.firstName, curator.lastName].filter(Boolean).join(" ") || "Curator";
+        const byArtist = new Map<string, { name: string; titles: string[] }>();
+        for (const aw of cRoom.artworks) {
+          if (!byArtist.has(aw.artist.id)) byArtist.set(aw.artist.id, { name: aw.artist.name, titles: [] });
+          byArtist.get(aw.artist.id)!.titles.push(aw.title);
+        }
+        const listing = Array.from(byArtist.values()).map(({ name, titles }) => `${name}: ${titles.join(", ")}`).join("\n");
+        const bio = [cRoom.gallery.description, "", listing].filter(v => v !== undefined).join("\n");
+        return { artist: { id: cRoom.gallery.id, name: cRoom.gallery.name, avatarUrl: null, specialization: `Curated by ${cName}`, bio }, artworks: cRoom.artworks };
+      })() : artistRooms[p.artistIndex];
       const corridorEdgeX = p.isLeft ? hallLeft : hallRight;
       const roomStartZ = p.corridorZ;
       const transform = p.isLeft ? transformLeftRoom : transformRightRoom;

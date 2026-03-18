@@ -81,6 +81,7 @@ export interface IStorage {
   getCuratorGalleriesByCurator(curatorId: string): Promise<CuratorGalleryWithArtworks[]>;
   getCuratorGallery(id: string): Promise<CuratorGalleryWithArtworks | undefined>;
   getPublishedCuratorGalleries(): Promise<CuratorGalleryWithArtworks[]>;
+  getActiveAndUpcomingCuratorGalleries(): Promise<CuratorGalleryWithArtworks[]>;
   createCuratorGallery(gallery: InsertCuratorGallery): Promise<CuratorGallery>;
   updateCuratorGallery(id: string, data: Partial<InsertCuratorGallery>): Promise<CuratorGallery | undefined>;
   deleteCuratorGallery(id: string): Promise<boolean>;
@@ -512,7 +513,7 @@ export class DatabaseStorage implements IStorage {
   async getCuratorGalleriesByCurator(curatorId: string): Promise<CuratorGalleryWithArtworks[]> {
     const galleries = await db.select().from(curatorGalleries)
       .where(eq(curatorGalleries.curatorId, curatorId))
-      .orderBy(desc(curatorGalleries.updatedAt));
+      .orderBy(asc(curatorGalleries.createdAt));
     return Promise.all(galleries.map(g => this.hydrateCuratorGallery(g)));
   }
 
@@ -523,10 +524,30 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPublishedCuratorGalleries(): Promise<CuratorGalleryWithArtworks[]> {
+    const now = new Date();
     const galleries = await db.select().from(curatorGalleries)
       .where(eq(curatorGalleries.isPublished, true))
-      .orderBy(desc(curatorGalleries.updatedAt));
-    return Promise.all(galleries.map(g => this.hydrateCuratorGallery(g)));
+      .orderBy(asc(curatorGalleries.startDate));
+    // Active: startDate <= now <= endDate
+    const active = galleries.filter(g => {
+      if (g.startDate && now < g.startDate) return false;
+      if (g.endDate && now > g.endDate) return false;
+      return true;
+    });
+    return Promise.all(active.map(g => this.hydrateCuratorGallery(g)));
+  }
+
+  async getActiveAndUpcomingCuratorGalleries(): Promise<CuratorGalleryWithArtworks[]> {
+    const now = new Date();
+    const galleries = await db.select().from(curatorGalleries)
+      .where(eq(curatorGalleries.isPublished, true))
+      .orderBy(asc(curatorGalleries.startDate));
+    // Include active (now between dates) and upcoming (start date in the future), exclude expired
+    const relevant = galleries.filter(g => {
+      if (g.endDate && now > g.endDate) return false;
+      return true;
+    });
+    return Promise.all(relevant.map(g => this.hydrateCuratorGallery(g)));
   }
 
   async createCuratorGallery(gallery: InsertCuratorGallery): Promise<CuratorGallery> {

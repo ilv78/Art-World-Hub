@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -74,7 +74,7 @@ export default function CuratorDashboard() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, ...data }: { id: string; name?: string; description?: string; isPublished?: boolean }) => {
+    mutationFn: async ({ id, ...data }: { id: string; name?: string; description?: string; isPublished?: boolean; startDate?: string | null; endDate?: string | null }) => {
       const res = await apiRequest("PATCH", `/api/curator/galleries/${id}`, data);
       return res.json();
     },
@@ -181,12 +181,65 @@ function GalleryCard({
   gallery: CuratorGalleryWithArtworks;
   isEditing: boolean;
   onEdit: () => void;
-  onUpdate: (data: { name?: string; description?: string; isPublished?: boolean }) => void;
+  onUpdate: (data: { name?: string; description?: string; isPublished?: boolean; startDate?: string | null; endDate?: string | null }) => void;
   onDelete: () => void;
   updating: boolean;
 }) {
   const [editName, setEditName] = useState(gallery.name);
   const [editDesc, setEditDesc] = useState(gallery.description || "");
+
+  const tz = gallery.timezone || "UTC";
+
+  // Convert a UTC Date to a datetime-local string in the gallery's timezone
+  const utcToLocal = (d: string | Date | null | undefined) => {
+    if (!d) return "";
+    const date = new Date(d);
+    if (isNaN(date.getTime())) return "";
+    const parts = new Intl.DateTimeFormat("sv-SE", {
+      timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", hour12: false,
+    }).formatToParts(date);
+    const get = (t: string) => parts.find(p => p.type === t)?.value || "00";
+    return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
+  };
+
+  // Convert a datetime-local string in the gallery's timezone to UTC ISO string
+  const localToUtc = (naive: string) => {
+    if (!naive) return null;
+    // Create a formatter that tells us the UTC offset for this timezone at this date
+    const probe = new Date(naive + "Z"); // approximate
+    const utcStr = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", hour12: false,
+      year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
+    }).format(probe);
+    const tzStr = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour12: false,
+      year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
+    }).format(probe);
+    const parseMMDDYYYY = (s: string) => {
+      const [datePart, timePart] = s.split(", ");
+      const [mm, dd, yyyy] = datePart.split("/").map(Number);
+      const [hh, min] = timePart.split(":").map(Number);
+      return new Date(Date.UTC(yyyy, mm - 1, dd, hh, min));
+    };
+    const utcMs = parseMMDDYYYY(utcStr).getTime();
+    const tzMs = parseMMDDYYYY(tzStr).getTime();
+    const offsetMs = utcMs - tzMs;
+    // The naive datetime in the target timezone, shifted to UTC
+    return new Date(probe.getTime() + offsetMs).toISOString();
+  };
+
+  const [localStart, setLocalStart] = useState(utcToLocal(gallery.startDate));
+  const [localEnd, setLocalEnd] = useState(utcToLocal(gallery.endDate));
+
+  useEffect(() => { setLocalStart(utcToLocal(gallery.startDate)); }, [gallery.startDate, tz]);
+  useEffect(() => { setLocalEnd(utcToLocal(gallery.endDate)); }, [gallery.endDate, tz]);
+
+  const isActive = (() => {
+    if (!gallery.isPublished) return false;
+    const now = new Date();
+    if (gallery.startDate && now < new Date(gallery.startDate)) return false;
+    if (gallery.endDate && now > new Date(gallery.endDate)) return false;
+    return true;
+  })();
 
   return (
     <Card>
@@ -205,7 +258,11 @@ function GalleryCard({
             </div>
           ) : (
             <>
-              <CardTitle className="cursor-pointer" onClick={onEdit}>{gallery.name}</CardTitle>
+              <div className="flex items-center gap-2">
+                <CardTitle className="cursor-pointer" onClick={onEdit}>{gallery.name}</CardTitle>
+                {isActive && <Badge className="bg-green-600">Live</Badge>}
+                {gallery.isPublished && !isActive && <Badge variant="outline">Scheduled</Badge>}
+              </div>
               {gallery.description && <CardDescription>{gallery.description}</CardDescription>}
             </>
           )}
@@ -216,7 +273,19 @@ function GalleryCard({
             <Switch
               id={`pub-${gallery.id}`}
               checked={gallery.isPublished ?? false}
-              onCheckedChange={(checked) => onUpdate({ isPublished: checked })}
+              onCheckedChange={(checked) => {
+                if (checked) {
+                  const now = new Date();
+                  const twoWeeks = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+                  const startIso = localStart ? localToUtc(localStart)! : now.toISOString();
+                  const endIso = localEnd ? localToUtc(localEnd)! : twoWeeks.toISOString();
+                  setLocalStart(utcToLocal(startIso));
+                  setLocalEnd(utcToLocal(endIso));
+                  onUpdate({ isPublished: true, startDate: startIso, endDate: endIso });
+                } else {
+                  onUpdate({ isPublished: false });
+                }
+              }}
             />
           </div>
           <Badge variant="secondary">{gallery.artworks.length} artworks</Badge>
@@ -237,7 +306,52 @@ function GalleryCard({
           </AlertDialog>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        <div className="flex flex-wrap gap-4 items-end">
+          <div>
+            <Label htmlFor={`tz-${gallery.id}`} className="text-xs text-muted-foreground">Timezone</Label>
+            <select
+              id={`tz-${gallery.id}`}
+              className="flex h-9 w-56 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              value={tz}
+              onChange={e => onUpdate({ timezone: e.target.value } as any)}
+            >
+              {[
+                "UTC", "Europe/London", "Europe/Amsterdam", "Europe/Berlin", "Europe/Paris",
+                "Europe/Bucharest", "Europe/Moscow", "America/New_York", "America/Chicago",
+                "America/Denver", "America/Los_Angeles", "America/Sao_Paulo",
+                "Asia/Tokyo", "Asia/Shanghai", "Asia/Dubai", "Asia/Kolkata",
+                "Australia/Sydney", "Pacific/Auckland",
+              ].map(t => <option key={t} value={t}>{t.replace(/_/g, " ")}</option>)}
+            </select>
+          </div>
+          <div>
+            <Label htmlFor={`start-${gallery.id}`} className="text-xs text-muted-foreground">Start ({tz.split("/").pop()?.replace(/_/g, " ")})</Label>
+            <input
+              id={`start-${gallery.id}`}
+              type="datetime-local"
+              className="flex h-9 w-56 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              value={localStart}
+              onChange={e => {
+                setLocalStart(e.target.value);
+                onUpdate({ startDate: localToUtc(e.target.value) });
+              }}
+            />
+          </div>
+          <div>
+            <Label htmlFor={`end-${gallery.id}`} className="text-xs text-muted-foreground">End ({tz.split("/").pop()?.replace(/_/g, " ")})</Label>
+            <input
+              id={`end-${gallery.id}`}
+              type="datetime-local"
+              className="flex h-9 w-56 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              value={localEnd}
+              onChange={e => {
+                setLocalEnd(e.target.value);
+                onUpdate({ endDate: localToUtc(e.target.value) });
+              }}
+            />
+          </div>
+        </div>
         <ArtworkPicker galleryId={gallery.id} selectedArtworks={gallery.artworks} />
       </CardContent>
     </Card>

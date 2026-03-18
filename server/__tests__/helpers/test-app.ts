@@ -50,6 +50,7 @@ const { mockStorage } = vi.hoisted(() => {
     getCuratorGalleriesByCurator: fn().mockResolvedValue([]),
     getCuratorGallery: fn().mockResolvedValue(undefined),
     getPublishedCuratorGalleries: fn().mockResolvedValue([]),
+    getActiveAndUpcomingCuratorGalleries: fn().mockResolvedValue([]),
     createCuratorGallery: fn().mockResolvedValue({}),
     updateCuratorGallery: fn().mockResolvedValue(undefined),
     deleteCuratorGallery: fn().mockResolvedValue(false),

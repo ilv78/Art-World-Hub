@@ -59,6 +59,7 @@ export function createMockStorage(): IStorage {
     getCuratorGalleriesByCurator: vi.fn().mockResolvedValue([]),
     getCuratorGallery: vi.fn().mockResolvedValue(undefined),
     getPublishedCuratorGalleries: vi.fn().mockResolvedValue([]),
+    getActiveAndUpcomingCuratorGalleries: vi.fn().mockResolvedValue([]),
     createCuratorGallery: vi.fn().mockResolvedValue({}),
     updateCuratorGallery: vi.fn().mockResolvedValue(undefined),
     deleteCuratorGallery: vi.fn().mockResolvedValue(false),

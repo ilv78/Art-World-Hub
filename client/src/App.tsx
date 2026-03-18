@@ -22,6 +22,8 @@ import AuthPage from "@/pages/auth-page";
 import SetPassword from "@/pages/set-password";
 import AdminPage from "@/pages/admin";
 import CuratorDashboard from "@/pages/curator-dashboard";
+import CuratorGalleryPage from "@/pages/curator-gallery";
+import Exhibitions from "@/pages/exhibitions";
 import Changelog from "@/pages/changelog";
 import NotFound from "@/pages/not-found";
 
@@ -30,6 +32,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/gallery" component={Gallery} />
+      <Route path="/exhibitions" component={Exhibitions} />
       <Route path="/store" component={Store} />
       <Route path="/auctions" component={Auctions} />
       <Route path="/artists" component={Artists} />
@@ -38,6 +41,7 @@ function Router() {
       <Route path="/blog" component={Blog} />
       <Route path="/blog/:id" component={BlogPost} />
       <Route path="/curator" component={CuratorDashboard} />
+      <Route path="/curator-gallery/:id" component={CuratorGalleryPage} />
       <Route path="/admin" component={AdminPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/auth/set-password" component={SetPassword} />

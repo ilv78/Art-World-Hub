@@ -1,4 +1,4 @@
-import { Home, Image, ShoppingBag, Users, LayoutDashboard, BookOpen, LogIn, LogOut, Shield, Brush } from "lucide-react";
+import { Home, Image, ShoppingBag, Users, LayoutDashboard, BookOpen, LogIn, LogOut, Shield, Brush, Calendar } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,11 @@ const menuItems = [
     title: "Virtual Gallery",
     url: "/gallery",
     icon: Image,
+  },
+  {
+    title: "Exhibitions",
+    url: "/exhibitions",
+    icon: Calendar,
   },
   {
     title: "Store",
