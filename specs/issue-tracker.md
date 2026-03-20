@@ -72,6 +72,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 4 | Bug hunter | medium | devops | 2026-03-17 | `fix/issue-25-gallery-slot-count` | #30 |
 | 75 | Upgrade recharts from 2.x to 3.x | high | bug | 2026-03-17 | `fix/issue-75-recharts-upgrade` | #159 |
 | 7 | Role gallery curator | medium | feature | 2026-03-18 | `feature/issue-42-backfill-docs` | #48 |
+| 172 | Mobile adaptation | critical | bug | 2026-03-20 | `fix/issue-172-mobile-adaptation` | #173 |
 ---
 
 ## Revision Log
@@ -102,3 +103,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-17 | Auto-closed #4 (Bug hunter). Moved from Active to Completed. PR #30. |
 | 2026-03-17 | Auto-closed #75 (Upgrade recharts from 2.x to 3.x). Moved from Active to Completed. PR #159. |
 | 2026-03-18 | Auto-closed #7 (Role gallery curator). Moved from Active to Completed. PR #48. |
+| 2026-03-20 | Auto-closed #172 (Mobile adaptation). Added to Completed. PR #173. |
