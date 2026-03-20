@@ -32,7 +32,8 @@ interface ArtistRoom {
 }
 
 export default function Gallery() {
-  const [viewMode, setViewMode] = useState<ViewMode>("3d");
+  const isMobile = typeof window !== "undefined" && ("ontouchstart" in window || navigator.maxTouchPoints > 0);
+  const [viewMode, setViewMode] = useState<ViewMode>(isMobile ? "classic" : "3d");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [showInfo, setShowInfo] = useState(false);
@@ -85,6 +86,9 @@ export default function Gallery() {
     }
   };
 
+  // Swipe tracking for mobile classic view
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (viewMode !== "classic") return;
@@ -93,8 +97,29 @@ export default function Gallery() {
       if (e.key === "i") setShowInfo((prev) => !prev);
       if (e.key === "Escape") setShowInfo(false);
     };
+    const handleTouchStart = (e: TouchEvent) => {
+      if (viewMode !== "classic") return;
+      touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    };
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (viewMode !== "classic" || !touchStartRef.current) return;
+      const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
+      const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
+      touchStartRef.current = null;
+      // Only horizontal swipes (minimum 50px, not too vertical)
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        if (dx < 0) handleNext();
+        else handlePrevious();
+      }
+    };
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+    window.addEventListener("touchend", handleTouchEnd, { passive: true });
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchend", handleTouchEnd);
+    };
   }, [galleryArtworks.length, viewMode]);
 
   const isLoading = artworksLoading || hallwayLoading;
@@ -191,7 +216,7 @@ export default function Gallery() {
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-32 bg-gradient-to-b from-yellow-100/30 to-transparent dark:from-yellow-100/10 blur-xl" />
           </div>
 
-          <div className="relative flex-1 flex items-center justify-center gap-4 p-8">
+          <div className="relative flex-1 flex items-center justify-center gap-2 sm:gap-4 p-4 sm:p-8">
             <Button
               variant="secondary"
               size="icon"
@@ -209,10 +234,10 @@ export default function Gallery() {
               <img
                 src={currentArtwork.imageUrl}
                 alt={currentArtwork.title}
-                className="max-w-lg max-h-[60vh] object-contain shadow-2xl rounded-sm"
+                className="max-w-[70vw] sm:max-w-lg max-h-[50vh] sm:max-h-[60vh] object-contain shadow-2xl rounded-sm"
                 data-testid="img-current-artwork"
               />
-              <div className="absolute bottom-0 left-full ml-2 z-20 w-48 p-2 bg-white/90 dark:bg-stone-800/90 backdrop-blur-sm shadow-lg rounded-sm text-left">
+              <div className="absolute -bottom-12 left-0 right-0 sm:bottom-0 sm:left-full sm:right-auto sm:ml-2 z-20 w-auto sm:w-48 p-2 bg-white/90 dark:bg-stone-800/90 backdrop-blur-sm shadow-lg rounded-sm text-left">
                 <h3 className="font-serif font-bold text-sm truncate" data-testid="text-artwork-title">
                   {currentArtwork.title}
                 </h3>
@@ -220,7 +245,7 @@ export default function Gallery() {
                   {currentArtwork.artist.name}
                   {currentArtwork.year && `, ${currentArtwork.year}`}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">{currentArtwork.medium}</p>
+                <p className="text-xs text-muted-foreground mt-1 hidden sm:block">{currentArtwork.medium}</p>
               </div>
             </div>
 
