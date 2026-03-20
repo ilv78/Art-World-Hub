@@ -75,6 +75,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 172 | Mobile adaptation | critical | bug | 2026-03-20 | `fix/issue-172-mobile-adaptation` | #173 |
 | 177 | Fix high-severity npm audit vulnerability in flatted | critical | bug | 2026-03-20 | `fix/issue-177-flatted-audit` | #178 |
 | 171 | Order cannot be submited | — | bug | 2026-03-20 | `fix/issue-171-order-submission` | #176 |
+| 170 | Store system - umbrella | high | enhancement | 2026-03-20 | `dependabot/github_actions/appleboy/scp-action-1.0.0` | #58 |
 ---
 
 ## Revision Log
@@ -108,3 +109,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-20 | Auto-closed #172 (Mobile adaptation). Added to Completed. PR #173. |
 | 2026-03-20 | Auto-closed #177 (Fix high-severity npm audit vulnerability in flatted). Added to Completed. PR #178. |
 | 2026-03-20 | Auto-closed #171 (Order cannot be submited). Added to Completed. PR #176. |
+| 2026-03-20 | Auto-closed #170 (Store system - umbrella). Added to Completed. PR #58. |
