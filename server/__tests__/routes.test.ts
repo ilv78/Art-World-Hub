@@ -177,6 +177,15 @@ describe("GET /api/artists/:id/orders", () => {
 // ----- POST validation -----
 
 describe("POST /api/orders", () => {
+  const artworkForSale = {
+    id: "a1",
+    title: "Painting",
+    price: "500.00",
+    isForSale: true,
+    artistId: "art1",
+    artist: { id: "art1", name: "Alice" },
+  };
+
   it("returns 400 with zod error for invalid body", async () => {
     const res = await request(app)
       .post("/api/orders")
@@ -197,9 +206,10 @@ describe("POST /api/orders", () => {
     };
 
     const createdOrder = { id: "o1", ...orderData, createdAt: new Date().toISOString() };
+    (mockStorage.getArtwork as ReturnType<typeof vi.fn>).mockResolvedValue(artworkForSale);
     (mockStorage.createOrder as ReturnType<typeof vi.fn>).mockResolvedValue(createdOrder);
     (mockStorage.updateArtwork as ReturnType<typeof vi.fn>).mockResolvedValue({});
-    (mockStorage.getArtwork as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (mockStorage.getArtist as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 
     const res = await request(app)
       .post("/api/orders")
@@ -210,10 +220,68 @@ describe("POST /api/orders", () => {
     expect(mockStorage.updateArtwork).toHaveBeenCalledWith("a1", { isForSale: false });
   });
 
-  it("rejects unauthenticated requests", async () => {
-    // This test verifies the middleware is wired — the mock always authenticates,
-    // so we test the route integration indirectly via the other tests above.
-    // A dedicated auth-bypass test would require a separate app without the mock.
+  it("uses DB price instead of client-sent price", async () => {
+    const orderData = {
+      artworkId: "a1",
+      buyerName: "John",
+      buyerEmail: "john@example.com",
+      shippingAddress: "123 Main St",
+      totalAmount: "1.00",
+      status: "pending",
+    };
+
+    const createdOrder = { id: "o1", ...orderData, totalAmount: "500.00", createdAt: new Date().toISOString() };
+    (mockStorage.getArtwork as ReturnType<typeof vi.fn>).mockResolvedValue(artworkForSale);
+    (mockStorage.createOrder as ReturnType<typeof vi.fn>).mockResolvedValue(createdOrder);
+    (mockStorage.updateArtwork as ReturnType<typeof vi.fn>).mockResolvedValue({});
+    (mockStorage.getArtist as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+
+    const res = await request(app)
+      .post("/api/orders")
+      .send(orderData);
+
+    expect(res.status).toBe(201);
+    expect(mockStorage.createOrder).toHaveBeenCalledWith(
+      expect.objectContaining({ totalAmount: "500.00" })
+    );
+  });
+
+  it("returns 404 when artwork does not exist", async () => {
+    (mockStorage.getArtwork as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+
+    const res = await request(app)
+      .post("/api/orders")
+      .send({
+        artworkId: "nonexistent",
+        buyerName: "John",
+        buyerEmail: "john@example.com",
+        shippingAddress: "123 Main St",
+        totalAmount: "500.00",
+        status: "pending",
+      });
+
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 400 when artwork is not for sale", async () => {
+    (mockStorage.getArtwork as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...artworkForSale,
+      isForSale: false,
+    });
+
+    const res = await request(app)
+      .post("/api/orders")
+      .send({
+        artworkId: "a1",
+        buyerName: "John",
+        buyerEmail: "john@example.com",
+        shippingAddress: "123 Main St",
+        totalAmount: "500.00",
+        status: "pending",
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain("not available");
   });
 });
 
