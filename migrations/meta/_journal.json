@@ -36,6 +36,13 @@
       "when": 1773865182702,
       "tag": "0004_nice_flatman",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1774046316444,
+      "tag": "0005_funny_moonstone",
+      "breakpoints": true
     }
   ]
 }
