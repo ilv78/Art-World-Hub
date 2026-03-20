@@ -51,6 +51,10 @@ export default function Gallery() {
     queryKey: ["/api/gallery/curated"],
   });
 
+  const { data: siteSettings } = useQuery<{ galleryTemplate: string }>({
+    queryKey: ["/api/site-settings"],
+  });
+
   const { addItem, items } = useCartStore();
   const { toast } = useToast();
 
@@ -192,7 +196,7 @@ export default function Gallery() {
       {viewMode === "3d" && (
         <div className="flex-1 relative">
           {hallwayData && hallwayData.length > 0 ? (
-            <HallwayGallery3D artistRooms={hallwayData} curatorRooms={curatedData} />
+            <HallwayGallery3D artistRooms={hallwayData} curatorRooms={curatedData} museumTemplate={siteSettings?.galleryTemplate} />
           ) : (
             <div className="h-full flex items-center justify-center">
               <div className="text-center space-y-4">

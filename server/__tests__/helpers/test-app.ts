@@ -57,6 +57,8 @@ const { mockStorage } = vi.hoisted(() => {
     setCuratorGalleryArtworks: fn().mockResolvedValue(undefined),
     regenerateCuratorGalleryLayout: fn().mockResolvedValue({ width: 3, height: 3, cells: [], spawnPoint: { x: 1, z: 1 } }),
     getAllExhibitionReadyArtworks: fn().mockResolvedValue([]),
+    getSiteSettings: fn().mockResolvedValue({ id: "default", galleryTemplate: "contemporary", updatedAt: new Date() }),
+    updateSiteSettings: fn().mockResolvedValue({ id: "default", galleryTemplate: "contemporary", updatedAt: new Date() }),
   };
   return { mockStorage };
 });

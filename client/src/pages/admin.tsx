@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { AlertTriangle, Shield, Trash2, Users, Palette, Image, Calendar, BookOpen } from "lucide-react";
+import { AlertTriangle, Shield, Trash2, Users, Palette, Image, Calendar, BookOpen, Settings } from "lucide-react";
+import { GALLERY_TEMPLATES } from "@/lib/gallery-templates";
 import { formatPrice } from "@/lib/utils";
 import {
   AlertDialog,
@@ -109,6 +110,25 @@ export default function AdminPage() {
     queryKey: ["/api/admin/blog"],
     queryFn: () => apiFetch("/api/admin/blog"),
     enabled: user?.role === "admin",
+  });
+
+  const { data: siteSettings } = useQuery<{ galleryTemplate: string }>({
+    queryKey: ["/api/site-settings"],
+    queryFn: () => apiFetch("/api/site-settings"),
+    enabled: user?.role === "admin",
+  });
+
+  const updateSettingsMutation = useMutation({
+    mutationFn: (data: { galleryTemplate: string }) =>
+      apiFetch("/api/admin/site-settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/site-settings"] });
+      toast({ title: "Museum template updated" });
+    },
   });
 
   const updateRoleMutation = useMutation({
@@ -262,6 +282,7 @@ export default function AdminPage() {
           <TabsTrigger value="artworks"><Image className="w-4 h-4 mr-2" />Artworks</TabsTrigger>
           <TabsTrigger value="exhibitions"><Calendar className="w-4 h-4 mr-2" />Exhibitions</TabsTrigger>
           <TabsTrigger value="blog"><BookOpen className="w-4 h-4 mr-2" />Blog</TabsTrigger>
+          <TabsTrigger value="settings"><Settings className="w-4 h-4 mr-2" />Settings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users">
@@ -528,6 +549,45 @@ export default function AdminPage() {
                   </TableBody>
                 </Table>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <Card>
+            <CardHeader>
+              <CardTitle>Museum Template</CardTitle>
+              <CardDescription>Choose the visual style for the entire virtual museum — hallway, artist rooms, and curated galleries.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                {Object.values(GALLERY_TEMPLATES).map((t) => {
+                  const isSelected = siteSettings?.galleryTemplate === t.id;
+                  const toHex = (n: number) => "#" + n.toString(16).padStart(6, "0");
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => updateSettingsMutation.mutate({ galleryTemplate: t.id })}
+                      className={`relative rounded-lg border-2 p-4 text-left transition-all hover:shadow-md ${
+                        isSelected ? "border-primary ring-2 ring-primary/20" : "border-border hover:border-primary/50"
+                      }`}
+                    >
+                      <div className="flex flex-col gap-2">
+                        <div className="h-16 rounded-md overflow-hidden flex flex-col" style={{ background: toHex(t.backgroundColor) }}>
+                          <div className="flex-1 mx-1 mt-1 rounded-t-sm" style={{ background: toHex(t.wallColor) }} />
+                          <div className="h-4 mx-1 rounded-b-sm" style={{ background: toHex(t.floorColor) }} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{t.name}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-2">{t.description}</p>
+                        </div>
+                        {isSelected && <Badge className="absolute top-2 right-2">Active</Badge>}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

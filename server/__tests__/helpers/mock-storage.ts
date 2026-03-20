@@ -74,5 +74,7 @@ export function createMockStorage(): IStorage {
     deleteUser: vi.fn().mockResolvedValue(false),
     deleteExhibition: vi.fn().mockResolvedValue(false),
     getAllBlogPosts: vi.fn().mockResolvedValue([]),
+    getSiteSettings: vi.fn().mockResolvedValue({ id: "default", galleryTemplate: "contemporary", updatedAt: new Date() }),
+    updateSiteSettings: vi.fn().mockResolvedValue({ id: "default", galleryTemplate: "contemporary", updatedAt: new Date() }),
   };
 }

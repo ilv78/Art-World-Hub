@@ -72,11 +72,8 @@ app.use(
 );
 
 (async () => {
-  // Seed database with initial data (disabled by default in production).
-  // Enable explicitly with SEED_DB=true.
-  if (process.env.SEED_DB === "true") {
-    await seedDatabase();
-  }
+  // Seed database with initial data only when database is empty.
+  await seedDatabase();
 
   await registerRoutes(httpServer, app);
 

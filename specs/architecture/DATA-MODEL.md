@@ -25,7 +25,7 @@ All tables defined using Drizzle ORM. Main schema in `shared/schema.ts`, auth ta
 | **users** | `shared/models/auth.ts` | id, email (unique), password (nullable, bcrypt hash), emailVerified (boolean), role (varchar, default "user" — user/curator/admin), firstName, lastName, profileImageUrl, createdAt, updatedAt | Authentication accounts (OIDC + local) with RBAC |
 | **sessions** | `shared/models/auth.ts` | sid (PK), sess (jsonb), expire | PostgreSQL session store (connect-pg-simple) |
 | **magic_links** | `shared/models/auth.ts` | id, email, token (unique), expiresAt, usedAt, createdAt | Email signup verification tokens (1-hour expiry, single-use) |
-| **artists** | `shared/schema.ts` | id, userId (FK→users), name, bio, avatarUrl, country, specialization, email, galleryLayout (jsonb), socialLinks (jsonb) | Artist profiles |
+| **artists** | `shared/schema.ts` | id, userId (FK→users), name, bio, avatarUrl, country, specialization, email, galleryLayout (jsonb), galleryTemplate (varchar, default 'contemporary'), socialLinks (jsonb) | Artist profiles |
 | **artworks** | `shared/schema.ts` | id, title, description, imageUrl, artistId (FK→artists), price (decimal), medium, dimensions, year, isForSale, isInGallery, isReadyForExhibition, exhibitionOrder, category | Art pieces |
 | **auctions** | `shared/schema.ts` | id, artworkId (FK→artworks), startingPrice, currentBid, minimumIncrement, startTime, endTime, status, winnerName | Live auctions |
 | **bids** | `shared/schema.ts` | id, auctionId (FK→auctions), bidderName, amount, timestamp | Auction bids |

@@ -16,6 +16,7 @@ import {
   type MazeCell,
   artists, artworks, auctions, bids, orders, exhibitions, exhibitionArtworks, blogPosts,
   curatorGalleries, curatorGalleryArtworks,
+  type SiteSettings, siteSettings,
 } from "@shared/schema";
 import { type User, type UserRole, users } from "@shared/models/auth";
 import { sessions } from "@shared/models/auth";
@@ -96,6 +97,8 @@ export interface IStorage {
   deleteUser(id: string): Promise<boolean>;
   deleteExhibition(id: string): Promise<boolean>;
   getAllBlogPosts(): Promise<BlogPostWithArtist[]>;
+  getSiteSettings(): Promise<SiteSettings>;
+  updateSiteSettings(data: Partial<Pick<SiteSettings, "galleryTemplate">>): Promise<SiteSettings>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -595,6 +598,22 @@ export class DatabaseStorage implements IStorage {
       .where(eq(artworks.isReadyForExhibition, true))
       .orderBy(asc(artists.name), asc(artworks.title));
     return result.map(({ artworks: artwork, artists: artist }) => ({ ...artwork, artist }));
+  }
+
+  async getSiteSettings(): Promise<SiteSettings> {
+    const [row] = await db.select().from(siteSettings).where(eq(siteSettings.id, "default"));
+    if (row) return row;
+    const [created] = await db.insert(siteSettings).values({ id: "default" }).returning();
+    return created;
+  }
+
+  async updateSiteSettings(data: Partial<Pick<SiteSettings, "galleryTemplate">>): Promise<SiteSettings> {
+    await this.getSiteSettings(); // ensure row exists
+    const [updated] = await db.update(siteSettings)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(siteSettings.id, "default"))
+      .returning();
+    return updated;
   }
 }
 

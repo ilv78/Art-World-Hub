@@ -200,10 +200,10 @@ export default function ArtistProfile() {
               <Skeleton className="h-[500px] rounded-md" />
             ) : galleryArtworks.length > 0 && galleryLayout ? (
               <div data-testid="artist-gallery-3d">
-                <MazeGallery3D 
-                  artworks={galleryArtworks} 
+                <MazeGallery3D
+                  artworks={galleryArtworks}
                   layout={galleryLayout}
-                  whiteRoom={true}
+                  galleryTemplate={artist.galleryTemplate || "contemporary"}
                   artist={artist}
                   onExitGallery={() => setActiveTab("portfolio")}
                 />

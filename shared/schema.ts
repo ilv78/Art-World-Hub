@@ -17,6 +17,7 @@ export const artists = pgTable("artists", {
   specialization: text("specialization"),
   email: text("email"),
   galleryLayout: jsonb("gallery_layout"),
+  galleryTemplate: varchar("gallery_template").default("contemporary"),
   socialLinks: jsonb("social_links").$type<Record<string, string>>(),
 });
 
@@ -170,6 +171,7 @@ export const curatorGalleries = pgTable("curator_galleries", {
   name: text("name").notNull(),
   description: text("description"),
   galleryLayout: jsonb("gallery_layout"),
+  galleryTemplate: varchar("gallery_template").default("contemporary"),
   isPublished: boolean("is_published").default(false),
   timezone: text("timezone").default("UTC"),
   startDate: timestamp("start_date"),
@@ -199,6 +201,15 @@ export type CuratorGalleryWithArtworks = CuratorGallery & {
   artworks: ArtworkWithArtist[];
   curator: { id: string; firstName: string | null; lastName: string | null };
 };
+
+// Site settings — single-row config table for admin-controlled settings
+export const siteSettings = pgTable("site_settings", {
+  id: varchar("id").primaryKey().default("default"),
+  galleryTemplate: varchar("gallery_template").default("contemporary").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type SiteSettings = typeof siteSettings.$inferSelect;
 
 // Layout types for the 3D maze
 export interface MazeCell {

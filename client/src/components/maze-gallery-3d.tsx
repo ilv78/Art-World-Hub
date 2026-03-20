@@ -13,11 +13,13 @@ import type { ArtworkWithArtist, Artist, MazeLayout, MazeCell } from "@shared/sc
 import { useCartStore } from "@/lib/cart-store";
 import { formatPrice } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { getTemplate, type GalleryTemplate, type TextureSet } from "@/lib/gallery-templates";
 
 interface MazeGallery3DProps {
   artworks: ArtworkWithArtist[];
   layout?: MazeLayout;
   whiteRoom?: boolean;
+  galleryTemplate?: string;
   artist?: Artist;
   onExitGallery?: () => void;
 }
@@ -90,8 +92,11 @@ function artworkScale(dimensions: string | null | undefined, maxSize: number): {
   return { w: finalW, h: finalH };
 }
 
-export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = false, artist, onExitGallery }: MazeGallery3DProps) {
-  const CELL_SIZE = whiteRoom ? CELL_SIZE_WHITE : CELL_SIZE_DEFAULT;
+export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = false, galleryTemplate: templateId, artist, onExitGallery }: MazeGallery3DProps) {
+  // Resolve template: explicit galleryTemplate prop takes priority, then whiteRoom legacy fallback
+  const tmpl: GalleryTemplate = getTemplate(templateId || (whiteRoom ? "contemporary" : undefined));
+  const isLightTheme = tmpl.ambientIntensity >= 0.8;
+  const CELL_SIZE = CELL_SIZE_WHITE;
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -145,89 +150,77 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
     }
   }, [selectedArtwork, isInCart, addItem, toast]);
 
-  const createMaze = useCallback((scene: THREE.Scene) => {
-    const wallColor = whiteRoom ? 0xf5f0eb : 0x3d3d3d;
+  // Load a texture set (color + normal + roughness) with tiling
+  const loadTexturedMaterial = useCallback((
+    texSet: TextureSet | null,
+    fallbackColor: number,
+    roughness: number,
+    repeat: number,
+    opts?: { metalness?: number },
+  ): THREE.MeshStandardMaterial => {
+    const loader = new THREE.TextureLoader();
+    const setupTile = (tex: THREE.Texture) => {
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(repeat, repeat);
+      return tex;
+    };
 
+    if (!texSet) {
+      return new THREE.MeshStandardMaterial({ color: fallbackColor, roughness, metalness: opts?.metalness || 0 });
+    }
+
+    const mat = new THREE.MeshStandardMaterial({ color: fallbackColor, roughness });
+
+    loader.load(texSet.color, (tex) => {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      setupTile(tex);
+      mat.map = tex;
+      mat.needsUpdate = true;
+    });
+    loader.load(texSet.normal, (tex) => {
+      setupTile(tex);
+      mat.normalMap = tex;
+      mat.normalScale = new THREE.Vector2(0.8, 0.8);
+      mat.needsUpdate = true;
+    });
+    loader.load(texSet.roughness, (tex) => {
+      setupTile(tex);
+      mat.roughnessMap = tex;
+      mat.needsUpdate = true;
+    });
+
+    return mat;
+  }, []);
+
+  const createMaze = useCallback((scene: THREE.Scene) => {
     const floorW = layout.width * CELL_SIZE + 4;
     const floorH = layout.height * CELL_SIZE + 4;
 
-    if (whiteRoom) {
-      const floorCanvas = document.createElement("canvas");
-      floorCanvas.width = 512;
-      floorCanvas.height = 512;
-      const fctx = floorCanvas.getContext("2d")!;
-      fctx.fillStyle = "#c8a882";
-      fctx.fillRect(0, 0, 512, 512);
-      const plankColors = ["#c8a882", "#bfa078", "#d4b896", "#b8956e", "#cbb08a", "#c2a07a", "#d0b090", "#c5a47e"];
-      const plankHeight = 24;
-      const plankWidth = 512;
-      for (let row = 0; row < Math.ceil(512 / plankHeight); row++) {
-        const py = row * plankHeight;
-        const baseColor = plankColors[row % plankColors.length];
-        fctx.fillStyle = baseColor;
-        fctx.fillRect(0, py, plankWidth, plankHeight - 1);
+    // Floor
+    const floorMat = loadTexturedMaterial(
+      tmpl.floorTexture, tmpl.floorColor, tmpl.floorRoughness, tmpl.floorRepeat,
+      { metalness: tmpl.floorType === "glossy" ? 0.1 : 0 },
+    );
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(floorW, floorH), floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.set(layout.width * CELL_SIZE / 2, 0, layout.height * CELL_SIZE / 2);
+    floor.receiveShadow = true;
+    scene.add(floor);
 
-        fctx.strokeStyle = "rgba(120, 80, 40, 0.3)";
-        fctx.lineWidth = 1;
-        fctx.beginPath();
-        fctx.moveTo(0, py + plankHeight - 1);
-        fctx.lineTo(plankWidth, py + plankHeight - 1);
-        fctx.stroke();
+    // Ceiling
+    const ceilMat = new THREE.MeshStandardMaterial({ color: tmpl.ceilingColor, roughness: tmpl.ceilingRoughness });
+    const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(floorW, floorH), ceilMat);
+    ceiling.rotation.x = Math.PI / 2;
+    ceiling.position.set(layout.width * CELL_SIZE / 2, WALL_HEIGHT, layout.height * CELL_SIZE / 2);
+    scene.add(ceiling);
 
-        fctx.strokeStyle = "rgba(90, 60, 30, 0.08)";
-        fctx.lineWidth = 0.5;
-        for (let g = 0; g < 6; g++) {
-          const gy = py + 3 + g * (plankHeight / 7);
-          fctx.beginPath();
-          fctx.moveTo(0, gy);
-          fctx.bezierCurveTo(128, gy + (g % 2 === 0 ? 1 : -1), 384, gy + (g % 2 === 0 ? -0.5 : 0.5), 512, gy);
-          fctx.stroke();
-        }
-      }
-      const floorTexture = new THREE.CanvasTexture(floorCanvas);
-      floorTexture.wrapS = THREE.RepeatWrapping;
-      floorTexture.wrapT = THREE.RepeatWrapping;
-      floorTexture.repeat.set(layout.width, layout.height);
-      floorTexture.colorSpace = THREE.SRGBColorSpace;
-      const floorGeo = new THREE.PlaneGeometry(floorW, floorH);
-      const floorMat = new THREE.MeshStandardMaterial({ map: floorTexture, roughness: 0.7 });
-      const floor = new THREE.Mesh(floorGeo, floorMat);
-      floor.rotation.x = -Math.PI / 2;
-      floor.position.set(layout.width * CELL_SIZE / 2, 0, layout.height * CELL_SIZE / 2);
-      floor.receiveShadow = true;
-      scene.add(floor);
-    } else {
-      const floorGeo = new THREE.PlaneGeometry(floorW, floorH);
-      const floorMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.8 });
-      const floor = new THREE.Mesh(floorGeo, floorMat);
-      floor.rotation.x = -Math.PI / 2;
-      floor.position.set(layout.width * CELL_SIZE / 2, 0, layout.height * CELL_SIZE / 2);
-      floor.receiveShadow = true;
-      scene.add(floor);
-    }
+    // Walls
+    const wallMaterial = loadTexturedMaterial(
+      tmpl.wallTexture, tmpl.wallColor, tmpl.wallRoughness, tmpl.wallRepeat,
+    );
 
-    if (whiteRoom) {
-      const ceilGeo = new THREE.PlaneGeometry(floorW, floorH);
-      const ceilMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 });
-      const ceiling = new THREE.Mesh(ceilGeo, ceilMat);
-      ceiling.rotation.x = Math.PI / 2;
-      ceiling.position.set(layout.width * CELL_SIZE / 2, WALL_HEIGHT, layout.height * CELL_SIZE / 2);
-      scene.add(ceiling);
-    } else {
-      const ceilGeo = new THREE.PlaneGeometry(floorW, floorH);
-      const ceilMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9 });
-      const ceiling = new THREE.Mesh(ceilGeo, ceilMat);
-      ceiling.rotation.x = Math.PI / 2;
-      ceiling.position.set(layout.width * CELL_SIZE / 2, WALL_HEIGHT, layout.height * CELL_SIZE / 2);
-      scene.add(ceiling);
-    }
-
-    const wallMaterial = new THREE.MeshStandardMaterial({ 
-      color: wallColor,
-      roughness: 0.7,
-    });
-
-    const doorFrameMaterial = new THREE.MeshStandardMaterial({ color: 0x5c3a1e, roughness: 0.6 });
+    const doorFrameMaterial = new THREE.MeshStandardMaterial({ color: tmpl.doorFrameColor, roughness: 0.6 });
     const doorCenterX = Math.floor(layout.width / 2);
 
     layout.cells.forEach((cell) => {
@@ -246,7 +239,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
       }
 
       if (cell.walls.south) {
-        const isDoorCell = whiteRoom && cell.z === 0 && cell.x === doorCenterX;
+        const isDoorCell = tmpl.hasDoor && cell.z === 0 && cell.x === doorCenterX;
         if (isDoorCell) {
           const doorWidth = CELL_SIZE * 0.5;
           const sideWidth = (CELL_SIZE - doorWidth) / 2;
@@ -293,7 +286,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
           lintelFrame.position.set(baseX + CELL_SIZE / 2, doorHeight, baseZ);
           scene.add(lintelFrame);
 
-          const doorPanelMat = new THREE.MeshStandardMaterial({ color: 0x6b4226, roughness: 0.5 });
+          const doorPanelMat = new THREE.MeshStandardMaterial({ color: tmpl.doorPanelColor, roughness: 0.5 });
           const doorPanel = new THREE.Mesh(
             new THREE.BoxGeometry(doorWidth - 0.04, doorHeight - 0.04, 0.06),
             doorPanelMat
@@ -336,7 +329,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
       }
     });
 
-  }, [layout, whiteRoom, CELL_SIZE]);
+  }, [layout, tmpl, CELL_SIZE, loadTexturedMaterial]);
 
   const computeSlotPosition = useCallback((wallId: string) => {
     const [cellX, cellZ, direction] = wallId.split("-");
@@ -522,7 +515,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
     });
     allSlots.sort((a, b) => a.position - b.position);
 
-    const hasPoster = whiteRoom && artist;
+    const hasPoster = isLightTheme && artist;
     let artworkIndex = 0;
     const zones: { x: number; z: number; normalX: number; normalZ: number }[] = [];
 
@@ -589,32 +582,624 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
       }
     }
     artworkCollisionZones.current = zones;
-  }, [layout, artworks, CELL_SIZE, whiteRoom, artist, computeSlotPosition, createArtistPoster]);
+  }, [layout, artworks, CELL_SIZE, isLightTheme, artist, computeSlotPosition, createArtistPoster]);
 
   // Setup lighting - minimal to avoid shader limits
   const setupLighting = useCallback((scene: THREE.Scene) => {
-    if (whiteRoom) {
-      const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
-      scene.add(ambientLight);
+    const ambientLight = new THREE.AmbientLight(tmpl.ambientColor, tmpl.ambientIntensity);
+    scene.add(ambientLight);
 
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-      directionalLight.position.set(layout.width * CELL_SIZE / 2, WALL_HEIGHT * 2, layout.height * CELL_SIZE / 2);
-      scene.add(directionalLight);
+    const directionalLight = new THREE.DirectionalLight(tmpl.directionalColor, tmpl.directionalIntensity);
+    directionalLight.position.set(layout.width * CELL_SIZE / 2, WALL_HEIGHT * 2, layout.height * CELL_SIZE / 2);
+    scene.add(directionalLight);
 
-      const hemiLight = new THREE.HemisphereLight(0xffffff, 0xe8e0d8, 0.5);
-      scene.add(hemiLight);
-    } else {
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-      scene.add(ambientLight);
+    const hemiLight = new THREE.HemisphereLight(tmpl.hemisphereColor, tmpl.hemisphereGroundColor, tmpl.hemisphereIntensity);
+    scene.add(hemiLight);
 
-      const directionalLight = new THREE.DirectionalLight(0xfff5e6, 0.5);
-      directionalLight.position.set(layout.width * CELL_SIZE / 2, WALL_HEIGHT * 2, layout.height * CELL_SIZE / 2);
-      scene.add(directionalLight);
+    // Artwork spotlights — track-light fixtures with point lights
+    const allSlots: { wallId: string; position: number }[] = [];
+    layout.cells.forEach((cell) => cell.artworkSlots.forEach((s) => allSlots.push(s)));
+    allSlots.sort((a, b) => a.position - b.position);
 
-      const hemiLight = new THREE.HemisphereLight(0xfff5e6, 0x444444, 0.3);
-      scene.add(hemiLight);
+    const spotColor = isLightTheme ? 0xfff8f0 : 0xfff5e6;
+    const spotIntensity = isLightTheme ? 2.0 : 3.0;
+    const maxSpots = 20;
+
+    for (let i = 0; i < Math.min(allSlots.length, maxSpots); i++) {
+      const pos = computeSlotPosition(allSlots[i].wallId);
+      const dir = allSlots[i].wallId.split("-")[2];
+      // Offset light from wall towards room center
+      const offsetDist = 0.5;
+      let lx = pos.x, lz = pos.z;
+      if (dir === "north") lz -= offsetDist;
+      else if (dir === "south") lz += offsetDist;
+      else if (dir === "east") lx -= offsetDist;
+      else if (dir === "west") lx += offsetDist;
+
+      // Track-light fixture (small cylinder on ceiling)
+      const fixtureGeo = new THREE.CylinderGeometry(0.04, 0.06, 0.08, 8);
+      const fixtureMat = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8, roughness: 0.3 });
+      const fixture = new THREE.Mesh(fixtureGeo, fixtureMat);
+      fixture.position.set(lx, WALL_HEIGHT - 0.04, lz);
+      scene.add(fixture);
+
+      // SpotLight aimed at artwork
+      const spot = new THREE.SpotLight(spotColor, spotIntensity, 5, Math.PI / 6, 0.5, 1);
+      spot.position.set(lx, WALL_HEIGHT - 0.1, lz);
+      spot.target.position.set(pos.x, WALL_HEIGHT / 2, pos.z);
+      scene.add(spot);
+      scene.add(spot.target);
     }
-  }, [layout, whiteRoom, CELL_SIZE]);
+  }, [layout, tmpl, CELL_SIZE, isLightTheme, computeSlotPosition]);
+
+  // Template-specific decorative elements
+  const addDecorations = useCallback((scene: THREE.Scene) => {
+    const roomW = layout.width * CELL_SIZE;
+    const roomH = layout.height * CELL_SIZE;
+    const cx = roomW / 2;
+    const cz = roomH / 2;
+
+    // --- Shared helpers ---
+    const addPottedPlant = (px: number, pz: number, scale = 1) => {
+      // Terracotta pot
+      const potMat = new THREE.MeshStandardMaterial({ color: 0xb5704f, roughness: 0.8 });
+      const potR = 0.08 * scale, potH = 0.12 * scale;
+      const pot = new THREE.Mesh(new THREE.CylinderGeometry(potR, potR * 0.75, potH, 10), potMat);
+      pot.position.set(px, potH / 2, pz);
+      scene.add(pot);
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(potR, 0.01 * scale, 6, 10), potMat);
+      rim.rotation.x = Math.PI / 2;
+      rim.position.set(px, potH, pz);
+      scene.add(rim);
+      // Soil
+      const soilMat = new THREE.MeshStandardMaterial({ color: 0x3d2b1f, roughness: 1.0 });
+      const soil = new THREE.Mesh(new THREE.CylinderGeometry(potR * 0.9, potR * 0.9, 0.02, 10), soilMat);
+      soil.position.set(px, potH - 0.01, pz);
+      scene.add(soil);
+      // Foliage — layered spheres
+      const leafMats = [
+        new THREE.MeshStandardMaterial({ color: 0x3a7a2a, roughness: 0.85 }),
+        new THREE.MeshStandardMaterial({ color: 0x4a8a38, roughness: 0.85 }),
+        new THREE.MeshStandardMaterial({ color: 0x2e6e22, roughness: 0.85 }),
+      ];
+      const leafR = 0.1 * scale;
+      const baseY = potH + leafR * 0.6;
+      for (let li = 0; li < 5; li++) {
+        const r = leafR * (0.6 + Math.random() * 0.5);
+        const ang = (li / 5) * Math.PI * 2;
+        const ox = Math.cos(ang) * leafR * 0.4;
+        const oz = Math.sin(ang) * leafR * 0.4;
+        const oy = Math.random() * leafR * 0.5;
+        const leaf = new THREE.Mesh(new THREE.SphereGeometry(r, 7, 5), leafMats[li % 3]);
+        leaf.scale.set(1, 0.7 + Math.random() * 0.3, 1);
+        leaf.position.set(px + ox, baseY + oy, pz + oz);
+        scene.add(leaf);
+      }
+    };
+
+    // --- Baseboards (all templates except outdoor) ---
+    if (tmpl.id !== "outdoor") {
+      const baseH = tmpl.id === "classical" || tmpl.id === "luxury" ? 0.12 : 0.08;
+      const baseD = 0.025;
+      const baseColor = tmpl.id === "luxury" ? 0x8b7340 :
+                         tmpl.id === "classical" ? 0x6b5030 :
+                         tmpl.id === "industrial" || tmpl.id === "industrial-new" ? 0x3a3a3a :
+                         tmpl.id === "futuristic" ? 0xd0d8e8 :
+                         tmpl.wallColor;
+      const baseMat = new THREE.MeshStandardMaterial({
+        color: baseColor,
+        roughness: tmpl.id === "luxury" ? 0.3 : 0.7,
+        metalness: tmpl.id === "luxury" || tmpl.id === "industrial" || tmpl.id === "industrial-new" ? 0.4 : 0,
+      });
+      const addBaseboard = (w: number, d: number, x: number, z: number) => {
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, baseH, d), baseMat);
+        mesh.position.set(x, baseH / 2, z);
+        scene.add(mesh);
+      };
+      addBaseboard(roomW, baseD, cx, 0);
+      addBaseboard(roomW, baseD, cx, roomH);
+      addBaseboard(baseD, roomH, 0, cz);
+      addBaseboard(baseD, roomH, roomW, cz);
+
+      // Top trim strip on baseboard for classical/luxury
+      if (tmpl.id === "classical" || tmpl.id === "luxury") {
+        const trimMat = new THREE.MeshStandardMaterial({
+          color: tmpl.id === "luxury" ? 0xd4a854 : 0xc4a878,
+          metalness: tmpl.id === "luxury" ? 0.5 : 0.1,
+          roughness: 0.35,
+        });
+        const trimH = 0.015;
+        const addTrim = (w: number, d: number, x: number, z: number) => {
+          const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, trimH, d + 0.005), trimMat);
+          mesh.position.set(x, baseH + trimH / 2, z);
+          scene.add(mesh);
+        };
+        addTrim(roomW, baseD, cx, 0);
+        addTrim(roomW, baseD, cx, roomH);
+        addTrim(baseD, roomH, 0, cz);
+        addTrim(baseD, roomH, roomW, cz);
+      }
+    }
+
+    // =================================================================
+    // CONTEMPORARY — minimalist bench, potted plant, thin picture rail
+    // =================================================================
+    if (tmpl.id === "contemporary") {
+      // Bench — wooden seat on black steel frame
+      const seatMat = new THREE.MeshStandardMaterial({ color: 0xb89070, roughness: 0.5 });
+      const seat = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.05, 0.42), seatMat);
+      seat.position.set(cx, 0.44, cz);
+      scene.add(seat);
+      const frameMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, metalness: 0.7, roughness: 0.3 });
+      // U-shaped steel legs
+      for (const dx of [-0.55, 0.55]) {
+        for (const dz of [-0.18, 0.18]) {
+          const leg = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.42, 0.03), frameMat);
+          leg.position.set(cx + dx, 0.21, cz + dz);
+          scene.add(leg);
+        }
+        const crossBar = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 0.36), frameMat);
+        crossBar.position.set(cx + dx, 0.015, cz);
+        scene.add(crossBar);
+      }
+      // Potted plant near entrance
+      addPottedPlant(CELL_SIZE * 0.5, CELL_SIZE * 0.5, 1.1);
+      // Picture rail (thin horizontal line near ceiling)
+      const railMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.3, roughness: 0.4 });
+      for (const [w, d, x, z] of [[roomW, 0.005, cx, 0.01], [roomW, 0.005, cx, roomH - 0.01], [0.005, roomH, 0.01, cz], [0.005, roomH, roomW - 0.01, cz]] as [number, number, number, number][]) {
+        const rail = new THREE.Mesh(new THREE.BoxGeometry(w, 0.015, d), railMat);
+        rail.position.set(x, WALL_HEIGHT - 0.25, z);
+        scene.add(rail);
+      }
+    }
+
+    // =================================================================
+    // CLASSICAL — fluted columns, crown molding, wall panels, chandelier
+    // =================================================================
+    if (tmpl.id === "classical") {
+      // Crown molding — two-layer profile
+      const moldMat = new THREE.MeshStandardMaterial({ color: 0xd4b896, roughness: 0.45, metalness: 0.05 });
+      const addMolding = (w: number, d: number, x: number, z: number) => {
+        const m1 = new THREE.Mesh(new THREE.BoxGeometry(w, 0.05, d), moldMat);
+        m1.position.set(x, WALL_HEIGHT - 0.025, z);
+        scene.add(m1);
+        const m2 = new THREE.Mesh(new THREE.BoxGeometry(w, 0.03, d + 0.02), moldMat);
+        m2.position.set(x, WALL_HEIGHT - 0.065, z);
+        scene.add(m2);
+      };
+      addMolding(roomW, 0.06, cx, 0);
+      addMolding(roomW, 0.06, cx, roomH);
+      addMolding(0.06, roomH, 0, cz);
+      addMolding(0.06, roomH, roomW, cz);
+
+      // Fluted columns in corners
+      const colMat = new THREE.MeshStandardMaterial({ color: 0xe8dcc8, roughness: 0.35 });
+      const goldMat = new THREE.MeshStandardMaterial({ color: 0xc8a855, metalness: 0.5, roughness: 0.3 });
+      const colR = 0.09;
+      const corners = [
+        [CELL_SIZE * 0.55, CELL_SIZE * 0.55],
+        [roomW - CELL_SIZE * 0.55, CELL_SIZE * 0.55],
+        [CELL_SIZE * 0.55, roomH - CELL_SIZE * 0.55],
+        [roomW - CELL_SIZE * 0.55, roomH - CELL_SIZE * 0.55],
+      ];
+      for (const [px, pz] of corners) {
+        // Column shaft
+        const shaft = new THREE.Mesh(new THREE.CylinderGeometry(colR, colR * 1.05, WALL_HEIGHT - 0.4, 16), colMat);
+        shaft.position.set(px, WALL_HEIGHT / 2, pz);
+        scene.add(shaft);
+        // Fluting — 8 thin indentations
+        for (let fi = 0; fi < 8; fi++) {
+          const ang = (fi / 8) * Math.PI * 2;
+          const fx = px + Math.cos(ang) * (colR + 0.003);
+          const fz = pz + Math.sin(ang) * (colR + 0.003);
+          const flute = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, WALL_HEIGHT - 0.5, 4), colMat);
+          flute.position.set(fx, WALL_HEIGHT / 2, fz);
+          scene.add(flute);
+        }
+        // Ionic-style capital
+        const capBase = new THREE.Mesh(new THREE.CylinderGeometry(colR * 1.5, colR, 0.08, 16), colMat);
+        capBase.position.set(px, WALL_HEIGHT - 0.24, pz);
+        scene.add(capBase);
+        const capTop = new THREE.Mesh(new THREE.BoxGeometry(colR * 3.2, 0.04, colR * 3.2), colMat);
+        capTop.position.set(px, WALL_HEIGHT - 0.18, pz);
+        scene.add(capTop);
+        // Gold ring accent
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(colR * 1.05, 0.01, 8, 16), goldMat);
+        ring.rotation.x = Math.PI / 2;
+        ring.position.set(px, WALL_HEIGHT - 0.28, pz);
+        scene.add(ring);
+        // Base — stepped plinth
+        const base1 = new THREE.Mesh(new THREE.BoxGeometry(colR * 3.2, 0.06, colR * 3.2), colMat);
+        base1.position.set(px, 0.03, pz);
+        scene.add(base1);
+        const base2 = new THREE.Mesh(new THREE.CylinderGeometry(colR * 1.3, colR * 1.5, 0.08, 16), colMat);
+        base2.position.set(px, 0.1, pz);
+        scene.add(base2);
+      }
+
+      // Simple chandelier in center
+      const chanMat = new THREE.MeshStandardMaterial({ color: 0xc8a855, metalness: 0.6, roughness: 0.25 });
+      // Central rod
+      const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.4, 8), chanMat);
+      rod.position.set(cx, WALL_HEIGHT - 0.2, cz);
+      scene.add(rod);
+      // Ring
+      const chanRing = new THREE.Mesh(new THREE.TorusGeometry(0.25, 0.015, 8, 24), chanMat);
+      chanRing.rotation.x = Math.PI / 2;
+      chanRing.position.set(cx, WALL_HEIGHT - 0.4, cz);
+      scene.add(chanRing);
+      // Candle holders
+      for (let ci = 0; ci < 6; ci++) {
+        const ang = (ci / 6) * Math.PI * 2;
+        const candleX = cx + Math.cos(ang) * 0.25;
+        const candleZ = cz + Math.sin(ang) * 0.25;
+        const holder = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.015, 0.06, 6), chanMat);
+        holder.position.set(candleX, WALL_HEIGHT - 0.43, candleZ);
+        scene.add(holder);
+        // Candle glow
+        const glowMat = new THREE.MeshStandardMaterial({ color: 0xffeedd, emissive: 0xffcc88, emissiveIntensity: 0.6 });
+        const glow = new THREE.Mesh(new THREE.SphereGeometry(0.015, 6, 6), glowMat);
+        glow.position.set(candleX, WALL_HEIGHT - 0.39, candleZ);
+        scene.add(glow);
+      }
+    }
+
+    // =================================================================
+    // INDUSTRIAL — pipes, ducts, junction boxes, concrete pillar, crate
+    // =================================================================
+    if (tmpl.id === "industrial") {
+      const pipeMat = new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 0.85, roughness: 0.3 });
+      const rustMat = new THREE.MeshStandardMaterial({ color: 0x7a5533, metalness: 0.5, roughness: 0.7 });
+      const pipeR = 0.04;
+      // Main pipes along ceiling
+      for (const xOff of [roomW * 0.25, roomW * 0.75]) {
+        const pipe = new THREE.Mesh(new THREE.CylinderGeometry(pipeR, pipeR, roomH, 10), pipeMat);
+        pipe.rotation.x = Math.PI / 2;
+        pipe.position.set(xOff, WALL_HEIGHT - 0.12, cz);
+        scene.add(pipe);
+        // Elbow joints at ends
+        for (const endZ of [0.1, roomH - 0.1]) {
+          const elbow = new THREE.Mesh(new THREE.SphereGeometry(pipeR * 1.3, 8, 8), pipeMat);
+          elbow.position.set(xOff, WALL_HEIGHT - 0.12, endZ);
+          scene.add(elbow);
+          // Vertical drop
+          const drop = new THREE.Mesh(new THREE.CylinderGeometry(pipeR * 0.9, pipeR * 0.9, 0.3, 8), pipeMat);
+          drop.position.set(xOff, WALL_HEIGHT - 0.27, endZ);
+          scene.add(drop);
+        }
+        // Brackets with bolts
+        for (let z = CELL_SIZE; z < roomH; z += CELL_SIZE * 1.5) {
+          const bracket = new THREE.Mesh(new THREE.TorusGeometry(pipeR + 0.02, 0.012, 6, 12, Math.PI), rustMat);
+          bracket.rotation.y = Math.PI / 2;
+          bracket.position.set(xOff, WALL_HEIGHT - 0.12, z);
+          scene.add(bracket);
+          // Bolt on bracket
+          const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.03, 6), pipeMat);
+          bolt.position.set(xOff, WALL_HEIGHT - 0.06, z);
+          scene.add(bolt);
+        }
+      }
+      // Rectangular duct across ceiling
+      const ductMat = new THREE.MeshStandardMaterial({ color: 0x666666, metalness: 0.7, roughness: 0.4 });
+      const duct = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.15, roomH * 0.6), ductMat);
+      duct.position.set(cx, WALL_HEIGHT - 0.08, cz);
+      scene.add(duct);
+      // Duct seam rivets
+      for (let z = cz - roomH * 0.25; z < cz + roomH * 0.25; z += 0.3) {
+        const rivet = new THREE.Mesh(new THREE.SphereGeometry(0.008, 4, 4), pipeMat);
+        rivet.position.set(cx - 0.126, WALL_HEIGHT - 0.08, z);
+        scene.add(rivet);
+      }
+      // Junction box on wall
+      const boxMat = new THREE.MeshStandardMaterial({ color: 0x4a4a4a, metalness: 0.6, roughness: 0.5 });
+      const jbox = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.25, 0.08), boxMat);
+      jbox.position.set(roomW - 0.05, 1.8, CELL_SIZE);
+      scene.add(jbox);
+      // Conduit from junction box
+      const conduit = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.8, 6), pipeMat);
+      conduit.position.set(roomW - 0.05, 2.3, CELL_SIZE);
+      scene.add(conduit);
+      // Wooden shipping crate
+      const crateMat = new THREE.MeshStandardMaterial({ color: 0x9a8060, roughness: 0.85 });
+      const crate = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.35, 0.35), crateMat);
+      crate.position.set(CELL_SIZE * 0.5, 0.175, roomH - CELL_SIZE * 0.5);
+      scene.add(crate);
+      // Crate slats
+      const slatMat = new THREE.MeshStandardMaterial({ color: 0x8a7050, roughness: 0.9 });
+      for (const dx of [-0.15, 0, 0.15]) {
+        const slat = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.36, 0.005), slatMat);
+        slat.position.set(CELL_SIZE * 0.5 + dx, 0.175, roomH - CELL_SIZE * 0.5 + 0.178);
+        scene.add(slat);
+      }
+    }
+
+    // =================================================================
+    // INDUSTRIAL-NEW — skylight ceiling panels, strip lights, wood bench
+    // Inspired by modern concrete museum galleries (Tadao Ando style)
+    // =================================================================
+    if (tmpl.id === "industrial-new") {
+      const steelMat = new THREE.MeshStandardMaterial({ color: 0x808080, metalness: 0.85, roughness: 0.25 });
+      const skylightMat = new THREE.MeshStandardMaterial({
+        color: 0xffffff, emissive: 0xeeeeff, emissiveIntensity: 0.6,
+        transparent: true, opacity: 0.85, roughness: 0.1,
+      });
+
+      // Skylight panels — angled glass panels along ceiling edges
+      const panelCount = Math.max(3, Math.floor(roomW / 1.2));
+      const panelW = (roomW - 0.3) / panelCount;
+      for (let i = 0; i < panelCount; i++) {
+        const px = 0.15 + panelW * i + panelW / 2;
+        // Glass panel
+        const glass = new THREE.Mesh(new THREE.PlaneGeometry(panelW - 0.06, 0.8), skylightMat);
+        glass.rotation.x = Math.PI / 2 + 0.2; // slight angle
+        glass.position.set(px, WALL_HEIGHT - 0.05, 0.5);
+        scene.add(glass);
+        // Matching panel on opposite side
+        const glass2 = new THREE.Mesh(new THREE.PlaneGeometry(panelW - 0.06, 0.8), skylightMat);
+        glass2.rotation.x = Math.PI / 2 - 0.2;
+        glass2.position.set(px, WALL_HEIGHT - 0.05, roomH - 0.5);
+        scene.add(glass2);
+        // Steel frame dividers
+        if (i > 0) {
+          const divider = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.04, 0.85), steelMat);
+          divider.position.set(0.15 + panelW * i, WALL_HEIGHT - 0.02, 0.5);
+          scene.add(divider);
+          const divider2 = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.04, 0.85), steelMat);
+          divider2.position.set(0.15 + panelW * i, WALL_HEIGHT - 0.02, roomH - 0.5);
+          scene.add(divider2);
+        }
+      }
+      // Steel frame rails along skylight edges
+      for (const z of [0.1, 0.9, roomH - 0.9, roomH - 0.1]) {
+        const rail = new THREE.Mesh(new THREE.BoxGeometry(roomW - 0.2, 0.03, 0.03), steelMat);
+        rail.position.set(cx, WALL_HEIGHT - 0.015, z);
+        scene.add(rail);
+      }
+
+      // Industrial strip lights — long tube fixtures near ceiling
+      const stripMat = new THREE.MeshStandardMaterial({
+        color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.4,
+      });
+      const stripHousingMat = new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 0.7, roughness: 0.4 });
+      for (const xOff of [roomW * 0.3, roomW * 0.7]) {
+        // Housing
+        const housing = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.04, roomH * 0.7), stripHousingMat);
+        housing.position.set(xOff, WALL_HEIGHT - 0.05, cz);
+        scene.add(housing);
+        // Light tube
+        const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, roomH * 0.65, 6), stripMat);
+        tube.rotation.x = Math.PI / 2;
+        tube.position.set(xOff, WALL_HEIGHT - 0.08, cz);
+        scene.add(tube);
+        // Point light for actual illumination from strip
+        const stripLight = new THREE.PointLight(0xffffff, 0.5, roomW);
+        stripLight.position.set(xOff, WALL_HEIGHT - 0.15, cz);
+        scene.add(stripLight);
+      }
+
+      // Light wood bench — centered, matching the reference image
+      const benchWoodMat = new THREE.MeshStandardMaterial({ color: 0xc8aa78, roughness: 0.45 });
+      const benchLegMat = new THREE.MeshStandardMaterial({ color: 0xb89a68, roughness: 0.5 });
+      const benchW = 1.8, benchD = 0.45, benchH = 0.42, seatThick = 0.04;
+      // Seat — planked appearance (3 planks)
+      for (let pi = 0; pi < 3; pi++) {
+        const plankD = benchD / 3 - 0.01;
+        const plank = new THREE.Mesh(new THREE.BoxGeometry(benchW, seatThick, plankD), benchWoodMat);
+        plank.position.set(cx, benchH, cz + (pi - 1) * (benchD / 3));
+        scene.add(plank);
+      }
+      // Legs — simple rectangular, inset
+      const legW = 0.06, legD = benchD - 0.06;
+      for (const dx of [-benchW / 2 + 0.12, benchW / 2 - 0.12]) {
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(legW, benchH - seatThick, legD), benchLegMat);
+        leg.position.set(cx + dx, (benchH - seatThick) / 2, cz);
+        scene.add(leg);
+      }
+
+    }
+
+    // =================================================================
+    // LUXURY — gold accents, pedestal with vase, velvet rope, plant
+    // =================================================================
+    if (tmpl.id === "luxury") {
+      const goldMat = new THREE.MeshStandardMaterial({ color: 0xd4a854, metalness: 0.65, roughness: 0.2 });
+      // Double gold accent strips
+      for (const y of [WALL_HEIGHT * 0.36, WALL_HEIGHT * 0.40]) {
+        for (const [w, d, x, z] of [[roomW, 0.015, cx, 0.008], [roomW, 0.015, cx, roomH - 0.008], [0.015, roomH, 0.008, cz], [0.015, roomH, roomW - 0.008, cz]] as [number, number, number, number][]) {
+          const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, 0.02, d), goldMat);
+          mesh.position.set(x, y, z);
+          scene.add(mesh);
+        }
+      }
+      // Marble pedestal with vase
+      const pedMat = new THREE.MeshStandardMaterial({ color: 0xf0e8d8, roughness: 0.25 });
+      // Stepped pedestal
+      const pedSteps = [
+        { r1: 0.28, r2: 0.3, h: 0.06, y: 0.03 },
+        { r1: 0.22, r2: 0.28, h: 0.06, y: 0.09 },
+        { r1: 0.18, r2: 0.18, h: 0.65, y: 0.445 },
+        { r1: 0.24, r2: 0.18, h: 0.04, y: 0.795 },
+      ];
+      for (const s of pedSteps) {
+        const mesh = new THREE.Mesh(new THREE.CylinderGeometry(s.r1, s.r2, s.h, 16), pedMat);
+        mesh.position.set(cx, s.y, cz);
+        scene.add(mesh);
+      }
+      // Gold ring on pedestal top
+      const pedRing = new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.01, 8, 20), goldMat);
+      pedRing.rotation.x = Math.PI / 2;
+      pedRing.position.set(cx, 0.815, cz);
+      scene.add(pedRing);
+      // Decorative vase on pedestal
+      const vaseMat = new THREE.MeshStandardMaterial({ color: 0xf8f4ee, roughness: 0.15, metalness: 0.05 });
+      // Vase body — LatheGeometry for realistic profile
+      const vasePoints = [
+        new THREE.Vector2(0, 0),
+        new THREE.Vector2(0.06, 0),
+        new THREE.Vector2(0.08, 0.02),
+        new THREE.Vector2(0.09, 0.08),
+        new THREE.Vector2(0.07, 0.18),
+        new THREE.Vector2(0.05, 0.22),
+        new THREE.Vector2(0.04, 0.24),
+        new THREE.Vector2(0.05, 0.26),
+        new THREE.Vector2(0.055, 0.27),
+        new THREE.Vector2(0.05, 0.28),
+      ];
+      const vaseGeo = new THREE.LatheGeometry(vasePoints, 16);
+      const vase = new THREE.Mesh(vaseGeo, vaseMat);
+      vase.position.set(cx, 0.82, cz);
+      scene.add(vase);
+      // Gold band on vase
+      const vBand = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.005, 6, 16), goldMat);
+      vBand.rotation.x = Math.PI / 2;
+      vBand.position.set(cx, 0.92, cz);
+      scene.add(vBand);
+      // Potted plants by entrance
+      addPottedPlant(CELL_SIZE * 0.4, CELL_SIZE * 0.4, 1.3);
+      addPottedPlant(roomW - CELL_SIZE * 0.4, CELL_SIZE * 0.4, 1.3);
+    }
+
+    // =================================================================
+    // FUTURISTIC — LED strips, ceiling panels, floating bench, holo ring
+    // =================================================================
+    if (tmpl.id === "futuristic") {
+      const ledMat = new THREE.MeshStandardMaterial({ color: 0x4488ff, emissive: 0x4488ff, emissiveIntensity: 0.8 });
+      const ledH = 0.02, ledD = 0.01;
+      // Floor LED strips
+      for (const [w, d, x, z] of [[roomW, ledD, cx, 0.005], [roomW, ledD, cx, roomH - 0.005], [ledD, roomH, 0.005, cz], [ledD, roomH, roomW - 0.005, cz]] as [number, number, number, number][]) {
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, ledH, d), ledMat);
+        mesh.position.set(x, ledH / 2, z);
+        scene.add(mesh);
+      }
+      // Ceiling LED strips (secondary color)
+      const ledMat2 = new THREE.MeshStandardMaterial({ color: 0x88aaff, emissive: 0x6688dd, emissiveIntensity: 0.4 });
+      for (const [w, d, x, z] of [[roomW, ledD, cx, 0.005], [roomW, ledD, cx, roomH - 0.005], [ledD, roomH, 0.005, cz], [ledD, roomH, roomW - 0.005, cz]] as [number, number, number, number][]) {
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, ledH, d), ledMat2);
+        mesh.position.set(x, WALL_HEIGHT - ledH / 2, z);
+        scene.add(mesh);
+      }
+      // Ceiling light panels with frame
+      const panelMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xddeeff, emissiveIntensity: 0.5 });
+      const frameMat = new THREE.MeshStandardMaterial({ color: 0xccccdd, metalness: 0.5, roughness: 0.2 });
+      for (let x = CELL_SIZE; x < roomW - CELL_SIZE / 2; x += CELL_SIZE * 2) {
+        const pw = CELL_SIZE * 0.8;
+        const panel = new THREE.Mesh(new THREE.PlaneGeometry(pw, pw), panelMat);
+        panel.rotation.x = Math.PI / 2;
+        panel.position.set(x, WALL_HEIGHT - 0.01, cz);
+        scene.add(panel);
+        // Frame around panel
+        for (const [fw, fd, fx, fz] of [[pw + 0.04, 0.02, 0, -pw / 2], [pw + 0.04, 0.02, 0, pw / 2], [0.02, pw, -pw / 2, 0], [0.02, pw, pw / 2, 0]] as [number, number, number, number][]) {
+          const fr = new THREE.Mesh(new THREE.BoxGeometry(fw, 0.02, fd), frameMat);
+          fr.position.set(x + fx, WALL_HEIGHT - 0.02, cz + fz);
+          scene.add(fr);
+        }
+      }
+      // Floating bench — glossy white slab on chrome supports
+      const benchMat = new THREE.MeshStandardMaterial({ color: 0xf0f3ff, roughness: 0.05, metalness: 0.1 });
+      const bench = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.06, 0.4), benchMat);
+      bench.position.set(cx, 0.44, cz);
+      scene.add(bench);
+      const chromeMat = new THREE.MeshStandardMaterial({ color: 0xddddee, metalness: 0.9, roughness: 0.1 });
+      for (const dx of [-0.45, 0.45]) {
+        const sup = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.42, 0.35), chromeMat);
+        sup.position.set(cx + dx, 0.21, cz);
+        scene.add(sup);
+      }
+    }
+
+    // =================================================================
+    // JAPANESE — zen garden, bonsai, bamboo, low wooden table, shoji
+    // =================================================================
+    if (tmpl.id === "japanese") {
+      // Zen rock garden in corner — sand base with raked circles
+      const sandMat = new THREE.MeshStandardMaterial({ color: 0xd8cdb8, roughness: 0.95 });
+      const gardenX = CELL_SIZE * 0.6, gardenZ = CELL_SIZE * 0.6;
+      const sandBase = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.02, 20), sandMat);
+      sandBase.position.set(gardenX, 0.01, gardenZ);
+      scene.add(sandBase);
+      // Raked circle lines in sand
+      const rakeMat = new THREE.MeshStandardMaterial({ color: 0xccc0a8, roughness: 1 });
+      for (const r of [0.15, 0.25, 0.35]) {
+        const rake = new THREE.Mesh(new THREE.TorusGeometry(r, 0.004, 4, 24), rakeMat);
+        rake.rotation.x = Math.PI / 2;
+        rake.position.set(gardenX, 0.025, gardenZ);
+        scene.add(rake);
+      }
+      // Zen stones — varied shapes
+      const stoneMats = [
+        new THREE.MeshStandardMaterial({ color: 0x6a6458, roughness: 0.92 }),
+        new THREE.MeshStandardMaterial({ color: 0x7a7268, roughness: 0.88 }),
+        new THREE.MeshStandardMaterial({ color: 0x5a5850, roughness: 0.95 }),
+      ];
+      const stones = [
+        { x: 0, z: 0, r: 0.07, sy: 0.8, sz: 0.7 },
+        { x: 0.1, z: 0.08, r: 0.05, sy: 0.6, sz: 0.9 },
+        { x: -0.06, z: 0.1, r: 0.04, sy: 0.5, sz: 1.1 },
+      ];
+      for (let si = 0; si < stones.length; si++) {
+        const s = stones[si];
+        const stone = new THREE.Mesh(new THREE.SphereGeometry(s.r, 8, 6), stoneMats[si]);
+        stone.scale.set(1, s.sy, s.sz);
+        stone.position.set(gardenX + s.x, s.r * s.sy * 0.9 + 0.02, gardenZ + s.z);
+        scene.add(stone);
+      }
+      // Bonsai tree on opposite corner
+      const bonsaiX = roomW - CELL_SIZE * 0.6, bonsaiZ = roomH - CELL_SIZE * 0.6;
+      // Pot
+      const bonsaiPotMat = new THREE.MeshStandardMaterial({ color: 0x3a5a4a, roughness: 0.7 });
+      const bonsaiPot = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.08, 0.06, 12), bonsaiPotMat);
+      bonsaiPot.position.set(bonsaiX, 0.03, bonsaiZ);
+      scene.add(bonsaiPot);
+      // Trunk — curved
+      const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5a3a1a, roughness: 0.85 });
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.025, 0.2, 6), trunkMat);
+      trunk.position.set(bonsaiX, 0.16, bonsaiZ);
+      trunk.rotation.z = 0.15;
+      scene.add(trunk);
+      // Canopy layers
+      const canopyMat = new THREE.MeshStandardMaterial({ color: 0x2a6a2a, roughness: 0.9 });
+      for (const [dx, dy, dz, r] of [[0.03, 0.26, 0, 0.08], [-0.02, 0.3, 0.03, 0.06], [0.05, 0.28, -0.02, 0.05]] as [number, number, number, number][]) {
+        const canopy = new THREE.Mesh(new THREE.SphereGeometry(r, 8, 6), canopyMat);
+        canopy.scale.set(1.3, 0.6, 1.2);
+        canopy.position.set(bonsaiX + dx, dy, bonsaiZ + dz);
+        scene.add(canopy);
+      }
+      // Bamboo cluster near wall
+      const bambooMats = [
+        new THREE.MeshStandardMaterial({ color: 0x6b8e4e, roughness: 0.65 }),
+        new THREE.MeshStandardMaterial({ color: 0x5d7e42, roughness: 0.7 }),
+      ];
+      for (const wallX of [CELL_SIZE * 0.25, roomW - CELL_SIZE * 0.25]) {
+        for (let bi = 0; bi < 5; bi++) {
+          const bx = wallX + (bi - 2) * 0.06;
+          const bz = cz + (bi % 2 - 0.5) * 0.08;
+          const bh = WALL_HEIGHT * (0.7 + Math.random() * 0.2);
+          const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.018, bh, 8), bambooMats[bi % 2]);
+          pole.position.set(bx, bh / 2, bz);
+          scene.add(pole);
+          // Bamboo nodes
+          const nodeMat = new THREE.MeshStandardMaterial({ color: 0x5a7a3e, roughness: 0.6 });
+          for (let ny = 0.3; ny < bh - 0.2; ny += 0.35 + Math.random() * 0.1) {
+            const node = new THREE.Mesh(new THREE.TorusGeometry(0.016, 0.004, 4, 8), nodeMat);
+            node.rotation.x = Math.PI / 2;
+            node.position.set(bx, ny, bz);
+            scene.add(node);
+          }
+        }
+      }
+      // Low wooden table/platform in center
+      const tableMat = new THREE.MeshStandardMaterial({ color: 0xa08060, roughness: 0.6 });
+      const tableTop = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.03, 0.35), tableMat);
+      tableTop.position.set(cx, 0.22, cz);
+      scene.add(tableTop);
+      for (const [dx, dz] of [[-0.25, -0.13], [0.25, -0.13], [-0.25, 0.13], [0.25, 0.13]]) {
+        const tleg = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.2, 0.03), tableMat);
+        tleg.position.set(cx + dx, 0.1, cz + dz);
+        scene.add(tleg);
+      }
+    }
+
+  }, [layout, tmpl, CELL_SIZE, WALL_HEIGHT]);
 
   // Collision detection
   const checkCollision = useCallback((position: THREE.Vector3): boolean => {
@@ -731,9 +1316,9 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
 
     // Scene
     const scene = new THREE.Scene();
-    const bgColor = whiteRoom ? 0xf5f0eb : 0x0a0a0a;
+    const bgColor = tmpl.backgroundColor;
     scene.background = new THREE.Color(bgColor);
-    scene.fog = new THREE.Fog(bgColor, whiteRoom ? 5 : 5, whiteRoom ? 30 : 40);
+    scene.fog = new THREE.Fog(bgColor, tmpl.fogNear, tmpl.fogFar);
     sceneRef.current = scene;
 
     const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 100);
@@ -742,7 +1327,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
       PLAYER_HEIGHT,
       layout.spawnPoint.z * CELL_SIZE + CELL_SIZE / 2
     );
-    if (whiteRoom) {
+    if (isLightTheme) {
       euler.current.y = Math.PI;
       camera.rotation.set(euler.current.x, euler.current.y, 0);
     }
@@ -768,6 +1353,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
     createMaze(scene);
     placeArtworks(scene);
     setupLighting(scene);
+    addDecorations(scene);
 
     // Animation loop
     const animate = () => {
@@ -842,7 +1428,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
       renderer.dispose();
       container.removeChild(renderer.domElement);
     };
-  }, [layout, artworks, whiteRoom, CELL_SIZE, createMaze, placeArtworks, setupLighting, checkCollision]);
+  }, [layout, artworks, tmpl, isLightTheme, CELL_SIZE, createMaze, placeArtworks, setupLighting, addDecorations, checkCollision]);
 
   // Pointer lock and controls (desktop + mobile touch)
   useEffect(() => {

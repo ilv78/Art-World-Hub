@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { artists, artworks, auctions, bids, orders, exhibitions, exhibitionArtworks, blogPosts, curatorGalleryArtworks, curatorGalleries } from "@shared/schema";
+import { artists, artworks, exhibitions, exhibitionArtworks, blogPosts } from "@shared/schema";
 import { sql, eq } from "drizzle-orm";
 import { seedLogger as logger } from "./logger";
 
@@ -295,26 +295,10 @@ Do you like this personality?`,
 export async function seedDatabase() {
   try {
     const existingArtists = await db.select().from(artists);
-    const hasCorrectData = existingArtists.some(a => a.id === ARTIST_ID);
 
-    if (existingArtists.length > 0 && hasCorrectData) {
-      logger.info("Database already seeded, skipping");
+    if (existingArtists.length > 0) {
+      logger.info("Database already has data, skipping seed");
       return;
-    }
-
-    if (existingArtists.length > 0 && !hasCorrectData) {
-      logger.info("Stale seed data detected, clearing and reseeding");
-      await db.delete(curatorGalleryArtworks);
-      await db.delete(curatorGalleries);
-      await db.delete(exhibitionArtworks);
-      await db.delete(bids);
-      await db.delete(auctions);
-      await db.delete(orders);
-      await db.delete(blogPosts);
-      await db.delete(artworks);
-      await db.delete(exhibitions);
-      await db.delete(artists);
-      logger.info("Cleared stale data");
     }
 
     logger.info("Seeding database");
