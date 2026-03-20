@@ -541,30 +541,44 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/orders", isAuthenticated, async (req: any, res) => {
+  app.post("/api/orders", async (req: any, res) => {
     try {
       const orderData = insertOrderSchema.parse(req.body);
-      const order = await storage.createOrder(orderData);
-      
+
+      // Validate artwork exists and is for sale, use DB price
+      const artwork = await storage.getArtwork(orderData.artworkId);
+      if (!artwork) {
+        return res.status(404).json({ error: "Artwork not found" });
+      }
+      if (!artwork.isForSale) {
+        return res.status(400).json({ error: "Artwork is not available for purchase" });
+      }
+
+      // Use actual DB price and force pending status
+      const validatedOrder = {
+        ...orderData,
+        totalAmount: artwork.price,
+        status: "pending",
+      };
+
+      const order = await storage.createOrder(validatedOrder);
+
       // Mark artwork as sold
       await storage.updateArtwork(orderData.artworkId, { isForSale: false });
 
       // Send email notifications
       try {
-        const artwork = await storage.getArtwork(orderData.artworkId);
-        if (artwork) {
-          const artist = await storage.getArtist(artwork.artist.id);
-          if (artist) {
-            await sendBuyerConfirmationEmail(artist, artwork, order, orderData);
-            if (artist.email) {
-              await sendOrderNotificationEmail(artist, artwork, order, orderData);
-            }
+        const artist = await storage.getArtist(artwork.artist.id);
+        if (artist) {
+          await sendBuyerConfirmationEmail(artist, artwork, order, validatedOrder);
+          if (artist.email) {
+            await sendOrderNotificationEmail(artist, artwork, order, validatedOrder);
           }
         }
       } catch (emailError) {
         logger.error({ err: emailError }, "Failed to send order emails");
       }
-      
+
       res.status(201).json(order);
     } catch (error) {
       if (error instanceof z.ZodError) {

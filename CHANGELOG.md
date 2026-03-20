@@ -8,7 +8,17 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
-_Nothing yet — all recent work included in v2.3.0 below._
+_Nothing yet — all recent work included in v2.4.0 below._
+
+## [2.4.0] - 2026-03-20
+
+### Added
+- Store system - umbrella ([#170](https://github.com/ilv78/Art-World-Hub/issues/170))
+
+### Fixed
+- Fix high-severity npm audit vulnerability in flatted ([#177](https://github.com/ilv78/Art-World-Hub/issues/177))
+- Mobile adaptation ([#172](https://github.com/ilv78/Art-World-Hub/issues/172))
+- Order cannot be submited ([#171](https://github.com/ilv78/Art-World-Hub/issues/171))
 
 ## [2.3.0] - 2026-03-18
 

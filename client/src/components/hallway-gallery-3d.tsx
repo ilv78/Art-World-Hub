@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { X, ShoppingCart, Move, Mouse, Keyboard, Maximize2, Minimize2, ZoomIn, Box, Map as MapIcon } from "lucide-react";
+import { X, ShoppingCart, Move, Mouse, Keyboard, Maximize2, Minimize2, ZoomIn, Box, Map as MapIcon, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Hand } from "lucide-react";
 import type { ArtworkWithArtist, MazeLayout, MazeCell } from "@shared/schema";
 import { useCartStore } from "@/lib/cart-store";
 import { formatPrice } from "@/lib/utils";
@@ -390,6 +390,10 @@ export function HallwayGallery3D({ artistRooms, curatorRooms, museumTemplate }: 
   const playerPosRef = useRef({ x: 0, z: 0, rotation: 0 });
   const isPointerLockedRef = useRef(false);
   const selectedArtworkRef = useRef<ArtworkWithArtist | null>(null);
+
+  const isMobile = typeof window !== "undefined" && ("ontouchstart" in window || navigator.maxTouchPoints > 0);
+  const touchLookRef = useRef<{ lastX: number; lastY: number } | null>(null);
+  const mobileMoveRef = useRef<{ forward: boolean; backward: boolean; left: boolean; right: boolean }>({ forward: false, backward: false, left: false, right: false });
 
   const { addItem, items } = useCartStore();
   const { toast } = useToast();
@@ -1208,10 +1212,11 @@ export function HallwayGallery3D({ artistRooms, curatorRooms, museumTemplate }: 
         const right = new THREE.Vector3(1, 0, 0).applyQuaternion(cam.quaternion);
         right.y = 0; right.normalize();
 
-        if (keysPressed.current.has("KeyW") || keysPressed.current.has("ArrowUp")) dir.add(forward);
-        if (keysPressed.current.has("KeyS") || keysPressed.current.has("ArrowDown")) dir.sub(forward);
-        if (keysPressed.current.has("KeyA") || keysPressed.current.has("ArrowLeft")) dir.sub(right);
-        if (keysPressed.current.has("KeyD") || keysPressed.current.has("ArrowRight")) dir.add(right);
+        const mm = mobileMoveRef.current;
+        if (keysPressed.current.has("KeyW") || keysPressed.current.has("ArrowUp") || mm.forward) dir.add(forward);
+        if (keysPressed.current.has("KeyS") || keysPressed.current.has("ArrowDown") || mm.backward) dir.sub(forward);
+        if (keysPressed.current.has("KeyA") || keysPressed.current.has("ArrowLeft") || mm.left) dir.sub(right);
+        if (keysPressed.current.has("KeyD") || keysPressed.current.has("ArrowRight") || mm.right) dir.add(right);
 
         if (dir.length() > 0) {
           dir.normalize().multiplyScalar(MOVE_SPEED);
@@ -1279,11 +1284,62 @@ export function HallwayGallery3D({ artistRooms, curatorRooms, museumTemplate }: 
       setIsPointerLocked(locked);
     };
 
+    // Touch controls for mobile
+    const handleTouchStart = (e: TouchEvent) => {
+      if (!isPointerLockedRef.current || selectedArtworkRef.current) return;
+      if (e.touches.length === 1) {
+        touchLookRef.current = { lastX: e.touches[0].clientX, lastY: e.touches[0].clientY };
+      }
+    };
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isPointerLockedRef.current || !cameraRef.current || !touchLookRef.current) return;
+      if (e.touches.length === 1) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const dx = touch.clientX - touchLookRef.current.lastX;
+        const dy = touch.clientY - touchLookRef.current.lastY;
+        touchLookRef.current = { lastX: touch.clientX, lastY: touch.clientY };
+        euler.current.setFromQuaternion(cameraRef.current.quaternion);
+        euler.current.y -= dx * LOOK_SPEED * 1.5;
+        euler.current.x -= dy * LOOK_SPEED * 1.5;
+        euler.current.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.current.x));
+        cameraRef.current.quaternion.setFromEuler(euler.current);
+      }
+    };
+    const handleTouchEnd = () => { touchLookRef.current = null; };
+    const handleTouchTap = (e: TouchEvent) => {
+      if (!isPointerLockedRef.current || !cameraRef.current || !rendererRef.current) return;
+      if (e.changedTouches.length !== 1) return;
+      const touch = e.changedTouches[0];
+      const rect = rendererRef.current.domElement.getBoundingClientRect();
+      const x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
+      const y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(new THREE.Vector2(x, y), cameraRef.current);
+      const meshes = Array.from(artworkMeshesRef.current.values()).map(d => d.mesh);
+      const intersects = raycaster.intersectObjects(meshes);
+      if (intersects.length > 0) {
+        const hit = intersects[0].object;
+        const entries = Array.from(artworkMeshesRef.current.entries());
+        for (const [, data] of entries) {
+          if (data.mesh === hit) { setSelectedArtwork(data.artwork); break; }
+        }
+      }
+    };
+
     document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("keyup", handleKeyUp);
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("pointerlockchange", handlePointerLockChange);
     document.addEventListener("click", handleClick);
+
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener("touchstart", handleTouchStart, { passive: false });
+      container.addEventListener("touchmove", handleTouchMove, { passive: false });
+      container.addEventListener("touchend", handleTouchEnd);
+      container.addEventListener("touchend", handleTouchTap);
+    }
 
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
@@ -1291,6 +1347,12 @@ export function HallwayGallery3D({ artistRooms, curatorRooms, museumTemplate }: 
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("pointerlockchange", handlePointerLockChange);
       document.removeEventListener("click", handleClick);
+      if (container) {
+        container.removeEventListener("touchstart", handleTouchStart);
+        container.removeEventListener("touchmove", handleTouchMove);
+        container.removeEventListener("touchend", handleTouchEnd);
+        container.removeEventListener("touchend", handleTouchTap);
+      }
     };
   }, [handleClick]);
 
@@ -1311,8 +1373,14 @@ export function HallwayGallery3D({ artistRooms, curatorRooms, museumTemplate }: 
   }, [isPointerLocked]);
 
   const requestPointerLock = () => {
-    if (containerRef.current && typeof containerRef.current.requestPointerLock === "function") {
+    if (isMobile) {
+      isPointerLockedRef.current = true;
+      setIsPointerLocked(true);
+    } else if (containerRef.current && typeof containerRef.current.requestPointerLock === "function") {
       containerRef.current.requestPointerLock();
+    } else {
+      isPointerLockedRef.current = true;
+      setIsPointerLocked(true);
     }
   };
 
@@ -1328,7 +1396,7 @@ export function HallwayGallery3D({ artistRooms, curatorRooms, museumTemplate }: 
 
   if (webglError) {
     return (
-      <div className="relative w-full bg-gradient-to-b from-stone-900 to-black rounded-lg overflow-hidden flex items-center justify-center" style={{ height: "600px" }} data-testid="webgl-fallback">
+      <div className="relative w-full bg-gradient-to-b from-stone-900 to-black rounded-lg overflow-hidden flex items-center justify-center h-[60vh] min-h-[300px] max-h-[600px]" data-testid="webgl-fallback">
         <Card className="p-8 max-w-md text-center space-y-4">
           <Box className="w-16 h-16 mx-auto text-muted-foreground" />
           <h2 className="font-serif text-2xl font-bold">3D Gallery Unavailable</h2>
@@ -1339,43 +1407,62 @@ export function HallwayGallery3D({ artistRooms, curatorRooms, museumTemplate }: 
   }
 
   return (
-    <div className="relative w-full rounded-lg overflow-hidden" style={{ height: "600px" }}>
+    <div className="relative w-full rounded-lg overflow-hidden h-[60vh] min-h-[300px] max-h-[600px]">
       <div ref={containerRef} className="absolute inset-0 cursor-crosshair" style={{ zIndex: 0 }} />
 
       {!isPointerLocked && !selectedArtwork && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm" style={{ zIndex: 10 }}>
-          <Card className="p-8 max-w-md text-center space-y-6">
-            <h2 className="font-serif text-2xl font-bold">Museum Hallway</h2>
-            <p className="text-muted-foreground">
-              Walk through a hallway with individual artist rooms on each side.
+          <Card className="p-6 sm:p-8 max-w-md text-center space-y-4 sm:space-y-6 mx-4">
+            <h2 className="font-serif text-xl sm:text-2xl font-bold">Museum Hallway</h2>
+            <p className="text-muted-foreground text-sm sm:text-base">
+              {isMobile
+                ? "Explore artist rooms in a 3D hallway. Drag to look, use buttons to walk."
+                : "Walk through a hallway with individual artist rooms on each side."}
             </p>
-            <div className="grid grid-cols-3 gap-4 text-sm">
-              <div className="flex flex-col items-center gap-2">
-                <Keyboard className="w-8 h-8 text-primary" />
-                <span>WASD / Arrows</span>
-                <span className="text-muted-foreground text-xs">Move</span>
+            {!isMobile && (
+              <div className="grid grid-cols-3 gap-4 text-sm">
+                <div className="flex flex-col items-center gap-2">
+                  <Keyboard className="w-8 h-8 text-primary" />
+                  <span>WASD / Arrows</span>
+                  <span className="text-muted-foreground text-xs">Move</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <Mouse className="w-8 h-8 text-primary" />
+                  <span>Mouse</span>
+                  <span className="text-muted-foreground text-xs">Look around</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <ZoomIn className="w-8 h-8 text-primary" />
+                  <span>Click</span>
+                  <span className="text-muted-foreground text-xs">View artwork</span>
+                </div>
               </div>
-              <div className="flex flex-col items-center gap-2">
-                <Mouse className="w-8 h-8 text-primary" />
-                <span>Mouse</span>
-                <span className="text-muted-foreground text-xs">Look around</span>
+            )}
+            {isMobile && (
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="flex flex-col items-center gap-2">
+                  <Hand className="w-8 h-8 text-primary" />
+                  <span>Drag</span>
+                  <span className="text-muted-foreground text-xs">Look around</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <ZoomIn className="w-8 h-8 text-primary" />
+                  <span>Tap</span>
+                  <span className="text-muted-foreground text-xs">View artwork</span>
+                </div>
               </div>
-              <div className="flex flex-col items-center gap-2">
-                <ZoomIn className="w-8 h-8 text-primary" />
-                <span>Click</span>
-                <span className="text-muted-foreground text-xs">View artwork</span>
-              </div>
-            </div>
+            )}
             <Button size="lg" onClick={() => { requestPointerLock(); }} className="w-full" data-testid="button-enter-gallery">
               <Move className="w-4 h-4 mr-2" />
               Enter Museum
             </Button>
-            <p className="text-xs text-muted-foreground">Press Escape to release cursor</p>
+            {!isMobile && <p className="text-xs text-muted-foreground">Press Escape to release cursor</p>}
           </Card>
         </div>
       )}
 
-      {isPointerLocked && !selectedArtwork && (
+      {/* Desktop HUD */}
+      {isPointerLocked && !selectedArtwork && !isMobile && (
         <div style={{ zIndex: 5 }}>
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
             <div className="w-4 h-4 border-2 border-white/50 rounded-full" />
@@ -1383,6 +1470,38 @@ export function HallwayGallery3D({ artistRooms, curatorRooms, museumTemplate }: 
           <div className="absolute bottom-4 left-4 text-white/70 text-sm space-y-1">
             <p>WASD to move | Mouse to look</p>
             <p>Click artwork to view | ESC to exit</p>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile D-pad + exit */}
+      {isPointerLocked && !selectedArtwork && isMobile && (
+        <div style={{ zIndex: 10 }}>
+          <Button size="sm" variant="secondary" className="absolute top-3 left-3 opacity-80"
+            onClick={() => { isPointerLockedRef.current = false; setIsPointerLocked(false); mobileMoveRef.current = { forward: false, backward: false, left: false, right: false }; }}>
+            <X className="w-4 h-4 mr-1" /> Exit
+          </Button>
+          <div className="absolute bottom-6 left-6 select-none touch-none" style={{ zIndex: 15 }}>
+            <div className="grid grid-cols-3 gap-1" style={{ width: "132px" }}>
+              <div />
+              <button className="w-11 h-11 rounded-lg bg-white/20 active:bg-white/40 flex items-center justify-center backdrop-blur-sm"
+                onTouchStart={() => { mobileMoveRef.current.forward = true; }} onTouchEnd={() => { mobileMoveRef.current.forward = false; }} onTouchCancel={() => { mobileMoveRef.current.forward = false; }}>
+                <ArrowUp className="w-5 h-5 text-white" /></button>
+              <div />
+              <button className="w-11 h-11 rounded-lg bg-white/20 active:bg-white/40 flex items-center justify-center backdrop-blur-sm"
+                onTouchStart={() => { mobileMoveRef.current.left = true; }} onTouchEnd={() => { mobileMoveRef.current.left = false; }} onTouchCancel={() => { mobileMoveRef.current.left = false; }}>
+                <ArrowLeft className="w-5 h-5 text-white" /></button>
+              <button className="w-11 h-11 rounded-lg bg-white/20 active:bg-white/40 flex items-center justify-center backdrop-blur-sm"
+                onTouchStart={() => { mobileMoveRef.current.backward = true; }} onTouchEnd={() => { mobileMoveRef.current.backward = false; }} onTouchCancel={() => { mobileMoveRef.current.backward = false; }}>
+                <ArrowDown className="w-5 h-5 text-white" /></button>
+              <button className="w-11 h-11 rounded-lg bg-white/20 active:bg-white/40 flex items-center justify-center backdrop-blur-sm"
+                onTouchStart={() => { mobileMoveRef.current.right = true; }} onTouchEnd={() => { mobileMoveRef.current.right = false; }} onTouchCancel={() => { mobileMoveRef.current.right = false; }}>
+                <ArrowRight className="w-5 h-5 text-white" /></button>
+            </div>
+          </div>
+          <div className="absolute bottom-6 right-6 text-white/50 text-xs text-right">
+            <p>Drag to look</p>
+            <p>Tap artwork to view</p>
           </div>
         </div>
       )}

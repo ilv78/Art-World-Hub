@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, ShoppingCart, Info, Move, Mouse, Keyboard, Maximize2, Minimize2, ZoomIn, ZoomOut, Box, Map as MapIcon, MapPin, Palette, Image as ImageIcon, ExternalLink } from "lucide-react";
+import { X, ShoppingCart, Info, Move, Mouse, Keyboard, Maximize2, Minimize2, ZoomIn, ZoomOut, Box, Map as MapIcon, MapPin, Palette, Image as ImageIcon, ExternalLink, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Hand } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import type { ArtworkWithArtist, Artist, MazeLayout, MazeCell } from "@shared/schema";
@@ -122,6 +122,11 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
   const isPointerLockedRef = useRef(false);
   const selectedArtworkRef = useRef<ArtworkWithArtist | null>(null);
   const artworkCollisionZones = useRef<{ x: number; z: number; normalX: number; normalZ: number }[]>([]);
+
+  // Mobile support
+  const isMobile = typeof window !== "undefined" && ("ontouchstart" in window || navigator.maxTouchPoints > 0);
+  const touchLookRef = useRef<{ lastX: number; lastY: number } | null>(null);
+  const mobileMoveRef = useRef<{ forward: boolean; backward: boolean; left: boolean; right: boolean }>({ forward: false, backward: false, left: false, right: false });
   
   const { addItem, items } = useCartStore();
   const { toast } = useToast();
@@ -1367,17 +1372,18 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
         right.y = 0;
         right.normalize();
 
-        // Apply movement based on keys
-        if (keysPressed.current.has("KeyW") || keysPressed.current.has("ArrowUp")) {
+        // Apply movement based on keys + mobile D-pad
+        const mm = mobileMoveRef.current;
+        if (keysPressed.current.has("KeyW") || keysPressed.current.has("ArrowUp") || mm.forward) {
           direction.add(forward);
         }
-        if (keysPressed.current.has("KeyS") || keysPressed.current.has("ArrowDown")) {
+        if (keysPressed.current.has("KeyS") || keysPressed.current.has("ArrowDown") || mm.backward) {
           direction.sub(forward);
         }
-        if (keysPressed.current.has("KeyA") || keysPressed.current.has("ArrowLeft")) {
+        if (keysPressed.current.has("KeyA") || keysPressed.current.has("ArrowLeft") || mm.left) {
           direction.sub(right);
         }
-        if (keysPressed.current.has("KeyD") || keysPressed.current.has("ArrowRight")) {
+        if (keysPressed.current.has("KeyD") || keysPressed.current.has("ArrowRight") || mm.right) {
           direction.add(right);
         }
 
@@ -1424,10 +1430,10 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
     };
   }, [layout, artworks, tmpl, isLightTheme, CELL_SIZE, createMaze, placeArtworks, setupLighting, addDecorations, checkCollision]);
 
-  // Pointer lock and controls
+  // Pointer lock and controls (desktop + mobile touch)
   useEffect(() => {
     const movementKeys = new Set(["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]);
-    
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (selectedArtworkRef.current) return;
       if (movementKeys.has(e.code) && isPointerLockedRef.current) {
@@ -1459,11 +1465,72 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
       setIsPointerLocked(locked);
     };
 
+    // Touch controls for mobile
+    const handleTouchStart = (e: TouchEvent) => {
+      if (!isPointerLockedRef.current || selectedArtworkRef.current) return;
+      if (e.touches.length === 1) {
+        touchLookRef.current = { lastX: e.touches[0].clientX, lastY: e.touches[0].clientY };
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isPointerLockedRef.current || !cameraRef.current || !touchLookRef.current) return;
+      if (e.touches.length === 1) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const dx = touch.clientX - touchLookRef.current.lastX;
+        const dy = touch.clientY - touchLookRef.current.lastY;
+        touchLookRef.current = { lastX: touch.clientX, lastY: touch.clientY };
+
+        euler.current.setFromQuaternion(cameraRef.current.quaternion);
+        euler.current.y -= dx * LOOK_SPEED * 1.5;
+        euler.current.x -= dy * LOOK_SPEED * 1.5;
+        euler.current.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.current.x));
+        cameraRef.current.quaternion.setFromEuler(euler.current);
+      }
+    };
+
+    const handleTouchEnd = () => {
+      touchLookRef.current = null;
+    };
+
+    // Tap on artwork — raycast from touch position
+    const handleTouchTap = (e: TouchEvent) => {
+      if (!isPointerLockedRef.current || !cameraRef.current || !rendererRef.current) return;
+      if (e.changedTouches.length !== 1) return;
+      const touch = e.changedTouches[0];
+      const rect = rendererRef.current.domElement.getBoundingClientRect();
+      const x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
+      const y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(new THREE.Vector2(x, y), cameraRef.current);
+      const meshes = Array.from(artworkMeshesRef.current.values()).map(d => d.mesh);
+      const intersects = raycaster.intersectObjects(meshes);
+      if (intersects.length > 0) {
+        const hit = intersects[0].object;
+        const entries = Array.from(artworkMeshesRef.current.entries());
+        for (const [, data] of entries) {
+          if (data.mesh === hit) {
+            setSelectedArtwork(data.artwork);
+            break;
+          }
+        }
+      }
+    };
+
     document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("keyup", handleKeyUp);
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("pointerlockchange", handlePointerLockChange);
     document.addEventListener("click", handleClick);
+
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener("touchstart", handleTouchStart, { passive: false });
+      container.addEventListener("touchmove", handleTouchMove, { passive: false });
+      container.addEventListener("touchend", handleTouchEnd);
+      container.addEventListener("touchend", handleTouchTap);
+    }
 
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
@@ -1471,6 +1538,12 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("pointerlockchange", handlePointerLockChange);
       document.removeEventListener("click", handleClick);
+      if (container) {
+        container.removeEventListener("touchstart", handleTouchStart);
+        container.removeEventListener("touchmove", handleTouchMove);
+        container.removeEventListener("touchend", handleTouchEnd);
+        container.removeEventListener("touchend", handleTouchTap);
+      }
     };
   }, [handleClick]);
 
@@ -1494,11 +1567,17 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
   }, [isPointerLocked]);
 
   const requestPointerLock = () => {
-    if (containerRef.current && typeof containerRef.current.requestPointerLock === 'function') {
+    if (isMobile) {
+      // Mobile: skip pointer lock, just enter gallery mode
+      isPointerLockedRef.current = true;
+      setIsPointerLocked(true);
+      setShowControls(false);
+    } else if (containerRef.current && typeof containerRef.current.requestPointerLock === 'function') {
       containerRef.current.requestPointerLock();
       setShowControls(false);
     } else {
       setShowControls(false);
+      isPointerLockedRef.current = true;
       setIsPointerLocked(true);
     }
   };
@@ -1516,7 +1595,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
   // Fallback UI when WebGL is not available
   if (webglError) {
     return (
-      <div className="relative w-full bg-gradient-to-b from-stone-900 to-black rounded-lg overflow-hidden flex items-center justify-center" style={{ height: "600px" }} data-testid="webgl-fallback">
+      <div className="relative w-full bg-gradient-to-b from-stone-900 to-black rounded-lg overflow-hidden flex items-center justify-center h-[60vh] min-h-[300px] max-h-[600px]" data-testid="webgl-fallback">
         <Card className="p-8 max-w-md text-center space-y-4">
           <Box className="w-16 h-16 mx-auto text-muted-foreground" />
           <h2 className="font-serif text-2xl font-bold">3D Gallery Unavailable</h2>
@@ -1530,38 +1609,57 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
   }
 
   return (
-    <div className="relative w-full rounded-lg overflow-hidden" style={{ height: "600px" }}>
+    <div className="relative w-full rounded-lg overflow-hidden h-[60vh] min-h-[300px] max-h-[600px]">
       <div ref={containerRef} className="absolute inset-0 cursor-crosshair" style={{ zIndex: 0 }} />
 
       {/* Controls overlay */}
       {!isPointerLocked && !selectedArtwork && !showArtistDialog && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm" style={{ zIndex: 10 }}>
-          <Card className="p-8 max-w-md text-center space-y-6">
-            <h2 className="font-serif text-2xl font-bold">Virtual Gallery</h2>
-            <p className="text-muted-foreground">
-              Walk through a 3D art gallery. Click anywhere to start exploring.
+          <Card className="p-6 sm:p-8 max-w-md text-center space-y-4 sm:space-y-6 mx-4">
+            <h2 className="font-serif text-xl sm:text-2xl font-bold">Virtual Gallery</h2>
+            <p className="text-muted-foreground text-sm sm:text-base">
+              {isMobile
+                ? "Explore a 3D art gallery. Drag to look around, use buttons to move."
+                : "Walk through a 3D art gallery. Click anywhere to start exploring."}
             </p>
-            
-            <div className="grid grid-cols-3 gap-4 text-sm">
-              <div className="flex flex-col items-center gap-2">
-                <Keyboard className="w-8 h-8 text-primary" />
-                <span>WASD / Arrows</span>
-                <span className="text-muted-foreground text-xs">Move</span>
-              </div>
-              <div className="flex flex-col items-center gap-2">
-                <Mouse className="w-8 h-8 text-primary" />
-                <span>Mouse</span>
-                <span className="text-muted-foreground text-xs">Look around</span>
-              </div>
-              <div className="flex flex-col items-center gap-2">
-                <ZoomIn className="w-8 h-8 text-primary" />
-                <span>Click</span>
-                <span className="text-muted-foreground text-xs">View artwork</span>
-              </div>
-            </div>
 
-            <Button 
-              size="lg" 
+            {!isMobile && (
+              <div className="grid grid-cols-3 gap-4 text-sm">
+                <div className="flex flex-col items-center gap-2">
+                  <Keyboard className="w-8 h-8 text-primary" />
+                  <span>WASD / Arrows</span>
+                  <span className="text-muted-foreground text-xs">Move</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <Mouse className="w-8 h-8 text-primary" />
+                  <span>Mouse</span>
+                  <span className="text-muted-foreground text-xs">Look around</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <ZoomIn className="w-8 h-8 text-primary" />
+                  <span>Click</span>
+                  <span className="text-muted-foreground text-xs">View artwork</span>
+                </div>
+              </div>
+            )}
+
+            {isMobile && (
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="flex flex-col items-center gap-2">
+                  <Hand className="w-8 h-8 text-primary" />
+                  <span>Drag</span>
+                  <span className="text-muted-foreground text-xs">Look around</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <ZoomIn className="w-8 h-8 text-primary" />
+                  <span>Tap</span>
+                  <span className="text-muted-foreground text-xs">View artwork</span>
+                </div>
+              </div>
+            )}
+
+            <Button
+              size="lg"
               onClick={requestPointerLock}
               className="w-full"
               data-testid="button-enter-gallery"
@@ -1570,25 +1668,77 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
               Enter Gallery
             </Button>
 
-            <p className="text-xs text-muted-foreground">
-              Press ESC to exit walking mode
-            </p>
+            {!isMobile && (
+              <p className="text-xs text-muted-foreground">
+                Press ESC to exit walking mode
+              </p>
+            )}
           </Card>
         </div>
       )}
 
-      {/* HUD */}
-      {isPointerLocked && (
+      {/* HUD — desktop */}
+      {isPointerLocked && !isMobile && (
         <div style={{ zIndex: 5 }}>
-          {/* Crosshair */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
             <div className="w-4 h-4 border-2 border-white/50 rounded-full" />
           </div>
-
-          {/* Mini instructions */}
           <div className="absolute bottom-4 left-4 text-white/70 text-sm space-y-1">
             <p>WASD to move | Mouse to look</p>
             <p>Click artwork to view | ESC to pause</p>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile D-pad + exit button */}
+      {isPointerLocked && isMobile && (
+        <div style={{ zIndex: 10 }}>
+          {/* Exit button */}
+          <Button
+            size="sm"
+            variant="secondary"
+            className="absolute top-3 left-3 opacity-80"
+            onClick={() => { isPointerLockedRef.current = false; setIsPointerLocked(false); mobileMoveRef.current = { forward: false, backward: false, left: false, right: false }; }}
+          >
+            <X className="w-4 h-4 mr-1" /> Exit
+          </Button>
+
+          {/* D-pad */}
+          <div className="absolute bottom-6 left-6 select-none touch-none" style={{ zIndex: 15 }}>
+            <div className="grid grid-cols-3 gap-1" style={{ width: "132px" }}>
+              <div />
+              <button
+                className="w-11 h-11 rounded-lg bg-white/20 active:bg-white/40 flex items-center justify-center backdrop-blur-sm"
+                onTouchStart={() => { mobileMoveRef.current.forward = true; }}
+                onTouchEnd={() => { mobileMoveRef.current.forward = false; }}
+                onTouchCancel={() => { mobileMoveRef.current.forward = false; }}
+              ><ArrowUp className="w-5 h-5 text-white" /></button>
+              <div />
+              <button
+                className="w-11 h-11 rounded-lg bg-white/20 active:bg-white/40 flex items-center justify-center backdrop-blur-sm"
+                onTouchStart={() => { mobileMoveRef.current.left = true; }}
+                onTouchEnd={() => { mobileMoveRef.current.left = false; }}
+                onTouchCancel={() => { mobileMoveRef.current.left = false; }}
+              ><ArrowLeft className="w-5 h-5 text-white" /></button>
+              <button
+                className="w-11 h-11 rounded-lg bg-white/20 active:bg-white/40 flex items-center justify-center backdrop-blur-sm"
+                onTouchStart={() => { mobileMoveRef.current.backward = true; }}
+                onTouchEnd={() => { mobileMoveRef.current.backward = false; }}
+                onTouchCancel={() => { mobileMoveRef.current.backward = false; }}
+              ><ArrowDown className="w-5 h-5 text-white" /></button>
+              <button
+                className="w-11 h-11 rounded-lg bg-white/20 active:bg-white/40 flex items-center justify-center backdrop-blur-sm"
+                onTouchStart={() => { mobileMoveRef.current.right = true; }}
+                onTouchEnd={() => { mobileMoveRef.current.right = false; }}
+                onTouchCancel={() => { mobileMoveRef.current.right = false; }}
+              ><ArrowRight className="w-5 h-5 text-white" /></button>
+            </div>
+          </div>
+
+          {/* Look hint */}
+          <div className="absolute bottom-6 right-6 text-white/50 text-xs text-right">
+            <p>Drag to look</p>
+            <p>Tap artwork to view</p>
           </div>
         </div>
       )}

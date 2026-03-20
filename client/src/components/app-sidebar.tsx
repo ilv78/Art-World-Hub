@@ -13,6 +13,7 @@ import {
   SidebarMenuItem,
   SidebarHeader,
   SidebarFooter,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 const menuItems = [
@@ -56,11 +57,13 @@ const menuItems = [
 export function AppSidebar() {
   const [location] = useLocation();
   const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
+  const { isMobile, setOpenMobile } = useSidebar();
+  const closeMobileSidebar = () => { if (isMobile) setOpenMobile(false); };
 
   return (
     <Sidebar>
       <SidebarHeader className="p-4 border-b border-sidebar-border">
-        <Link href="/" className="flex items-center gap-3" data-testid="link-logo">
+        <Link href="/" className="flex items-center gap-3" data-testid="link-logo" onClick={closeMobileSidebar}>
           <div className="w-10 h-10 rounded-md bg-primary flex items-center justify-center">
             <span className="text-primary-foreground font-serif font-bold text-xl">A</span>
           </div>
@@ -82,7 +85,7 @@ export function AppSidebar() {
                     isActive={location === item.url}
                     data-testid={`link-nav-${item.title.toLowerCase().replace(/\s+/g, '-')}`}
                   >
-                    <Link href={item.url}>
+                    <Link href={item.url} onClick={closeMobileSidebar}>
                       <item.icon className="w-4 h-4" />
                       <span>{item.title}</span>
                     </Link>
@@ -95,7 +98,7 @@ export function AppSidebar() {
                     asChild
                     isActive={location === "/curator"}
                   >
-                    <Link href="/curator">
+                    <Link href="/curator" onClick={closeMobileSidebar}>
                       <Brush className="w-4 h-4" />
                       <span>Curator</span>
                     </Link>
@@ -109,7 +112,7 @@ export function AppSidebar() {
                     isActive={location === "/admin"}
                     data-testid="link-nav-admin"
                   >
-                    <Link href="/admin">
+                    <Link href="/admin" onClick={closeMobileSidebar}>
                       <Shield className="w-4 h-4" />
                       <span>Admin</span>
                     </Link>
@@ -136,7 +139,7 @@ export function AppSidebar() {
             </Button>
           </div>
         ) : (
-          <Link href="/auth">
+          <Link href="/auth" onClick={closeMobileSidebar}>
             <Button variant="outline" size="sm" className="w-full">
               <LogIn className="w-4 h-4 mr-2" />
               Sign in

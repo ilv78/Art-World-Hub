@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { artists, artworks, auctions, bids, orders, exhibitions, exhibitionArtworks, blogPosts } from "@shared/schema";
+import { artists, artworks, exhibitions, exhibitionArtworks, blogPosts } from "@shared/schema";
 import { sql, eq } from "drizzle-orm";
 import { seedLogger as logger } from "./logger";
 
