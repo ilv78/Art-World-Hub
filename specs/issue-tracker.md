@@ -74,6 +74,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 7 | Role gallery curator | medium | feature | 2026-03-18 | `feature/issue-42-backfill-docs` | #48 |
 | 172 | Mobile adaptation | critical | bug | 2026-03-20 | `fix/issue-172-mobile-adaptation` | #173 |
 | 177 | Fix high-severity npm audit vulnerability in flatted | critical | bug | 2026-03-20 | `fix/issue-177-flatted-audit` | #178 |
+| 171 | Order cannot be submited | — | bug | 2026-03-20 | `fix/issue-171-order-submission` | #176 |
 ---
 
 ## Revision Log
@@ -106,3 +107,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-18 | Auto-closed #7 (Role gallery curator). Moved from Active to Completed. PR #48. |
 | 2026-03-20 | Auto-closed #172 (Mobile adaptation). Added to Completed. PR #173. |
 | 2026-03-20 | Auto-closed #177 (Fix high-severity npm audit vulnerability in flatted). Added to Completed. PR #178. |
+| 2026-03-20 | Auto-closed #171 (Order cannot be submited). Added to Completed. PR #176. |
