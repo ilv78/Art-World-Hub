@@ -1,6 +1,6 @@
 # BUG-0172: Mobile Adaptation
 
-**Status:** Fixed
+**Status:** Resolved
 **Priority:** Critical
 **Issue:** #172
 
