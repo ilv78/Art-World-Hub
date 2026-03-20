@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { artists, artworks, auctions, bids, orders, exhibitions, exhibitionArtworks, blogPosts } from "@shared/schema";
+import { artists, artworks, auctions, bids, orders, exhibitions, exhibitionArtworks, blogPosts, curatorGalleryArtworks, curatorGalleries } from "@shared/schema";
 import { sql, eq } from "drizzle-orm";
 import { seedLogger as logger } from "./logger";
 
@@ -304,6 +304,8 @@ export async function seedDatabase() {
 
     if (existingArtists.length > 0 && !hasCorrectData) {
       logger.info("Stale seed data detected, clearing and reseeding");
+      await db.delete(curatorGalleryArtworks);
+      await db.delete(curatorGalleries);
       await db.delete(exhibitionArtworks);
       await db.delete(bids);
       await db.delete(auctions);
