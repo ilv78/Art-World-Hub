@@ -1,0 +1,1 @@
+ALTER TABLE "artists" ADD COLUMN "gallery_template" varchar DEFAULT 'contemporary';

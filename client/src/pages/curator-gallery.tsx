@@ -64,8 +64,8 @@ export default function CuratorGalleryPage() {
           <MazeGallery3D
             artworks={gallery.artworks}
             layout={layout}
-            whiteRoom={true}
-            artist={{ id: gallery.id, name: gallery.name, avatarUrl: null, specialization: `Curated by ${curatorName}`, bio: posterBio, email: null, country: null, userId: null, galleryLayout: null, socialLinks: null }}
+            galleryTemplate={gallery.galleryTemplate || "contemporary"}
+            artist={{ id: gallery.id, name: gallery.name, avatarUrl: null, specialization: `Curated by ${curatorName}`, bio: posterBio, email: null, country: null, userId: null, galleryLayout: null, galleryTemplate: null, socialLinks: null }}
           />
         ) : (
           <div className="flex items-center justify-center h-full">

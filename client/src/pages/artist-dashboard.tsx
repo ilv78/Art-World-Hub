@@ -118,6 +118,7 @@ export default function ArtistDashboard() {
     country: "",
     specialization: "",
     email: "",
+    galleryTemplate: "contemporary",
     socialLinks: {} as Record<string, string>,
   });
   const [profileEditing, setProfileEditing] = useState(false);
@@ -235,13 +236,14 @@ export default function ArtistDashboard() {
         country: myArtist.country || "",
         specialization: myArtist.specialization || "",
         email: myArtist.email || "",
+        galleryTemplate: myArtist.galleryTemplate || "contemporary",
         socialLinks: (myArtist.socialLinks as Record<string, string>) || {},
       });
     }
   }, [myArtist, profileEditing]);
 
   const updateProfileMutation = useMutation({
-    mutationFn: async (data: { name: string; avatarUrl: string; bio: string; country: string; specialization: string; email: string; socialLinks: Record<string, string> }) => {
+    mutationFn: async (data: { name: string; avatarUrl: string; bio: string; country: string; specialization: string; email: string; galleryTemplate: string; socialLinks: Record<string, string> }) => {
       return apiRequest("PATCH", `/api/artists/${selectedArtistId}`, data);
     },
     onSuccess: () => {
@@ -1131,6 +1133,7 @@ export default function ArtistDashboard() {
                         country: myArtist.country || "",
                         specialization: myArtist.specialization || "",
                         email: myArtist.email || "",
+                        galleryTemplate: myArtist.galleryTemplate || "contemporary",
                         socialLinks: (myArtist.socialLinks as Record<string, string>) || {},
                       });
                     }

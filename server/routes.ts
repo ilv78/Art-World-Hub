@@ -393,7 +393,7 @@ export async function registerRoutes(
             }
           }
           return {
-            artist: { id: artist.id, name: artist.name, avatarUrl: artist.avatarUrl, specialization: artist.specialization, bio: artist.bio, country: artist.country, galleryLayout: layout },
+            artist: { id: artist.id, name: artist.name, avatarUrl: artist.avatarUrl, specialization: artist.specialization, bio: artist.bio, country: artist.country, galleryLayout: layout, galleryTemplate: artist.galleryTemplate },
             artworks: readyArtworks,
           };
         })
@@ -861,7 +861,7 @@ export async function registerRoutes(
     try {
       const galleries = await storage.getPublishedCuratorGalleries();
       res.json(galleries.map(g => ({
-        gallery: { id: g.id, name: g.name, description: g.description, galleryLayout: g.galleryLayout, curator: g.curator },
+        gallery: { id: g.id, name: g.name, description: g.description, galleryLayout: g.galleryLayout, galleryTemplate: g.galleryTemplate, curator: g.curator },
         artworks: g.artworks,
       })));
     } catch (error) {
@@ -1104,6 +1104,26 @@ export async function registerRoutes(
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete blog post" });
+    }
+  });
+
+  // ── Site settings (public read, admin write) ─────────────────
+  app.get("/api/site-settings", async (_req, res) => {
+    try {
+      const settings = await storage.getSiteSettings();
+      res.json(settings);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch site settings" });
+    }
+  });
+
+  app.patch("/api/admin/site-settings", isAdmin, async (req: any, res) => {
+    try {
+      const { galleryTemplate } = req.body;
+      const updated = await storage.updateSiteSettings({ galleryTemplate });
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update site settings" });
     }
   });
 

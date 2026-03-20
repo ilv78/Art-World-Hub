@@ -8,6 +8,7 @@ import type { ArtworkWithArtist, MazeLayout, MazeCell } from "@shared/schema";
 import { useCartStore } from "@/lib/cart-store";
 import { formatPrice } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { getTemplate } from "@/lib/gallery-templates";
 
 interface ArtistRoom {
   artist: {
@@ -18,6 +19,7 @@ interface ArtistRoom {
     bio?: string | null;
     country?: string | null;
     galleryLayout?: MazeLayout | null;
+    galleryTemplate?: string | null;
   };
   artworks: ArtworkWithArtist[];
 }
@@ -28,6 +30,7 @@ interface CuratorRoom {
     name: string;
     description?: string | null;
     galleryLayout?: MazeLayout | null;
+    galleryTemplate?: string | null;
     curator: { id: string; firstName: string | null; lastName: string | null };
   };
   artworks: ArtworkWithArtist[];
@@ -36,6 +39,7 @@ interface CuratorRoom {
 interface HallwayGallery3DProps {
   artistRooms: ArtistRoom[];
   curatorRooms?: CuratorRoom[];
+  museumTemplate?: string;
 }
 
 const CELL_SIZE = 2.5;
@@ -365,7 +369,7 @@ function Minimap({ artistRooms, curatorRooms, placements, hallLeft, hallRight, h
   );
 }
 
-export function HallwayGallery3D({ artistRooms, curatorRooms }: HallwayGallery3DProps) {
+export function HallwayGallery3D({ artistRooms, curatorRooms, museumTemplate }: HallwayGallery3DProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -440,12 +444,13 @@ export function HallwayGallery3D({ artistRooms, curatorRooms }: HallwayGallery3D
   }, []);
 
   const buildScene = useCallback((scene: THREE.Scene) => {
-    const wallMat = new THREE.MeshStandardMaterial({ color: 0xf5f0eb, roughness: 0.7 });
-    const ceilingMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 });
-    const corridorFloorMat = new THREE.MeshStandardMaterial({ color: 0xd4cdc0, roughness: 0.9 });
-    const accentMat = new THREE.MeshStandardMaterial({ color: 0x8b7355, roughness: 0.6, metalness: 0.2 });
-    const doorFrameMat = new THREE.MeshStandardMaterial({ color: 0x5c3a1e, roughness: 0.6 });
-    const doorPanelMat = new THREE.MeshStandardMaterial({ color: 0x6b4226, roughness: 0.5 });
+    const tmpl = getTemplate(museumTemplate);
+    const wallMat = new THREE.MeshStandardMaterial({ color: tmpl.wallColor, roughness: tmpl.wallRoughness });
+    const ceilingMat = new THREE.MeshStandardMaterial({ color: tmpl.ceilingColor, roughness: tmpl.ceilingRoughness });
+    const corridorFloorMat = new THREE.MeshStandardMaterial({ color: tmpl.floorColor, roughness: tmpl.floorRoughness });
+    const accentMat = new THREE.MeshStandardMaterial({ color: tmpl.doorFrameColor, roughness: 0.4, metalness: 0.3 });
+    const doorFrameMat = new THREE.MeshStandardMaterial({ color: tmpl.doorFrameColor, roughness: 0.4, metalness: 0.3 });
+    const doorPanelMat = new THREE.MeshStandardMaterial({ color: tmpl.doorPanelColor, roughness: 0.5 });
 
     const addCollisionWall = (mesh: THREE.Mesh) => {
       wallBoxesRef.current.push(new THREE.Box3().setFromObject(mesh));
@@ -766,9 +771,24 @@ export function HallwayGallery3D({ artistRooms, curatorRooms }: HallwayGallery3D
 
     const parquetTexture = createParquetTexture();
 
+    // Cache solid-color materials per template (no textures — avoids flicker)
+    const roomMatCache = new Map<string, { wall: THREE.MeshStandardMaterial; floor: THREE.MeshStandardMaterial; ceil: THREE.MeshStandardMaterial }>();
+    const getRoomMats = (templateId: string | null | undefined) => {
+      const tmpl = getTemplate(templateId);
+      if (roomMatCache.has(tmpl.id)) return roomMatCache.get(tmpl.id)!;
+      const mats = {
+        wall: new THREE.MeshStandardMaterial({ color: tmpl.wallColor, roughness: tmpl.wallRoughness }),
+        floor: new THREE.MeshStandardMaterial({ color: tmpl.floorColor, roughness: tmpl.floorRoughness }),
+        ceil: new THREE.MeshStandardMaterial({ color: tmpl.ceilingColor, roughness: tmpl.ceilingRoughness }),
+      };
+      roomMatCache.set(tmpl.id, mats);
+      return mats;
+    };
+
     for (const p of placements) {
       const layout = p.layout;
       const cRoom = p.isCuratorRoom && curatorRooms ? curatorRooms[p.curatorIndex!] : null;
+      const roomMats = getRoomMats(museumTemplate);
       const room = cRoom ? (() => {
         const curator = cRoom.gallery.curator;
         const cName = [curator.firstName, curator.lastName].filter(Boolean).join(" ") || "Curator";
@@ -787,12 +807,8 @@ export function HallwayGallery3D({ artistRooms, curatorRooms }: HallwayGallery3D
 
       const roomFloorW = layout.height * CELL_SIZE + 0.5;
       const roomFloorD = layout.width * CELL_SIZE;
-      const floorTex = parquetTexture.clone();
-      floorTex.repeat.set(layout.height, layout.width);
-      floorTex.needsUpdate = true;
-      const roomFloorMat = new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.7 });
       const floorGeo = new THREE.PlaneGeometry(roomFloorW, roomFloorD);
-      const floorMesh = new THREE.Mesh(floorGeo, roomFloorMat);
+      const floorMesh = new THREE.Mesh(floorGeo, roomMats.floor);
       floorMesh.rotation.x = -Math.PI / 2;
       const floorCenter = transform(
         layout.width * CELL_SIZE / 2,
@@ -805,7 +821,7 @@ export function HallwayGallery3D({ artistRooms, curatorRooms }: HallwayGallery3D
       scene.add(floorMesh);
 
       const ceilGeo = new THREE.PlaneGeometry(roomFloorW, roomFloorD);
-      const ceilMesh = new THREE.Mesh(ceilGeo, ceilingMat);
+      const ceilMesh = new THREE.Mesh(ceilGeo, roomMats.ceil);
       ceilMesh.rotation.x = Math.PI / 2;
       ceilMesh.position.set(floorCenter.wx, WALL_H, floorCenter.wz);
       scene.add(ceilMesh);
@@ -824,7 +840,7 @@ export function HallwayGallery3D({ artistRooms, curatorRooms }: HallwayGallery3D
           const dx = c2.wx - c1.wx;
           const dz = c2.wz - c1.wz;
           const wallLen = Math.sqrt(dx * dx + dz * dz);
-          addWallMesh(WALL_T, WALL_H, wallLen, cx, WALL_H / 2, cz);
+          addWallMesh(WALL_T, WALL_H, wallLen, cx, WALL_H / 2, cz, roomMats.wall);
         }
 
         if (cell.walls.south) {
@@ -837,7 +853,7 @@ export function HallwayGallery3D({ artistRooms, curatorRooms }: HallwayGallery3D
             const dx = c2.wx - c1.wx;
             const dz = c2.wz - c1.wz;
             const wallLen = Math.sqrt(dx * dx + dz * dz);
-            addWallMesh(WALL_T, WALL_H, wallLen, cx, WALL_H / 2, cz);
+            addWallMesh(WALL_T, WALL_H, wallLen, cx, WALL_H / 2, cz, roomMats.wall);
           }
         }
 
@@ -849,7 +865,7 @@ export function HallwayGallery3D({ artistRooms, curatorRooms }: HallwayGallery3D
           const dx = c2.wx - c1.wx;
           const dz = c2.wz - c1.wz;
           const wallLen = Math.sqrt(dx * dx + dz * dz);
-          addWallMesh(wallLen, WALL_H, WALL_T, cx, WALL_H / 2, cz);
+          addWallMesh(wallLen, WALL_H, WALL_T, cx, WALL_H / 2, cz, roomMats.wall);
         }
 
         if (cell.walls.west) {
@@ -860,7 +876,7 @@ export function HallwayGallery3D({ artistRooms, curatorRooms }: HallwayGallery3D
           const dx = c2.wx - c1.wx;
           const dz = c2.wz - c1.wz;
           const wallLen = Math.sqrt(dx * dx + dz * dz);
-          addWallMesh(wallLen, WALL_H, WALL_T, cx, WALL_H / 2, cz);
+          addWallMesh(wallLen, WALL_H, WALL_T, cx, WALL_H / 2, cz, roomMats.wall);
         }
       }
 
@@ -1150,9 +1166,10 @@ export function HallwayGallery3D({ artistRooms, curatorRooms }: HallwayGallery3D
     const gl = testCanvas.getContext("webgl") || testCanvas.getContext("experimental-webgl");
     if (!gl) { setWebglError("WebGL is not supported."); return; }
 
+    const sceneTmpl = getTemplate(museumTemplate);
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xf5f0eb);
-    scene.fog = new THREE.Fog(0xf5f0eb, 8, 40);
+    scene.background = new THREE.Color(sceneTmpl.backgroundColor);
+    scene.fog = new THREE.Fog(sceneTmpl.backgroundColor, 8, 40);
     sceneRef.current = scene;
 
     const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 100);
