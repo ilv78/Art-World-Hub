@@ -954,7 +954,10 @@ export function HallwayGallery3D({ artistRooms, curatorRooms, museumTemplate }: 
         artMesh.rotation.y = worldRotY;
         artMesh.translateZ(0.06);
         scene.add(artMesh);
-        artworkMeshesRef.current.set(artwork.id, { mesh: artMesh, artwork });
+        // Use a unique key per physical placement to avoid collisions when the
+        // same artwork appears in both an artist room and a curator room.
+        const meshKey = `${artwork.id}-${p.isLeft ? "L" : "R"}-${p.corridorZ}-${si}`;
+        artworkMeshesRef.current.set(meshKey, { mesh: artMesh, artwork });
 
         loadTextureWithCache(artwork.imageUrl).then(texture => {
           artMesh.material = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.3 });
