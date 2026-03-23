@@ -6,7 +6,6 @@ import pinoHttp from "pino-http";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
-import { seedDatabase } from "./seed";
 import { registerMcpRoutes } from "./mcp";
 import healthRouter from "./routes/health";
 import { logger } from "./logger";
@@ -72,9 +71,6 @@ app.use(
 );
 
 (async () => {
-  // Seed database with initial data only when database is empty.
-  await seedDatabase();
-
   await registerRoutes(httpServer, app);
 
   // Serve uploaded images (before MCP and static/vite catch-all)

@@ -545,7 +545,7 @@ describe("GET /api/admin/logs", () => {
   const logFile = path.join(logDir, "app.log");
 
   const testEntries = [
-    { level: 30, time: "2026-03-15T10:00:00.000Z", module: "seed", msg: "Database seeded" },
+    { level: 30, time: "2026-03-15T10:00:00.000Z", module: "app", msg: "Server started" },
     { level: 30, time: "2026-03-15T10:01:00.000Z", module: "mcp", msg: "MCP registered" },
     { level: 40, time: "2026-03-15T10:02:00.000Z", module: "auth", msg: "Token expired" },
     { level: 50, time: "2026-03-15T10:03:00.000Z", module: "auth", msg: "Login failed", err: { message: "bad password" } },

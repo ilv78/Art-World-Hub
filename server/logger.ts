@@ -27,6 +27,5 @@ export const logger = pino(
 // Child loggers for different modules
 export const authLogger = logger.child({ module: "auth" });
 export const mcpLogger = logger.child({ module: "mcp" });
-export const seedLogger = logger.child({ module: "seed" });
 
 export { LOG_DIR };

@@ -67,7 +67,6 @@ Art-World-Hub/
 │   ├── storage.ts        34-method database layer (IStorage interface)
 │   ├── mcp.ts            MCP server (AI integration)
 │   ├── email.ts          Resend email client (magic links, order emails)
-│   ├── seed.ts           Demo data seeder
 │   ├── __tests__/        70+ unit & integration tests
 │   └── replit_integrations/auth/   Authentication (OIDC + local)
 ├── shared/
@@ -419,7 +418,6 @@ npx vitest run <file>       # Single file
 |----------|----------|---------|---------|
 | `DATABASE_URL` | Yes | — | PostgreSQL connection string |
 | `SESSION_SECRET` | Yes | — | Express session signing key |
-| `SEED_DB` | No | `false` | Seed demo data on startup |
 | `PORT` | No | `5000` | Server listen port |
 | `NODE_ENV` | No | `development` | Environment mode |
 | `OIDC_ISSUER_URL` | No | `https://accounts.google.com` | OIDC provider URL |
@@ -458,9 +456,4 @@ npx vitest run <file>       # Single file
 
 ## 14. Seed Data
 
-When `SEED_DB=true`, the application seeds:
-- **1 artist:** Alexandra C. (Romanian/Dutch reverse glass painter)
-- **18 artworks:** Reverse glass paintings + oil paintings (mix of for-sale and sold)
-- **1 blog post:** "Opening the Studio Door" (published)
-- **1 exhibition:** "Grand Opening Exhibition" (active, with wall placements)
-- **Pre-generated gallery layout:** 7x7 white room with artworks on perimeter walls
+Removed. The seed system was deleted in issue #181 after a production incident where accidental reseeding deleted data.

@@ -24,8 +24,8 @@ Structured JSON logging using [pino](https://github.com/pinojs/pino), replacing 
                          │
                ┌─────────┼──────────┐
                ▼         ▼          ▼
-          authLogger  mcpLogger  seedLogger
-          (child)     (child)    (child)
+          authLogger  mcpLogger
+          (child)     (child)
 ```
 
 - **Root logger** — `pino` with ISO timestamps and `pino.multistream` for dual output
@@ -50,7 +50,7 @@ Each line in the log file is a standalone JSON object:
 | `fatal` | 60 | Process-ending errors |
 | `error` | 50 | Operation failures (auth, email, DB) |
 | `warn` | 40 | Degraded state (Resend not configured, OIDC disabled) |
-| `info` | 30 | Normal operations (startup, requests, seeding) |
+| `info` | 30 | Normal operations (startup, requests) |
 | `debug` | 20 | Detailed diagnostics (off by default) |
 | `trace` | 10 | Very verbose (off by default) |
 
@@ -77,7 +77,7 @@ Requires admin role (RBAC). Returns filtered log entries from the log file.
 |-------|------|-------------|
 | `limit` | number | Max entries to return (default 200, max 2000) |
 | `level` | string | Minimum level: `fatal`, `error`, `warn`, `info`, `debug`, `trace` |
-| `module` | string | Filter by module: `auth`, `mcp`, `seed` |
+| `module` | string | Filter by module: `auth`, `mcp` |
 | `search` | string | Case-insensitive text search across log lines |
 | `since` | string | ISO timestamp — only entries after this time |
 
