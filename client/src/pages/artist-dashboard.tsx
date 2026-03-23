@@ -39,7 +39,8 @@ import {
   Globe,
   Loader2
 } from "lucide-react";
-import { SiInstagram, SiX, SiFacebook, SiYoutube, SiTiktok, SiLinkedin, SiBehance, SiDribbble, SiDeviantart, SiPinterest } from "react-icons/si";
+import { SiInstagram, SiX, SiFacebook, SiYoutube, SiTiktok, SiBehance, SiDribbble, SiDeviantart, SiPinterest } from "react-icons/si";
+import { FaLinkedin } from "react-icons/fa6";
 import type { Artist, ArtworkWithArtist, BlogPost, InsertArtwork, InsertBlogPost, OrderWithArtwork } from "@shared/schema";
 import { ORDER_STATUSES, ORDER_TRANSITIONS } from "@shared/schema";
 import { ShoppingBag, Package, Mail, Search, Filter, ChevronRight, Ban, ArrowRight } from "lucide-react";
@@ -96,7 +97,7 @@ const socialPlatformsList = [
   { key: "facebook", label: "Facebook", icon: SiFacebook, placeholder: "https://facebook.com/username" },
   { key: "youtube", label: "YouTube", icon: SiYoutube, placeholder: "https://youtube.com/@channel" },
   { key: "tiktok", label: "TikTok", icon: SiTiktok, placeholder: "https://tiktok.com/@username" },
-  { key: "linkedin", label: "LinkedIn", icon: SiLinkedin, placeholder: "https://linkedin.com/in/username" },
+  { key: "linkedin", label: "LinkedIn", icon: FaLinkedin, placeholder: "https://linkedin.com/in/username" },
   { key: "behance", label: "Behance", icon: SiBehance, placeholder: "https://behance.net/username" },
   { key: "dribbble", label: "Dribbble", icon: SiDribbble, placeholder: "https://dribbble.com/username" },
   { key: "deviantart", label: "DeviantArt", icon: SiDeviantart, placeholder: "https://deviantart.com/username" },

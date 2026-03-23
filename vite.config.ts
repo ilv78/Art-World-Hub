@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig } from "rolldown-vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
@@ -30,6 +30,7 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    cssMinify: "esbuild",
   },
   server: {
     hmr: process.env.VITE_HMR_HOST
