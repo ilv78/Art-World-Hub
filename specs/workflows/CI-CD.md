@@ -11,7 +11,7 @@
 
 #### CI/CD Workflow (`.github/workflows/ci.yml`)
 
-Single unified workflow with four jobs. Triggers on every push (all branches) and pull requests to `main`.
+Single unified workflow with five jobs. Triggers on every push (all branches) and pull requests to `main`.
 
 **Job 1: `ci`** — Lint, Type Check, Test & Build
 
@@ -47,9 +47,17 @@ Single unified workflow with four jobs. Triggers on every push (all branches) an
 - **Only on main push** — `if: github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.changes.outputs.code == 'true'`
 - Uses GHA layer caching for fast rebuilds
 
-**Job 4: `deploy-staging`** — Deploy to Staging
+**Job 4: `scan-image`** — Trivy Container Scan
 
-- **Depends on `build-image`** — automatically skipped when build is skipped (docs-only changes)
+- **Depends on `build-image`** — runs after the image is pushed to GHCR
+- Pulls the just-built image and runs Trivy vulnerability scanner
+- Fails the pipeline on CRITICAL or HIGH severity findings (unfixed vulnerabilities ignored via `.trivyignore`)
+- Uses the same Trivy action (pinned to SHA) and config as `security.yml` for consistency
+- **Gates staging deploy** — `deploy-staging` depends on this job passing
+
+**Job 5: `deploy-staging`** — Deploy to Staging
+
+- **Depends on `scan-image`** — automatically skipped when build is skipped (docs-only changes) or when Trivy finds critical/high vulnerabilities
 
 #### Docker Setup
 
@@ -95,6 +103,11 @@ Feature Branch                   main
                           │ Build & Push  │
                           │ Docker Image  │
                           │ → GHCR       │
+                          └──────┬───────┘
+                                 │
+                          ┌──────┴───────┐
+                          │ Trivy Scan   │
+                          │ (CRIT/HIGH)  │
                           └──────┬───────┘
                                  │
                           ┌──────┴───────┐

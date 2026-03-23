@@ -15,6 +15,7 @@ import fs from "fs";
 import crypto from "crypto";
 import { logger, logFilePath } from "./logger";
 import readline from "readline";
+import rateLimit from "express-rate-limit";
 
 function formatPrice(amount: string | number): string {
   return `${parseInt(String(amount)).toLocaleString()} \u20AC`;
@@ -151,6 +152,22 @@ export async function registerRoutes(
   // Setup authentication (BEFORE other routes)
   await setupAuth(app);
   registerAuthRoutes(app);
+
+  // Rate limit write endpoints: 100 requests per 15 minutes per IP
+  // (Auth endpoints have their own stricter limiter at 10/15min)
+  const writeLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Too many requests, please try again later" },
+  });
+  app.use((req, res, next) => {
+    if (["POST", "PATCH", "PUT", "DELETE"].includes(req.method) && !req.path.startsWith("/api/auth/")) {
+      return writeLimiter(req, res, next);
+    }
+    next();
+  });
 
   // File upload configuration
   const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];

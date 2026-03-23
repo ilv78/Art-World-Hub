@@ -1,0 +1,16 @@
+#!/bin/sh
+
+# Pre-commit hook: scan staged changes for secrets using gitleaks.
+# Blocks the commit if any secrets are detected.
+# Install gitleaks: https://github.com/gitleaks/gitleaks#installing
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "WARNING: gitleaks is not installed — skipping secret scan."
+  echo "  Install it to enable pre-commit secret detection:"
+  echo "    brew install gitleaks          # macOS"
+  echo "    sudo apt install gitleaks      # Debian/Ubuntu"
+  echo "    go install github.com/gitleaks/gitleaks/v8@latest  # Go"
+  exit 0
+fi
+
+gitleaks git --pre-commit --staged --verbose
