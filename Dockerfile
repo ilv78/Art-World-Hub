@@ -17,7 +17,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ARG APP_VERSION=dev
 ENV APP_VERSION=$APP_VERSION
-COPY --from=build /app/package.json /app/package-lock.json ./
+COPY --from=build /app/package.json /app/package-lock.json /app/.npmrc ./
 RUN npm ci --omit=dev --ignore-scripts
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/shared ./shared
