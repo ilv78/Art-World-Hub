@@ -78,6 +78,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 206 | Skip Docker build and staging deploy for docs-only changes | — | devops | 2026-03-23 | `fix/issue-206-skip-docs-deploy` | #207 |
 | 74 | Upgrade react-resizable-panels from 2.x to 4.x | high | bug | 2026-03-23 | `refactor/issue-53-simplify-auth-email` | #54 |
 | 181 | Remove seed functionality from codebase | low | bug | 2026-03-23 | `fix/issue-181-remove-seed` | #214 |
+| 197 | Migrate react-day-picker v8 → v9 | high | enhancement | 2026-03-23 | `feature/issue-197-day-picker-v9` | #216 |
 ---
 
 ## Revision Log
@@ -117,3 +118,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-23 | Auto-closed #206 (Skip Docker build and staging deploy for docs-only changes). Added to Completed. PR #207. |
 | 2026-03-23 | Auto-closed #74 (Upgrade react-resizable-panels from 2.x to 4.x). Moved from Active to Completed. PR #54. |
 | 2026-03-23 | Auto-closed #181 (Remove seed functionality from codebase). Added to Completed. PR #214. |
+| 2026-03-23 | Auto-closed #197 (Migrate react-day-picker v8 → v9). Added to Completed. PR #216. |
