@@ -146,9 +146,46 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  scan-image:
+    name: Trivy Container Scan
+    needs: build-image
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Lowercase image name
+        id: image
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Pull image
+        run: docker pull "${{ steps.image.outputs.name }}:${{ github.sha }}"
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.30.0
+        with:
+          image-ref: ${{ steps.image.outputs.name }}:${{ github.sha }}
+          format: table
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+          trivyignores: .trivyignore
+
   deploy-staging:
     name: Deploy to Staging
-    needs: build-image
+    needs: scan-image
     runs-on: ubuntu-latest
 
     permissions:

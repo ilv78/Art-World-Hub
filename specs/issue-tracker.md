@@ -27,7 +27,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 8 | Create admin section | high | feature | Open | — | Admin panel for platform management |
 | 32 | Correct names in museum gallery | medium | bug | Open | — | Artist room names incorrect |
 | 36 | Role securitas - in CI/CD | high | devops | In Progress | — | Parent: spec at `specs/SECURITY_AGENT.md`. Sub-issue #55 done. Audit completed → issue #77 (4×P0, 6×P1, 7×P2). |
-| 77 | Security Audit — Critical findings | critical | devops | In Progress | — | Parent. All 4 P0s done (PRs #82–#84), all 6 P1s done (PR #85). 6 P2s remaining (1 P2 was done in P1 batch). |
+| 77 | Security Audit — Critical findings | critical | devops | In Progress | `fix/issue-77-p2-security-hardening` | Parent. All 4 P0s done (PRs #82–#84), all 6 P1s done (PR #85). P2 fixes in progress: pre-commit hook, write rate limiting, Trivy gate. |
 | 76 | Upgrade Vite 7→8 | high | bug | Open | — | Dependabot PR #70 closed (major) |
 | 97 | Post-mortem: Issue #8 admin section pushed directly to main | critical | bug | Open | — | Parent postmortem issue. Action items: #100 (done), #101 (done), #102 (in progress). |
 
@@ -119,3 +119,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-23 | Auto-closed #74 (Upgrade react-resizable-panels from 2.x to 4.x). Moved from Active to Completed. PR #54. |
 | 2026-03-23 | Auto-closed #181 (Remove seed functionality from codebase). Added to Completed. PR #214. |
 | 2026-03-23 | Auto-closed #197 (Migrate react-day-picker v8 → v9). Added to Completed. PR #216. |
+| 2026-03-23 | #77 P2 security hardening started — pre-commit gitleaks hook, write endpoint rate limiting, Trivy gate before staging deploy. Branch `fix/issue-77-p2-security-hardening`. |
