@@ -25,7 +25,6 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | # | Title | Priority | Category | Status | Branch | Notes |
 |---|-------|----------|----------|--------|--------|-------|
 | 8 | Create admin section | high | feature | Open | — | Admin panel for platform management |
-| 14 | Multiple gallery templates | low | enhancement | Open | — | Support different gallery room layouts |
 | 32 | Correct names in museum gallery | medium | bug | Open | — | Artist room names incorrect |
 | 36 | Role securitas - in CI/CD | high | devops | In Progress | — | Parent: spec at `specs/SECURITY_AGENT.md`. Sub-issue #55 done. Audit completed → issue #77 (4×P0, 6×P1, 7×P2). |
 | 73 | Upgrade Node.js 20→25 | high | bug | Open | — | Dependabot PR #57 closed (major) |
@@ -76,6 +75,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 177 | Fix high-severity npm audit vulnerability in flatted | critical | bug | 2026-03-20 | `fix/issue-177-flatted-audit` | #178 |
 | 171 | Order cannot be submited | — | bug | 2026-03-20 | `fix/issue-171-order-submission` | #176 |
 | 170 | Store system - umbrella | high | enhancement | 2026-03-20 | `dependabot/github_actions/appleboy/scp-action-1.0.0` | #58 |
+| 14 | multiple gallery templates | low | enhancement | 2026-03-23 | `feature/issue-98-postmortem-workflow` | #99 |
 ---
 
 ## Revision Log
@@ -110,3 +110,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-20 | Auto-closed #177 (Fix high-severity npm audit vulnerability in flatted). Added to Completed. PR #178. |
 | 2026-03-20 | Auto-closed #171 (Order cannot be submited). Added to Completed. PR #176. |
 | 2026-03-20 | Auto-closed #170 (Store system - umbrella). Added to Completed. PR #58. |
+| 2026-03-23 | Auto-closed #14 (multiple gallery templates). Moved from Active to Completed. PR #99. |
