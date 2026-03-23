@@ -19,7 +19,8 @@ import {
   Globe,
   ExternalLink
 } from "lucide-react";
-import { SiInstagram, SiX, SiFacebook, SiYoutube, SiTiktok, SiLinkedin, SiBehance, SiDribbble, SiDeviantart, SiPinterest } from "react-icons/si";
+import { SiInstagram, SiX, SiFacebook, SiYoutube, SiTiktok, SiBehance, SiDribbble, SiDeviantart, SiPinterest } from "react-icons/si";
+import { FaLinkedin } from "react-icons/fa6";
 import { useCartStore } from "@/lib/cart-store";
 import { formatPrice } from "@/lib/utils";
 import { MazeGallery3D } from "@/components/maze-gallery-3d";
@@ -38,7 +39,7 @@ const socialPlatforms: Record<string, { label: string; icon: React.ComponentType
   facebook: { label: "Facebook", icon: SiFacebook },
   youtube: { label: "YouTube", icon: SiYoutube },
   tiktok: { label: "TikTok", icon: SiTiktok },
-  linkedin: { label: "LinkedIn", icon: SiLinkedin },
+  linkedin: { label: "LinkedIn", icon: FaLinkedin },
   behance: { label: "Behance", icon: SiBehance },
   dribbble: { label: "Dribbble", icon: SiDribbble },
   deviantart: { label: "DeviantArt", icon: SiDeviantart },
