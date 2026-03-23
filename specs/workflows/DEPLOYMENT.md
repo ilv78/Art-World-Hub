@@ -1,7 +1,7 @@
 # ArtVerse — Deployment Procedures
 
 **Status:** Active
-**Last Updated:** 2026-03-13
+**Last Updated:** 2026-03-23
 
 ---
 
@@ -142,7 +142,43 @@ ssh -i ~/.ssh/artverse-deploy root@artverse.idata.ro          # Root (for Nginx,
 
 ---
 
-## 5. GitHub Secrets
+## 5. Docker Image Layout
+
+The production Docker image is a multi-stage build (`Dockerfile`):
+
+1. **deps** — installs all npm dependencies
+2. **build** — compiles the app (`npm run build`)
+3. **run** — production-only image with minimal footprint
+
+### Build args
+
+| Arg | Default | Purpose |
+|-----|---------|---------|
+| `APP_VERSION` | `dev` | Baked into the image as an env var. CI sets this to `github.run_number`. Used by the `/api/version` endpoint. |
+
+### Files included in the image
+
+| Path | Source |
+|------|--------|
+| `dist/` | Compiled client + server |
+| `shared/` | Shared schema (needed by Drizzle at runtime) |
+| `migrations/` | Versioned SQL migration files |
+| `drizzle.config.ts` | Drizzle config for migration runner |
+| `CHANGELOG.md` | Served by the version/changelog API endpoint |
+| `docker-entrypoint.sh` | Entrypoint script (runs migrations then starts app) |
+
+### Volume directories
+
+The image creates these directories at build time. Docker-compose mounts named volumes over them so data persists across container restarts:
+
+| Volume mount | Directories inside |
+|---|---|
+| `uploads:/app/uploads` | `artworks/`, `blog-covers/`, `avatars/` |
+| `logs:/app/logs` | Structured pino log files |
+
+---
+
+## 6. GitHub Secrets
 
 | Secret | Value | Purpose |
 |--------|-------|---------|
@@ -156,7 +192,7 @@ Database passwords and session secrets are stored in `.env` files on the VPS, no
 
 ---
 
-## 6. Notifications
+## 7. Notifications
 
 Deploy notifications are sent to Telegram automatically. You'll receive a message for:
 
