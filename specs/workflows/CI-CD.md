@@ -1,7 +1,7 @@
 # ArtVerse — CI/CD Pipeline Specification
 
 **Status:** Active
-**Last Updated:** 2026-03-13
+**Last Updated:** 2026-03-23
 
 ---
 
@@ -11,7 +11,7 @@
 
 #### CI/CD Workflow (`.github/workflows/ci.yml`)
 
-Single unified workflow with two jobs. Triggers on every push (all branches) and pull requests to `main`.
+Single unified workflow with four jobs. Triggers on every push (all branches) and pull requests to `main`.
 
 **Job 1: `ci`** — Lint, Type Check, Test & Build
 
@@ -27,7 +27,14 @@ Single unified workflow with two jobs. Triggers on every push (all branches) and
 
 - Uses a PostgreSQL 16 Alpine service container (needed for the build to succeed)
 
-**Job 2: `deploy`** — Build & Push Docker Image
+**Job 2: `changes`** — Detect Code Changes
+
+- **Only on main push** — runs after `ci` passes, only on `main`
+- Uses `dorny/paths-filter` to check if any non-docs files changed
+- Outputs `code: true/false` — docs-only pushes (`specs/`, `docs/`, `**/*.md`, `.github/ISSUE_TEMPLATE/`) output `false`
+- Prevents unnecessary Docker builds and staging deploys for documentation-only changes
+
+**Job 3: `build-image`** — Build & Push Docker Image
 
 | Step | What it does |
 |------|-------------|
@@ -36,14 +43,13 @@ Single unified workflow with two jobs. Triggers on every push (all branches) and
 | Login to GHCR | Authenticates to GitHub Container Registry |
 | Build & push image | Multi-stage Docker build, pushes `latest` + `sha` + `run_number` tags, passes `APP_VERSION` build arg |
 
-- **Gated on CI** — `needs: ci`, only runs if all CI checks pass
-- **Only on main push** — `if: github.ref == 'refs/heads/main' && github.event_name == 'push'`
+- **Gated on CI + code changes** — `needs: [ci, changes]`, skipped when only docs changed
+- **Only on main push** — `if: github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.changes.outputs.code == 'true'`
 - Uses GHA layer caching for fast rebuilds
-- **Does NOT deploy** — the image sits in GHCR, nothing pulls or runs it
-- **No staging environment**
-- **No production deployment**
-- **No database migration step**
-- **No health check after deploy**
+
+**Job 4: `deploy-staging`** — Deploy to Staging
+
+- **Depends on `build-image`** — automatically skipped when build is skipped (docs-only changes)
 
 #### Docker Setup
 
@@ -463,17 +469,27 @@ DB passwords and session secrets are stored in `.env` files on the VPS (not in G
                           │ only on main push
                           ▼
                ┌──────────────────────────┐
-               │  Docker Job (~2 min)     │
+               │  Detect Changes          │
                │                          │
-               │  Build multi-stage image │
-               │  Push to GHCR:           │
-               │    :latest               │
-               │    :<commit-sha>         │
-               │    :<run-number>         │
-               └──────────┬───────────────┘
-                          │
-                          │ needs: docker job
-                          ▼
+               │  dorny/paths-filter      │
+               │  Code changed? ──┐       │
+               └──────────────────┼───────┘
+                    │             │
+                    │ yes         │ no (docs only)
+                    ▼             ▼
+               ┌────────────┐   SKIP build
+               │  Docker    │   SKIP deploy
+               │  (~2 min)  │   SKIP notify
+               │            │
+               │  Build     │
+               │  Push GHCR │
+               │  :latest   │
+               │  :<sha>    │
+               │  :<run-#>  │
+               └─────┬──────┘
+                     │
+                     │ needs: docker job
+                     ▼
                ┌──────────────────────────┐
                │  Staging Deploy (~30s)   │
                │                          │
@@ -597,6 +613,7 @@ All third-party actions across all workflow files are **pinned to commit SHAs** 
 | `docker/build-push-action` | `d08e5c354a6adb9ed34480a06d141179aa583294` (+ `build-args: APP_VERSION`) |
 | `appleboy/scp-action` | `ff85246acaad7bdce478db94a363cd2bf7c90345` |
 | `appleboy/ssh-action` | `0ff4204d59e8e51228ff73bce53f80d53301dee2` |
+| `dorny/paths-filter` | `de90cc6fb38fc0963ad72b210f1f284cd68cea36` |
 | `anthropics/claude-code-action` | `5d0cc745cd0cce4c0e9e0b3511de26c3bc285eb5` |
 
 **Applies to:** `ci.yml`, `deploy-production.yml`, `rollback-production.yml`, `doc-agent.yml`, `issue-tracker.yml`
@@ -687,3 +704,4 @@ Changes go through a PR, so CI validates the CHANGELOG update before it reaches 
 | 2026-03-13 | Release management (Issue #35): 3-tag Docker images (latest+sha+run_number), `/health` endpoint, APP_VERSION build arg, post-deploy smoke tests, production auto-rollback on failure, git release tags (`release-N`), CHANGELOG.md. Added `STAGING_URL` and `PRODUCTION_URL` to secrets inventory. |
 | 2026-03-14 | Added Section 6.6: Automated Release Workflow — label-driven versioned releases via `release.yml` + `prepare-release.sh`. Auto-detects PATCH/MINOR bump, updates CHANGELOG, creates git tag + GitHub Release, removes labels, Telegram notification. (Issue #110) |
 | 2026-03-15 | Added logging smoke test to staging deploy — verifies log file exists, has entries, valid JSON, and contains startup message. Updated test count from 32 to 52. (Issue [#39](https://github.com/ilv78/Art-World-Hub/issues/39)) |
+| 2026-03-23 | Skip Docker build and staging deploy for docs-only changes — added `changes` job with `dorny/paths-filter` to detect non-docs file changes. `build-image` and `deploy-staging` are skipped when only `specs/`, `docs/`, `**/*.md`, or `.github/ISSUE_TEMPLATE/` files changed. Updated pipeline diagram and job descriptions. (Issue [#206](https://github.com/ilv78/Art-World-Hub/issues/206)) |
