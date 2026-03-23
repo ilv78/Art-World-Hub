@@ -8,7 +8,12 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
-_Nothing yet — all recent work included in v2.4.0 below._
+_Nothing yet — all recent work included in v2.5.0 below._
+
+## [2.5.0] - 2026-03-23
+
+### Added
+- multiple gallery templates ([#14](https://github.com/ilv78/Art-World-Hub/issues/14))
 
 ## [2.4.0] - 2026-03-20
 
