@@ -28,7 +28,6 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 32 | Correct names in museum gallery | medium | bug | Open | — | Artist room names incorrect |
 | 36 | Role securitas - in CI/CD | high | devops | In Progress | — | Parent: spec at `specs/SECURITY_AGENT.md`. Sub-issue #55 done. Audit completed → issue #77 (4×P0, 6×P1, 7×P2). |
 | 77 | Security Audit — Critical findings | critical | devops | In Progress | — | Parent. All 4 P0s done (PRs #82–#84), all 6 P1s done (PR #85). 6 P2s remaining (1 P2 was done in P1 batch). |
-| 74 | Upgrade react-resizable-panels 2→4 | high | bug | Open | — | Dependabot PR #68 closed (major) |
 | 76 | Upgrade Vite 7→8 | high | bug | Open | — | Dependabot PR #70 closed (major) |
 | 97 | Post-mortem: Issue #8 admin section pushed directly to main | critical | bug | Open | — | Parent postmortem issue. Action items: #100 (done), #101 (done), #102 (in progress). |
 
@@ -77,6 +76,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 14 | multiple gallery templates | low | enhancement | 2026-03-23 | `feature/issue-98-postmortem-workflow` | #99 |
 | 73 | Upgrade Node.js from 20 to 25 in Docker image | high | bug | 2026-03-23 | `upgrade/node-25` | #201 |
 | 206 | Skip Docker build and staging deploy for docs-only changes | — | devops | 2026-03-23 | `fix/issue-206-skip-docs-deploy` | #207 |
+| 74 | Upgrade react-resizable-panels from 2.x to 4.x | high | bug | 2026-03-23 | `refactor/issue-53-simplify-auth-email` | #54 |
 ---
 
 ## Revision Log
@@ -114,3 +114,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-23 | Auto-closed #14 (multiple gallery templates). Moved from Active to Completed. PR #99. |
 | 2026-03-23 | Auto-closed #73 (Upgrade Node.js from 20 to 25 in Docker image). Moved from Active to Completed. PR #201. |
 | 2026-03-23 | Auto-closed #206 (Skip Docker build and staging deploy for docs-only changes). Added to Completed. PR #207. |
+| 2026-03-23 | Auto-closed #74 (Upgrade react-resizable-panels from 2.x to 4.x). Moved from Active to Completed. PR #54. |
