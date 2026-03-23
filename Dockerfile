@@ -2,7 +2,7 @@
 
 FROM node:25-bookworm-slim AS deps
 WORKDIR /app
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json .npmrc ./
 RUN npm ci
 
 FROM node:25-bookworm-slim AS build
