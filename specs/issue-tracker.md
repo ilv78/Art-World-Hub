@@ -80,6 +80,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 197 | Migrate react-day-picker v8 → v9 | high | enhancement | 2026-03-23 | `feature/issue-197-day-picker-v9` | #216 |
 | 77 | 🔴 Security Audit — Critical findings require immediate action | medium | devops | 2026-03-23 | `fix/issue-79-lock-order-endpoints` | #83 |
 | 161 | museum overview | low | bug | 2026-03-23 | — | — |
+| 169 | Artworks not visible on click | high | bug | 2026-03-23 | `fix/issue-80-81-mcp-auth-ssrf` | #84 |
 ---
 
 ## Revision Log
@@ -123,3 +124,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-23 | #77 P2 security hardening started — pre-commit gitleaks hook, write endpoint rate limiting, Trivy gate before staging deploy. Branch `fix/issue-77-p2-security-hardening`. |
 | 2026-03-23 | Auto-closed #77 (🔴 Security Audit — Critical findings require immediate action). Moved from Active to Completed. PR #83. |
 | 2026-03-23 | Auto-closed #161 (museum overview). Added to Completed. |
+| 2026-03-23 | Auto-closed #169 (Artworks not visible on click). Added to Completed. PR #84. |
