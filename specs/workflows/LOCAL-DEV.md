@@ -7,11 +7,11 @@
 
 ## 1. Environments
 
-| Environment | URL | Deploys | Database | Seed Data |
-|-------------|-----|---------|----------|-----------|
-| **Local** | `http://localhost:5000` | `npm run dev` | Local PostgreSQL (port 5433) | Optional (`SEED_DB=true`) |
-| **Staging** | https://staging.artverse.idata.ro | Auto on push to `main` | Dedicated PostgreSQL on VPS | Yes |
-| **Production** | https://artverse.idata.ro | Manual trigger via GitHub Actions | Dedicated PostgreSQL on VPS | No |
+| Environment | URL | Deploys | Database |
+|-------------|-----|---------|----------|
+| **Local** | `http://localhost:5000` | `npm run dev` | Local PostgreSQL (port 5433) |
+| **Staging** | https://staging.artverse.idata.ro | Auto on push to `main` | Dedicated PostgreSQL on VPS |
+| **Production** | https://artverse.idata.ro | Manual trigger via GitHub Actions | Dedicated PostgreSQL on VPS |
 
 ---
 

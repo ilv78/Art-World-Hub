@@ -127,7 +127,6 @@ vi.mock("../../logger", () => {
     logger: noopLogger,
     authLogger: noopLogger,
     mcpLogger: noopLogger,
-    seedLogger: noopLogger,
     logFilePath: `${testLogDir}/app.log`,
     LOG_DIR: testLogDir,
   };

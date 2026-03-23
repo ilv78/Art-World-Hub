@@ -111,7 +111,7 @@ Shadcn UI (Radix primitives) + Tailwind CSS. Component source in `client/src/com
 
 ## Environment Variables
 
-Required: `DATABASE_URL`, `SESSION_SECRET`. Optional: `SEED_DB=true` (seeds sample data), `OIDC_ISSUER_URL`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`. See `.env.example`.
+Required: `DATABASE_URL`, `SESSION_SECRET`. Optional: `OIDC_ISSUER_URL`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`. See `.env.example`.
 
 ## Documentation Culture
 

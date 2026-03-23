@@ -679,7 +679,7 @@ export function createMcpServer(): McpServer {
     {
       limit: z.number().optional().default(100).describe("Max entries to return (default 100, max 2000)"),
       level: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).optional().describe("Minimum log level"),
-      module: z.string().optional().describe("Filter by module (e.g. auth, mcp, seed)"),
+      module: z.string().optional().describe("Filter by module (e.g. auth, mcp)"),
       search: z.string().optional().describe("Text search across log entries"),
       since: z.string().optional().describe("ISO timestamp — only return entries after this time"),
     },
