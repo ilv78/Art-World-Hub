@@ -76,6 +76,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 170 | Store system - umbrella | high | enhancement | 2026-03-20 | `dependabot/github_actions/appleboy/scp-action-1.0.0` | #58 |
 | 14 | multiple gallery templates | low | enhancement | 2026-03-23 | `feature/issue-98-postmortem-workflow` | #99 |
 | 73 | Upgrade Node.js from 20 to 25 in Docker image | high | bug | 2026-03-23 | `upgrade/node-25` | #201 |
+| 206 | Skip Docker build and staging deploy for docs-only changes | — | devops | 2026-03-23 | `fix/issue-206-skip-docs-deploy` | #207 |
 ---
 
 ## Revision Log
@@ -112,3 +113,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-20 | Auto-closed #170 (Store system - umbrella). Added to Completed. PR #58. |
 | 2026-03-23 | Auto-closed #14 (multiple gallery templates). Moved from Active to Completed. PR #99. |
 | 2026-03-23 | Auto-closed #73 (Upgrade Node.js from 20 to 25 in Docker image). Moved from Active to Completed. PR #201. |
+| 2026-03-23 | Auto-closed #206 (Skip Docker build and staging deploy for docs-only changes). Added to Completed. PR #207. |
