@@ -27,7 +27,6 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 8 | Create admin section | high | feature | Open | — | Admin panel for platform management |
 | 32 | Correct names in museum gallery | medium | bug | Open | — | Artist room names incorrect |
 | 36 | Role securitas - in CI/CD | high | devops | In Progress | — | Parent: spec at `specs/SECURITY_AGENT.md`. Sub-issue #55 done. Audit completed → issue #77 (4×P0, 6×P1, 7×P2). |
-| 73 | Upgrade Node.js 20→25 | high | bug | Open | — | Dependabot PR #57 closed (major) |
 | 77 | Security Audit — Critical findings | critical | devops | In Progress | — | Parent. All 4 P0s done (PRs #82–#84), all 6 P1s done (PR #85). 6 P2s remaining (1 P2 was done in P1 batch). |
 | 74 | Upgrade react-resizable-panels 2→4 | high | bug | Open | — | Dependabot PR #68 closed (major) |
 | 76 | Upgrade Vite 7→8 | high | bug | Open | — | Dependabot PR #70 closed (major) |
@@ -76,6 +75,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 171 | Order cannot be submited | — | bug | 2026-03-20 | `fix/issue-171-order-submission` | #176 |
 | 170 | Store system - umbrella | high | enhancement | 2026-03-20 | `dependabot/github_actions/appleboy/scp-action-1.0.0` | #58 |
 | 14 | multiple gallery templates | low | enhancement | 2026-03-23 | `feature/issue-98-postmortem-workflow` | #99 |
+| 73 | Upgrade Node.js from 20 to 25 in Docker image | high | bug | 2026-03-23 | `upgrade/node-25` | #201 |
 ---
 
 ## Revision Log
@@ -111,3 +111,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-20 | Auto-closed #171 (Order cannot be submited). Added to Completed. PR #176. |
 | 2026-03-20 | Auto-closed #170 (Store system - umbrella). Added to Completed. PR #58. |
 | 2026-03-23 | Auto-closed #14 (multiple gallery templates). Moved from Active to Completed. PR #99. |
+| 2026-03-23 | Auto-closed #73 (Upgrade Node.js from 20 to 25 in Docker image). Moved from Active to Completed. PR #201. |
