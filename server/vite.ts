@@ -1,5 +1,5 @@
 import { type Express } from "express";
-import { createServer as createViteServer, createLogger } from "vite";
+import { createServer as createViteServer, createLogger } from "rolldown-vite";
 import { type Server } from "http";
 import viteConfig from "../vite.config";
 import fs from "fs";
