@@ -1399,7 +1399,7 @@ export function HallwayGallery3D({ artistRooms, curatorRooms, museumTemplate }: 
 
   if (webglError) {
     return (
-      <div className="relative w-full bg-gradient-to-b from-stone-900 to-black rounded-lg overflow-hidden flex items-center justify-center h-[60vh] min-h-[300px] max-h-[600px]" data-testid="webgl-fallback">
+      <div className="relative w-full bg-linear-to-b from-stone-900 to-black rounded-lg overflow-hidden flex items-center justify-center h-[60vh] min-h-[300px] max-h-[600px]" data-testid="webgl-fallback">
         <Card className="p-8 max-w-md text-center space-y-4">
           <Box className="w-16 h-16 mx-auto text-muted-foreground" />
           <h2 className="font-serif text-2xl font-bold">3D Gallery Unavailable</h2>

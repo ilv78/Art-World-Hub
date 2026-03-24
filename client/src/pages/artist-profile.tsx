@@ -114,7 +114,7 @@ export default function ArtistProfile() {
 
   return (
     <div className="min-h-screen">
-      <div className="relative h-48 bg-gradient-to-br from-primary/20 via-primary/10 to-background">
+      <div className="relative h-48 bg-linear-to-br from-primary/20 via-primary/10 to-background">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMtOS45NDEgMC0xOCA4LjA1OS0xOCAxOHM4LjA1OSAxOCAxOCAxOCAxOC04LjA1OSAxOC0xOC04LjA1OS0xOC0xOC0xOHoiIHN0cm9rZT0icmdiYSgwLDAsMCwwLjAzKSIgc3Ryb2tlLXdpZHRoPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-30" />
       </div>
 
@@ -224,7 +224,7 @@ export default function ArtistProfile() {
             {artworksLoading ? (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="aspect-[4/3] rounded-md" />
+                  <Skeleton key={i} className="aspect-4/3 rounded-md" />
                 ))}
               </div>
             ) : artworks && artworks.length > 0 ? (
@@ -237,7 +237,7 @@ export default function ArtistProfile() {
                       onClick={() => setSelectedArtwork(artwork)}
                       data-testid={`card-profile-artwork-${artwork.id}`}
                     >
-                      <div className="aspect-[4/3] relative overflow-visible">
+                      <div className="aspect-4/3 relative overflow-visible">
                         <img 
                           src={artwork.imageUrl} 
                           alt={artwork.title}
@@ -317,7 +317,7 @@ export default function ArtistProfile() {
                     data-testid={`card-profile-blog-${post.id}`}
                   >
                     {post.coverImageUrl && (
-                      <div className="aspect-[3/1] overflow-hidden">
+                      <div className="aspect-3/1 overflow-hidden">
                         <img 
                           src={post.coverImageUrl} 
                           alt={post.title}

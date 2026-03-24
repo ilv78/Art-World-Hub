@@ -694,14 +694,14 @@ export default function ArtistDashboard() {
           {artworksLoading ? (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="aspect-[4/3] rounded-md" />
+                <Skeleton key={i} className="aspect-4/3 rounded-md" />
               ))}
             </div>
           ) : artworks && artworks.length > 0 ? (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {artworks.map((artwork) => (
                 <Card key={artwork.id} className="overflow-hidden" data-testid={`card-artwork-${artwork.id}`}>
-                  <div className="aspect-[4/3] relative">
+                  <div className="aspect-4/3 relative">
                     <img 
                       src={artwork.imageUrl} 
                       alt={artwork.title}

@@ -67,7 +67,7 @@ export function CartSheet() {
                       className="flex gap-4 items-start"
                       data-testid={`cart-item-${item.artwork.id}`}
                     >
-                      <div className="w-16 h-16 rounded-md overflow-hidden bg-muted flex-shrink-0">
+                      <div className="w-16 h-16 rounded-md overflow-hidden bg-muted shrink-0">
                         <img
                           src={item.artwork.imageUrl}
                           alt={item.artwork.title}

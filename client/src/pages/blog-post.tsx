@@ -14,7 +14,7 @@ export default function BlogPost({ params }: { params: { id: string } }) {
     return (
       <div className="min-h-screen p-6 max-w-3xl mx-auto space-y-6">
         <Skeleton className="h-8 w-48" />
-        <Skeleton className="aspect-[16/9] rounded-md" />
+        <Skeleton className="aspect-video rounded-md" />
         <Skeleton className="h-10 w-3/4" />
         <Skeleton className="h-4 w-1/3" />
         <div className="space-y-3">
@@ -48,7 +48,7 @@ export default function BlogPost({ params }: { params: { id: string } }) {
       </Button>
 
       {post.coverImageUrl && (
-        <div className="aspect-[16/9] rounded-lg overflow-hidden">
+        <div className="aspect-video rounded-lg overflow-hidden">
           <img
             src={post.coverImageUrl}
             alt={post.title}
