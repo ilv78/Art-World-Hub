@@ -134,6 +134,7 @@ Feature Branch                   main
 | **Local** | Development | `npm run dev` / `docker compose up` | Local PostgreSQL (port 5433) | `localhost:5000` |
 | **CI** | Validation | Push / PR | Ephemeral service container | N/A |
 | **Staging** | Pre-production testing | Auto on merge to `main` | Dedicated staging DB | `staging.artverse.<domain>` |
+| **Preview** | v3 redesign testing | Auto on push to `redesign/v3` | Dedicated preview DB | `preview.artverse.<domain>` |
 | **Production** | Live site | Manual approval / git tag | Dedicated production DB | `artverse.<domain>` |
 
 ---
@@ -394,6 +395,7 @@ By: username
 | `TELEGRAM_CHAT_ID` | Set | Deploy notifications | Telegram chat ID for notifications |
 
 | `STAGING_URL` | Needs setup | Staging smoke test | Full staging URL (`https://staging.artverse.idata.ro`) |
+| `PREVIEW_URL` | Needs setup | Preview smoke test | Full preview URL (`https://preview.artverse.idata.ro`) |
 | `PRODUCTION_URL` | Needs setup | Production smoke test | Full production URL (`https://artverse.idata.ro`) |
 
 DB passwords and session secrets are stored in `.env` files on the VPS (not in GitHub Secrets), since the docker-compose files read them locally.
@@ -582,18 +584,18 @@ DB passwords and session secrets are stored in `.env` files on the VPS (not in G
                     ┌────────┴────────────┐
                     │                     │
                     ▼                     ▼
-     ┌──────────────────────┐  ┌──────────────────────┐
-     │  STAGING             │  │  PRODUCTION           │
-     │  staging user        │  │  production user      │
-     │                      │  │                       │
-     │  App    → :5003      │  │  App    → :5002       │
-     │  DB     → :5435      │  │  DB     → :5434       │
-     │                      │  │                       │
-     │  DB mode: push       │  │  DB mode: migrate     │
-     │  Auto-deploy on main │  │  Manual deploy        │
-     └──────────┬───────────┘  └──────────┬────────────┘
-                │                         │
-                └────────┬────────────────┘
+     ┌──────────────────────┐  ┌──────────────────────┐  ┌──────────────────────┐
+     │  STAGING             │  │  PREVIEW              │  │  PRODUCTION           │
+     │  staging user        │  │  preview user         │  │  production user      │
+     │                      │  │                       │  │                       │
+     │  App    → :5003      │  │  App    → :5004       │  │  App    → :5002       │
+     │  DB     → :5435      │  │  DB     → :5436       │  │  DB     → :5434       │
+     │                      │  │                       │  │                       │
+     │  DB mode: push       │  │  DB mode: push        │  │  DB mode: migrate     │
+     │  Auto-deploy on main │  │  Auto on redesign/v3  │  │  Manual deploy        │
+     └──────────┬───────────┘  └──────────┬────────────┘  └──────────┬────────────┘
+                │                         │                          │
+                └────────┬────────────────┴──────────────────────────┘
                          │ localhost only
                          ▼
               ┌──────────────────────┐
@@ -601,6 +603,9 @@ DB passwords and session secrets are stored in `.env` files on the VPS (not in G
               │                      │
               │  staging.artverse.   │
               │  idata.ro → :5003   │
+              │                      │
+              │  preview.artverse.   │
+              │  idata.ro → :5004   │
               │                      │
               │  artverse.           │
               │  idata.ro → :5002   │
@@ -718,3 +723,4 @@ Changes go through a PR, so CI validates the CHANGELOG update before it reaches 
 | 2026-03-14 | Added Section 6.6: Automated Release Workflow — label-driven versioned releases via `release.yml` + `prepare-release.sh`. Auto-detects PATCH/MINOR bump, updates CHANGELOG, creates git tag + GitHub Release, removes labels, Telegram notification. (Issue #110) |
 | 2026-03-15 | Added logging smoke test to staging deploy — verifies log file exists, has entries, valid JSON, and contains startup message. Updated test count from 32 to 52. (Issue [#39](https://github.com/ilv78/Art-World-Hub/issues/39)) |
 | 2026-03-23 | Skip Docker build and staging deploy for docs-only changes — added `changes` job with `dorny/paths-filter` to detect non-docs file changes. `build-image` and `deploy-staging` are skipped when only `specs/`, `docs/`, `**/*.md`, or `.github/ISSUE_TEMPLATE/` files changed. Updated pipeline diagram and job descriptions. (Issue [#206](https://github.com/ilv78/Art-World-Hub/issues/206)) |
+| 2026-03-24 | Added preview environment for `redesign/v3` branch — new `deploy-preview` job in ci.yml, `deploy/preview/docker-compose.yml` (port 5004/5436), nginx config for `preview.artverse.idata.ro`, updated server-setup.sh with preview user. CI pipeline now builds Docker images and deploys on both `main` (→ staging) and `redesign/v3` (→ preview). PRs can target either branch. (Issue [#235](https://github.com/ilv78/Art-World-Hub/issues/235)) |
