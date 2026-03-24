@@ -514,9 +514,6 @@ export default function ArtistDashboard() {
             <p className="text-sm text-muted-foreground">Your Artist Dashboard</p>
           </div>
         </div>
-        <Button variant="outline" asChild data-testid="button-logout">
-          <a href="/api/logout">Log Out</a>
-        </Button>
       </div>
 
       <Tabs defaultValue="artworks" className="space-y-6">
