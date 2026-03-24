@@ -8,7 +8,22 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
-_Nothing yet — all recent work included in v2.5.0 below._
+_Nothing yet — all recent work included in v2.6.0 below._
+
+## [2.6.0] - 2026-03-24
+
+### Added
+- Migrate Zod v3 → v4 ([#198](https://github.com/ilv78/Art-World-Hub/issues/198))
+- Migrate react-day-picker v8 → v9 ([#197](https://github.com/ilv78/Art-World-Hub/issues/197))
+- Migrate Tailwind CSS v3 → v4 ([#196](https://github.com/ilv78/Art-World-Hub/issues/196))
+
+### Fixed
+- Remove seed functionality from codebase ([#181](https://github.com/ilv78/Art-World-Hub/issues/181))
+- Upgrade react-resizable-panels from 2.x to 4.x ([#74](https://github.com/ilv78/Art-World-Hub/issues/74))
+- Upgrade Node.js from 20 to 25 in Docker image ([#73](https://github.com/ilv78/Art-World-Hub/issues/73))
+
+### Security
+- 🔴 Security Audit — Critical findings require immediate action ([#77](https://github.com/ilv78/Art-World-Hub/issues/77))
 
 ## [2.5.0] - 2026-03-23
 
