@@ -47,11 +47,6 @@ const menuItems = [
     url: "/blog",
     icon: BookOpen,
   },
-  {
-    title: "Artist Dashboard",
-    url: "/dashboard",
-    icon: LayoutDashboard,
-  },
 ];
 
 export function AppSidebar() {
@@ -92,15 +87,30 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-              {isAuthenticated && (user?.role === "curator" || user?.role === "admin") && (
+              {isAuthenticated && user?.role === "user" && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location === "/dashboard"}
+                    data-testid="link-nav-artist-dashboard"
+                  >
+                    <Link href="/dashboard" onClick={closeMobileSidebar}>
+                      <LayoutDashboard className="w-4 h-4" />
+                      <span>Artist Dashboard</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              {isAuthenticated && user?.role === "curator" && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
                     isActive={location === "/curator"}
+                    data-testid="link-nav-curator-dashboard"
                   >
                     <Link href="/curator" onClick={closeMobileSidebar}>
                       <Brush className="w-4 h-4" />
-                      <span>Curator</span>
+                      <span>Curator Dashboard</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -110,11 +120,11 @@ export function AppSidebar() {
                   <SidebarMenuButton
                     asChild
                     isActive={location === "/admin"}
-                    data-testid="link-nav-admin"
+                    data-testid="link-nav-admin-dashboard"
                   >
                     <Link href="/admin" onClick={closeMobileSidebar}>
                       <Shield className="w-4 h-4" />
-                      <span>Admin</span>
+                      <span>Admin Dashboard</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

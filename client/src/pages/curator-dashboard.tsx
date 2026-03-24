@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Plus, Trash2, Save, Loader2, Image as ImageIcon, GripVertical, LogIn } from "lucide-react";
+import { Plus, Trash2, Save, Loader2, Image as ImageIcon, GripVertical, LogIn, Pencil } from "lucide-react";
 import type { CuratorGalleryWithArtworks, ArtworkWithArtist } from "@shared/schema";
 
 export default function CuratorDashboard() {
@@ -41,6 +41,28 @@ export default function CuratorDashboard() {
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newDescription, setNewDescription] = useState("");
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileFirstName, setProfileFirstName] = useState("");
+  const [profileLastName, setProfileLastName] = useState("");
+
+  useEffect(() => {
+    if (user) {
+      setProfileFirstName(user.firstName || "");
+      setProfileLastName(user.lastName || "");
+    }
+  }, [user]);
+
+  const profileMutation = useMutation({
+    mutationFn: async (data: { firstName: string; lastName: string }) => {
+      const res = await apiRequest("PATCH", "/api/curator/profile", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      setEditingProfile(false);
+      toast({ title: "Profile updated" });
+    },
+  });
 
   const isCurator = isAuthenticated && (user?.role === "curator" || user?.role === "admin");
 
@@ -112,6 +134,7 @@ export default function CuratorDashboard() {
           <DialogTrigger asChild>
             <Button><Plus className="w-4 h-4 mr-2" />New Gallery</Button>
           </DialogTrigger>
+
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Create Gallery</DialogTitle>
@@ -139,6 +162,50 @@ export default function CuratorDashboard() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+          <CardTitle className="text-lg">Profile</CardTitle>
+          {!editingProfile && (
+            <Button variant="ghost" size="sm" onClick={() => setEditingProfile(true)}>
+              <Pencil className="w-4 h-4 mr-1" />Edit
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          {editingProfile ? (
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="profile-first">First name</Label>
+                <Input id="profile-first" value={profileFirstName} onChange={e => setProfileFirstName(e.target.value)} className="w-48" />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="profile-last">Last name</Label>
+                <Input id="profile-last" value={profileLastName} onChange={e => setProfileLastName(e.target.value)} className="w-48" />
+              </div>
+              <Button
+                size="sm"
+                onClick={() => profileMutation.mutate({ firstName: profileFirstName, lastName: profileLastName })}
+                disabled={profileMutation.isPending}
+              >
+                {profileMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                <Save className="w-4 h-4 mr-1" />Save
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => {
+                setProfileFirstName(user?.firstName || "");
+                setProfileLastName(user?.lastName || "");
+                setEditingProfile(false);
+              }}>Cancel</Button>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {user?.firstName || user?.lastName
+                ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim()
+                : <span className="italic">No name set — click Edit to add your display name</span>}
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       {isLoading ? (
         <div className="grid gap-4">
