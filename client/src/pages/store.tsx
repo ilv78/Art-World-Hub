@@ -195,7 +195,7 @@ export default function Store() {
         >
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="space-y-3">
-              <Skeleton className="aspect-[4/5] rounded-md" />
+              <Skeleton className="aspect-4/5 rounded-md" />
               <Skeleton className="h-5 w-3/4" />
               <Skeleton className="h-4 w-1/2" />
             </div>
@@ -233,7 +233,7 @@ export default function Store() {
               onClick={() => setSelectedArtwork(artwork)}
               data-testid={`list-item-${artwork.id}`}
             >
-              <div className="w-24 h-24 flex-shrink-0 rounded-md overflow-hidden">
+              <div className="w-24 h-24 shrink-0 rounded-md overflow-hidden">
                 <img
                   src={artwork.imageUrl}
                   alt={artwork.title}
@@ -247,7 +247,7 @@ export default function Store() {
                   {artwork.description}
                 </p>
               </div>
-              <div className="text-right flex-shrink-0">
+              <div className="text-right shrink-0">
                 <p className="font-bold text-primary text-lg">
                   {formatPrice(artwork.price)}
                 </p>

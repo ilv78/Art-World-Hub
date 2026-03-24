@@ -29,7 +29,7 @@ export default function Home() {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-background to-accent/20 py-20 px-6">
+      <section className="relative overflow-hidden bg-linear-to-br from-primary/10 via-background to-accent/20 py-20 px-6">
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=1920&q=80')] bg-cover bg-center opacity-5" />
         <div className="relative max-w-4xl mx-auto text-center space-y-6">
           <Badge variant="outline" className="px-4 py-1">
@@ -127,7 +127,7 @@ export default function Home() {
             {artworksLoading ? (
               Array.from({ length: 4 }).map((_, i) => (
                 <Card key={i} className="overflow-hidden">
-                  <Skeleton className="aspect-[4/5]" />
+                  <Skeleton className="aspect-4/5" />
                   <CardContent className="p-4 space-y-2">
                     <Skeleton className="h-5 w-3/4" />
                     <Skeleton className="h-4 w-1/2" />
@@ -139,7 +139,7 @@ export default function Home() {
               featuredArtworks.slice(0, 4).map((artwork) => (
                 <Link href="/store" key={artwork.id}>
                   <Card className="overflow-hidden hover-elevate cursor-pointer group" data-testid={`card-featured-${artwork.id}`}>
-                    <div className="aspect-[4/5] overflow-hidden">
+                    <div className="aspect-4/5 overflow-hidden">
                       <img
                         src={artwork.imageUrl}
                         alt={artwork.title}

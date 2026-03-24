@@ -215,16 +215,16 @@ export default function Gallery() {
 
       {viewMode === "classic" && (
         <>
-          <div className="absolute inset-0 bg-gradient-to-b from-stone-100 to-stone-200 dark:from-stone-900 dark:to-stone-950">
-            <div className="absolute bottom-0 left-0 right-0 h-1/4 bg-gradient-to-t from-amber-900/20 to-transparent" />
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-32 bg-gradient-to-b from-yellow-100/30 to-transparent dark:from-yellow-100/10 blur-xl" />
+          <div className="absolute inset-0 bg-linear-to-b from-stone-100 to-stone-200 dark:from-stone-900 dark:to-stone-950">
+            <div className="absolute bottom-0 left-0 right-0 h-1/4 bg-linear-to-t from-amber-900/20 to-transparent" />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-32 bg-linear-to-b from-yellow-100/30 to-transparent dark:from-yellow-100/10 blur-xl" />
           </div>
 
           <div className="relative flex-1 flex items-center justify-center gap-2 sm:gap-4 p-4 sm:p-8">
             <Button
               variant="secondary"
               size="icon"
-              className="flex-shrink-0 z-20 h-12 w-12 rounded-full shadow-lg"
+              className="shrink-0 z-20 h-12 w-12 rounded-full shadow-lg"
               onClick={handlePrevious}
               data-testid="button-prev-artwork"
             >
@@ -256,7 +256,7 @@ export default function Gallery() {
             <Button
               variant="secondary"
               size="icon"
-              className="flex-shrink-0 z-20 h-12 w-12 rounded-full shadow-lg"
+              className="shrink-0 z-20 h-12 w-12 rounded-full shadow-lg"
               onClick={handleNext}
               data-testid="button-next-artwork"
             >
@@ -285,7 +285,7 @@ export default function Gallery() {
                   <button
                     key={artwork.id}
                     onClick={() => { setCurrentIndex(index); setZoom(1); setShowInfo(false); }}
-                    className={`flex-shrink-0 w-16 h-16 rounded-md overflow-hidden border-2 transition-all ${
+                    className={`shrink-0 w-16 h-16 rounded-md overflow-hidden border-2 transition-all ${
                       index === currentIndex
                         ? "border-primary ring-2 ring-primary/30"
                         : "border-transparent opacity-60 hover:opacity-100"
@@ -309,7 +309,7 @@ export default function Gallery() {
               </div>
               <ScrollArea className="flex-1">
                 <div className="p-4 space-y-6">
-                  <div className="aspect-[4/3] rounded-lg overflow-hidden">
+                  <div className="aspect-4/3 rounded-lg overflow-hidden">
                     <img src={currentArtwork.imageUrl} alt={currentArtwork.title} className="w-full h-full object-cover" />
                   </div>
                   <div className="space-y-4">

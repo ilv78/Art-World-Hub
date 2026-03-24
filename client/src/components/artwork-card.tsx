@@ -36,13 +36,13 @@ export function ArtworkCard({ artwork, onViewDetails, showAddToCart = true }: Ar
       onClick={onViewDetails}
       data-testid={`card-artwork-${artwork.id}`}
     >
-      <div className="relative aspect-[4/5] overflow-hidden rounded-t-md">
+      <div className="relative aspect-4/5 overflow-hidden rounded-t-md">
         <img
           src={artwork.imageUrl}
           alt={artwork.title}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         <div className="absolute bottom-4 left-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <Button
             size="sm"
@@ -83,7 +83,7 @@ export function ArtworkCard({ artwork, onViewDetails, showAddToCart = true }: Ar
               {artwork.title}
             </h3>
             {artwork.year && (
-              <span className="text-xs text-muted-foreground flex-shrink-0">
+              <span className="text-xs text-muted-foreground shrink-0">
                 {artwork.year}
               </span>
             )}

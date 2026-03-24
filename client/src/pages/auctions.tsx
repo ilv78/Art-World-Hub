@@ -71,7 +71,7 @@ function AuctionCard({
 
   return (
     <Card className="overflow-hidden hover-elevate" data-testid={`card-auction-${auction.id}`}>
-      <div className="relative aspect-[4/3] overflow-hidden">
+      <div className="relative aspect-4/3 overflow-hidden">
         <img
           src={auction.artwork.imageUrl}
           alt={auction.artwork.title}
@@ -301,7 +301,7 @@ export default function Auctions() {
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <Card key={i} className="overflow-hidden">
-                    <Skeleton className="aspect-[4/3]" />
+                    <Skeleton className="aspect-4/3" />
                     <CardContent className="p-4 space-y-3">
                       <Skeleton className="h-6 w-3/4" />
                       <Skeleton className="h-4 w-1/2" />
@@ -368,7 +368,7 @@ export default function Auctions() {
 
               <div className="grid gap-6">
                 <div className="flex gap-4">
-                  <div className="w-24 h-24 rounded-md overflow-hidden flex-shrink-0">
+                  <div className="w-24 h-24 rounded-md overflow-hidden shrink-0">
                     <img
                       src={selectedAuction.artwork.imageUrl}
                       alt={selectedAuction.artwork.title}

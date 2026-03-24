@@ -65,7 +65,7 @@ function App() {
             <div className="flex min-h-screen w-full">
               <AppSidebar />
               <div className="flex flex-col flex-1 min-w-0">
-                <header className="sticky top-0 z-40 flex items-center justify-between gap-4 p-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+                <header className="sticky top-0 z-40 flex items-center justify-between gap-4 p-3 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
                   <SidebarTrigger data-testid="button-sidebar-toggle" />
                   <div className="flex items-center gap-2">
                     <CartSheet />
