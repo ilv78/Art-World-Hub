@@ -142,18 +142,265 @@ The 3D museum is our unique feature — enhance, not hide it:
 
 ---
 
-## 5. Implementation Phases
+## 5. Implementation Plan
 
-To be broken into separate GitHub issues:
+### Dependency Graph
 
-1. **Navigation restructure** — Top nav component, split layout shells, route updates
-2. **Footer component** — Multi-column footer, social links, newsletter
-3. **Home page redesign** — Full-bleed hero, horizontal shelves, mixed grids
-4. **Gallery page** — Full-width 3D, immersive mode toggle
-5. **Store page** — Variable grid, improved filters
-6. **Other pages** — Artists, exhibitions, blog grid improvements
-7. **Rebrand** — New name, logo, color refinements (see NAMING-SPEC.md)
-8. **Mobile polish** — Bottom tab bar, touch optimizations
+```
+Phase 1: Foundation
+  Issue 1 (Split layout shells)
+    ├── Issue 2 (Top nav)        ← depends on Issue 1
+    ├── Issue 3 (Footer)         ← depends on Issue 1, parallel with Issue 2
+    │
+Phase 2: Page Redesigns          ← after Issues 2 & 3 are merged
+    ├── Issue 4 (Home page)      ← parallel
+    ├── Issue 5 (Gallery + 3D)   ← parallel
+    ├── Issue 6 (Store page)     ← parallel
+    ├── Issue 7 (Other pages)    ← parallel
+    │
+Phase 3: Polish                   ← after page redesigns stabilize
+    ├── Issue 8 (Mobile nav)
+    └── Issue 9 (Rebrand)        ← last
+```
+
+### Phase 1: Foundation
+
+These changes are structural and must land first. Everything else depends on them.
+
+#### Issue 1 — Split Layout Shells
+
+**Priority:** Critical — all other issues depend on this.
+
+**Scope:**
+- Create `PublicLayout` component: top-level wrapper with slot for top nav, full-width `<main>`, slot for footer
+- Create `DashboardLayout` component: wraps existing `SidebarProvider` + `AppSidebar` pattern
+- Update `App.tsx` routing to assign each page to the correct shell:
+  - **Public:** `/` (home), `/gallery`, `/exhibitions`, `/store`, `/artists`, `/artists/:id`, `/blog`, `/blog/:id`, `/auctions`, `/changelog`, `/auth`, `/auth/set-password`
+  - **Dashboard:** `/dashboard` (artist), `/curator`, `/curator-gallery/:id`, `/admin`
+- Preserve all existing functionality — this is a structural refactor, not a visual change yet
+- The public shell renders without sidebar; the dashboard shell keeps the current sidebar
+
+**Key files to modify:**
+- `client/src/App.tsx` — routing and layout shell assignment
+- `client/src/components/public-layout.tsx` — new file
+- `client/src/components/dashboard-layout.tsx` — new file (extracts current sidebar pattern)
+- `client/src/components/app-sidebar.tsx` — moved into dashboard shell only
+
+**Acceptance criteria:**
+- Public pages render full-width without sidebar
+- Dashboard pages render with sidebar exactly as before
+- No visual regressions on dashboard pages
+- All routes still work, auth still works
+
+---
+
+#### Issue 2 — Top Navigation Bar
+
+**Priority:** High — depends on Issue 1.
+
+**Scope:**
+- Build `TopNav` component for the public layout shell
+- Sticky top bar with structure:
+  - Left: Logo (orange circle "A") + brand name (Playfair Display serif)
+  - Center: Nav links — Gallery, Exhibitions, Store, Artists, Blog
+  - Right: Search icon, Cart button (with badge count from Zustand store), Palette picker, Theme toggle, User menu (avatar + dropdown with dashboard link + logout)
+- Active link highlighting (uses Wouter `useLocation`)
+- Unauthenticated state: Login button instead of user menu
+- Role-aware: dashboard link in user menu points to correct dashboard (artist/curator/admin)
+- Responsive: collapses to hamburger menu on mobile (< md breakpoint)
+
+**Key files to create/modify:**
+- `client/src/components/top-nav.tsx` — new file
+- `client/src/components/public-layout.tsx` — integrate TopNav
+- Reuse existing: `CartSheet`, `PalettePicker`, `ThemeToggle` components
+
+**Design reference:** Artsy (clean, sticky) + Gagosian (minimal, serif brand)
+
+**Acceptance criteria:**
+- All public pages have a top nav instead of sidebar
+- Cart, theme, palette features still work
+- Navigation between all public pages works
+- Auth state correctly reflected (login button vs user menu)
+- Mobile hamburger menu works
+
+---
+
+#### Issue 3 — Footer Component
+
+**Priority:** High — depends on Issue 1, can be built in parallel with Issue 2.
+
+**Scope:**
+- Build `Footer` component for the public layout shell
+- Multi-column layout (responsive: 1 col mobile → 4 col desktop):
+  - Column 1: Brand name + tagline ("Discover. Collect. Create.") + social media icons
+  - Column 2: Navigation links (Gallery, Store, Exhibitions, Artists, Blog)
+  - Column 3: For Artists (Join as Artist, Artist Dashboard, Curator Dashboard)
+  - Column 4: Newsletter signup (email input + subscribe button — can be placeholder initially)
+- Bottom bar: Copyright year, Privacy Policy link, Terms link, version number + changelog link
+- Respects current theme (light/dark mode)
+
+**Key files to create/modify:**
+- `client/src/components/footer.tsx` — new file
+- `client/src/components/public-layout.tsx` — integrate Footer
+
+**Design reference:** MoMA (substantial, multi-column) + Tate (clean, organized)
+
+**Acceptance criteria:**
+- Footer appears on all public pages
+- Footer does NOT appear on dashboard pages
+- Responsive: stacks on mobile, 4 columns on desktop
+- Links work, theme-aware
+
+---
+
+### Phase 2: Page Redesigns
+
+These issues can be worked on in parallel once the public shell, top nav, and footer are in place. Each issue is independent.
+
+#### Issue 4 — Home Page Redesign
+
+**Priority:** High — biggest visual impact.
+
+**Scope:**
+- **Hero section:** Replace gradient + text with full-bleed visual approach
+  - Option A: Featured artwork carousel with cinematic transitions (Gagosian-style pan/zoom)
+  - Option B: 3D gallery teaser/preview embedded in hero
+  - Minimal overlay text, CTAs overlaid on visual content
+- **Featured artworks:** Replace static 4-card grid with horizontal scroll shelf (Artsy pattern)
+  - Snap scrolling, arrow navigation, drag/swipe on mobile
+- **Features section:** Redesign 3-column cards with better visual hierarchy
+- **Additional sections to consider:**
+  - "New This Week" horizontal shelf
+  - Featured exhibition spotlight (full-bleed card)
+  - Artist spotlight section
+- **CTA section:** More visual, less text-heavy
+
+**Key files to modify:**
+- `client/src/pages/home.tsx` — full page restructure
+- New component: `client/src/components/horizontal-shelf.tsx` — reusable scroll shelf
+- New component: `client/src/components/hero-carousel.tsx` — hero with transitions
+
+**Design reference:** Gagosian (hero), Artsy (shelves), MoMA (section variety)
+
+**Acceptance criteria:**
+- Hero makes strong visual first impression
+- Horizontal shelf is smooth and responsive
+- Page has visual rhythm — no single repeated grid pattern
+- All existing CTAs and links still work
+
+---
+
+#### Issue 5 — Gallery Page: Full-Width 3D + Immersive Mode
+
+**Priority:** High — our key differentiator.
+
+**Scope:**
+- 3D gallery now renders full viewport width (no sidebar constraint)
+- **Immersive mode toggle:** Button to enter full-screen mode
+  - Hides top nav and footer
+  - 3D canvas fills entire viewport
+  - Floating exit button (top-right corner) or ESC key to exit
+  - Uses browser Fullscreen API where supported
+- Classic gallery view also benefits from full width
+- Tab switching between 3D/Classic remains
+
+**Key files to modify:**
+- `client/src/pages/gallery.tsx` — layout adjustments, immersive mode state
+- `client/src/components/hallway-gallery-3d.tsx` — respond to full-width/immersive
+- `client/src/components/maze-gallery-3d.tsx` — same treatment for artist galleries
+
+**Acceptance criteria:**
+- 3D gallery uses full viewport width
+- Immersive mode hides all chrome, ESC/button exits
+- Classic view also full-width
+- No regressions in 3D navigation (WASD, mouse look)
+
+---
+
+#### Issue 6 — Store Page Grid Improvements
+
+**Priority:** Medium.
+
+**Scope:**
+- Variable column density: featured/promoted artworks get larger cards
+- Consider masonry layout option for artwork grid (respects natural aspect ratios)
+- Improved filter panel: sidebar filters on desktop (left side), sheet/drawer on mobile
+- Horizontal shelf for "Recently Added" or "Staff Picks" at top
+- Keep existing search, category, sort functionality
+
+**Key files to modify:**
+- `client/src/pages/store.tsx` — grid layout changes
+- `client/src/components/artwork-card.tsx` — possible size variants (small/medium/large)
+
+**Acceptance criteria:**
+- Store grid has visual variety
+- Filters work on desktop and mobile
+- All existing functionality preserved (search, sort, cart, detail dialog)
+
+---
+
+#### Issue 7 — Other Page Improvements
+
+**Priority:** Medium. Can be split into sub-issues if needed.
+
+**Scope:**
+- **Artists page:** Larger artist cards, hover to preview portfolio, variable grid
+- **Exhibitions page:** Full-bleed exhibition hero cards, better visual hierarchy for active vs upcoming
+- **Blog page:** Magazine-style layout — lead article full-width, rest in grid
+- **Artist profile page:** Full-width 3D gallery, better tab layout
+
+**Key files to modify:**
+- `client/src/pages/artists.tsx`
+- `client/src/pages/exhibitions.tsx`
+- `client/src/pages/blog.tsx`
+- `client/src/pages/artist-profile.tsx`
+
+---
+
+### Phase 3: Polish
+
+#### Issue 8 — Mobile Navigation
+
+**Priority:** Medium — after page layouts stabilize.
+
+**Scope:**
+- Evaluate: bottom tab bar vs improved hamburger menu
+- Bottom tab bar (if chosen): 4-5 tabs — Home, Gallery, Store, Artists, Cart
+  - Visible on mobile only (< md breakpoint)
+  - Active tab highlighting
+  - Cart tab shows badge count
+- Hamburger menu refinements: full-screen overlay with large touch targets
+- Touch-optimized card sizes across all pages
+
+**Key files to create/modify:**
+- `client/src/components/bottom-tabs.tsx` — new file (if bottom tab approach)
+- `client/src/components/top-nav.tsx` — mobile menu improvements
+- `client/src/components/public-layout.tsx` — conditional bottom tabs
+
+---
+
+#### Issue 9 — Rebrand
+
+**Priority:** Medium — deliberately last, easier once layout is settled.
+
+**Scope:**
+- Apply new brand name (see `NAMING-SPEC.md` — selection pending)
+- Update logo, favicon, meta tags, OpenGraph images
+- Update sidebar brand section (dashboard shell)
+- Update top nav brand section (public shell)
+- Update footer brand section
+- Update `<title>` tags across pages
+- SEO: update meta descriptions, structured data
+- Consider color refinements if name inspires a shift
+
+**Key files to modify:**
+- `client/index.html` — title, favicon, meta
+- `client/src/components/top-nav.tsx` — brand name/logo
+- `client/src/components/app-sidebar.tsx` — brand name/logo
+- `client/src/components/footer.tsx` — brand name
+- All page components with hardcoded "ArtVerse" references
+
+**Depends on:** Brand name selection from NAMING-SPEC.md
 
 ---
 
