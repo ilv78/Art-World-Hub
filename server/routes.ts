@@ -522,7 +522,7 @@ export async function registerRoutes(
       res.status(201).json(bid);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: error.errors[0].message });
+        return res.status(400).json({ error: error.issues[0].message });
       }
       res.status(500).json({ error: "Failed to place bid" });
     }
@@ -599,7 +599,7 @@ export async function registerRoutes(
       res.status(201).json(order);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: error.errors[0].message });
+        return res.status(400).json({ error: error.issues[0].message });
       }
       res.status(500).json({ error: "Failed to create order" });
     }
@@ -723,7 +723,7 @@ export async function registerRoutes(
       res.status(201).json(post);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: error.errors[0].message });
+        return res.status(400).json({ error: error.issues[0].message });
       }
       res.status(500).json({ error: "Failed to create blog post" });
     }
@@ -788,7 +788,7 @@ export async function registerRoutes(
       res.json(artist);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: error.errors[0].message });
+        return res.status(400).json({ error: error.issues[0].message });
       }
       res.status(500).json({ error: "Failed to update artist" });
     }
@@ -812,7 +812,7 @@ export async function registerRoutes(
       res.status(201).json(artwork);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: error.errors[0].message });
+        return res.status(400).json({ error: error.issues[0].message });
       }
       res.status(500).json({ error: "Failed to create artwork" });
     }

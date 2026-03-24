@@ -486,7 +486,7 @@ export function createMcpServer(): McpServer {
       country: z.string().optional().describe("Country"),
       specialization: z.string().optional().describe("Art specialization"),
       email: z.string().email().optional().describe("Contact email"),
-      socialLinks: z.record(z.string()).optional().describe("Social media links as key-value pairs (e.g. { instagram: 'url', website: 'url' })"),
+      socialLinks: z.record(z.string(), z.string()).optional().describe("Social media links as key-value pairs (e.g. { instagram: 'url', website: 'url' })"),
     },
     async (args) => {
       try {

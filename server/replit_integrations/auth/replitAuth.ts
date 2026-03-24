@@ -217,7 +217,7 @@ export async function setupAuth(app: Express) {
       res.json({ message: "Check your email for a verification link." });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: error.errors[0].message });
+        return res.status(400).json({ message: error.issues[0].message });
       }
       logger.error({ err: error }, "Signup error");
       res.status(500).json({ message: "Failed to send verification email" });
@@ -285,7 +285,7 @@ export async function setupAuth(app: Express) {
       res.json({ message: "Password set successfully" });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: error.errors[0].message });
+        return res.status(400).json({ message: error.issues[0].message });
       }
       logger.error({ err: error }, "Set password error");
       res.status(500).json({ message: "Failed to set password" });
@@ -298,7 +298,7 @@ export async function setupAuth(app: Express) {
       loginSchema.parse(req.body);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: error.errors[0].message });
+        return res.status(400).json({ message: error.issues[0].message });
       }
     }
 
