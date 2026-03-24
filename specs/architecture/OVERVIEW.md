@@ -446,7 +446,7 @@ npx vitest run <file>       # Single file
 | openid-client | 6.8 | OIDC protocol |
 | bcryptjs | 3.0 | Password hashing |
 | Resend | 4.0 | Transactional email |
-| Zod | 3.24 | Schema validation |
+| Zod | 4.3 | Schema validation |
 | @modelcontextprotocol/sdk | 1.26 | MCP server |
 | esbuild | 0.25 | Server bundler |
 | Vitest | 3.2 | Test framework |
