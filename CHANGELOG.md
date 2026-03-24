@@ -8,7 +8,12 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
-_Nothing yet — all recent work included in v2.6.0 below._
+_Nothing yet — all recent work included in v2.7.0 below._
+
+## [2.7.0] - 2026-03-24
+
+### Added
+- We will need a curator profile editor ([#164](https://github.com/ilv78/Art-World-Hub/issues/164))
 
 ## [2.6.0] - 2026-03-24
 
