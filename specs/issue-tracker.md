@@ -82,6 +82,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 161 | museum overview | low | bug | 2026-03-23 | — | — |
 | 169 | Artworks not visible on click | high | bug | 2026-03-23 | `fix/issue-80-81-mcp-auth-ssrf` | #84 |
 | 198 | Migrate Zod v3 → v4 | high | enhancement | 2026-03-24 | `upgrade/zod-v4` | #224 |
+| 196 | Migrate Tailwind CSS v3 → v4 | high | enhancement | 2026-03-24 | `upgrade/tailwind-v4` | #227 |
 ---
 
 ## Revision Log
@@ -127,3 +128,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-23 | Auto-closed #161 (museum overview). Added to Completed. |
 | 2026-03-23 | Auto-closed #169 (Artworks not visible on click). Added to Completed. PR #84. |
 | 2026-03-24 | Auto-closed #198 (Migrate Zod v3 → v4). Added to Completed. PR #224. |
+| 2026-03-24 | Auto-closed #196 (Migrate Tailwind CSS v3 → v4). Added to Completed. PR #227. |
