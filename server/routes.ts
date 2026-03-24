@@ -914,6 +914,27 @@ export async function registerRoutes(
     }
   });
 
+  // Curator: update own profile (name)
+  app.patch("/api/curator/profile", isCurator, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const { firstName, lastName } = req.body;
+      if (typeof firstName !== "string" && typeof lastName !== "string") {
+        return res.status(400).json({ error: "Provide firstName or lastName" });
+      }
+      const data: { firstName?: string; lastName?: string } = {};
+      if (typeof firstName === "string") data.firstName = firstName.trim();
+      if (typeof lastName === "string") data.lastName = lastName.trim();
+      const user = await storage.updateUserProfile(userId, data);
+      if (!user) return res.status(404).json({ error: "User not found" });
+      const { password: _, ...safeUser } = user;
+      res.json(safeUser);
+    } catch (error) {
+      logger.error({ err: error }, "Update curator profile error");
+      res.status(500).json({ error: "Failed to update profile" });
+    }
+  });
+
   // Curator: available artworks
   app.get("/api/curator/artworks/available", isCurator, async (_req, res) => {
     try {

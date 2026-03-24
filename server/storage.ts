@@ -90,6 +90,9 @@ export interface IStorage {
   regenerateCuratorGalleryLayout(galleryId: string): Promise<MazeLayout>;
   getAllExhibitionReadyArtworks(): Promise<ArtworkWithArtist[]>;
 
+  // User profile
+  updateUserProfile(userId: string, data: { firstName?: string; lastName?: string }): Promise<User | undefined>;
+
   // Admin
   getUsers(): Promise<User[]>;
   updateUserRole(userId: string, role: UserRole): Promise<User | undefined>;
@@ -429,6 +432,15 @@ export class DatabaseStorage implements IStorage {
   // Admin
   async getUsers(): Promise<User[]> {
     return db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async updateUserProfile(userId: string, data: { firstName?: string; lastName?: string }): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
   }
 
   async updateUserRole(userId: string, role: UserRole): Promise<User | undefined> {

@@ -41,6 +41,7 @@ const { mockStorage } = vi.hoisted(() => {
     deleteBlogPost: fn().mockResolvedValue(false),
     getExhibitionReadyArtworks: fn().mockResolvedValue([]),
     regenerateArtistGallery: fn().mockResolvedValue({ width: 3, height: 3, cells: [], spawnPoint: { x: 1, z: 1 } }),
+    updateUserProfile: fn().mockResolvedValue(undefined),
     getUsers: fn().mockResolvedValue([]),
     updateUserRole: fn().mockResolvedValue(undefined),
     deleteArtist: fn().mockResolvedValue(false),
