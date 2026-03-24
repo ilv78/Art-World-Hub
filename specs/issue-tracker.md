@@ -84,6 +84,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 198 | Migrate Zod v3 → v4 | high | enhancement | 2026-03-24 | `upgrade/zod-v4` | #224 |
 | 196 | Migrate Tailwind CSS v3 → v4 | high | enhancement | 2026-03-24 | `upgrade/tailwind-v4` | #227 |
 | 164 | We will need a curator profile editor | high | feature | 2026-03-24 | `feature/issue-164-curator-profile-editor` | #230 |
+| 235 | v3: CI pipeline + preview deploy for redesign/v3 branch | — | devops | 2026-03-24 | `feature/issue-235-preview-deploy` | #245 |
 ---
 
 ## Revision Log
@@ -131,3 +132,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-24 | Auto-closed #198 (Migrate Zod v3 → v4). Added to Completed. PR #224. |
 | 2026-03-24 | Auto-closed #196 (Migrate Tailwind CSS v3 → v4). Added to Completed. PR #227. |
 | 2026-03-24 | Auto-closed #164 (We will need a curator profile editor). Added to Completed. PR #230. |
+| 2026-03-24 | Auto-closed #235 (v3: CI pipeline + preview deploy for redesign/v3 branch). Added to Completed. PR #245. |
