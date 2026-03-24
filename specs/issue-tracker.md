@@ -81,6 +81,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 77 | 🔴 Security Audit — Critical findings require immediate action | medium | devops | 2026-03-23 | `fix/issue-79-lock-order-endpoints` | #83 |
 | 161 | museum overview | low | bug | 2026-03-23 | — | — |
 | 169 | Artworks not visible on click | high | bug | 2026-03-23 | `fix/issue-80-81-mcp-auth-ssrf` | #84 |
+| 198 | Migrate Zod v3 → v4 | high | enhancement | 2026-03-24 | `upgrade/zod-v4` | #224 |
 ---
 
 ## Revision Log
@@ -125,3 +126,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-23 | Auto-closed #77 (🔴 Security Audit — Critical findings require immediate action). Moved from Active to Completed. PR #83. |
 | 2026-03-23 | Auto-closed #161 (museum overview). Added to Completed. |
 | 2026-03-23 | Auto-closed #169 (Artworks not visible on click). Added to Completed. PR #84. |
+| 2026-03-24 | Auto-closed #198 (Migrate Zod v3 → v4). Added to Completed. PR #224. |
