@@ -86,6 +86,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 164 | We will need a curator profile editor | high | feature | 2026-03-24 | `feature/issue-164-curator-profile-editor` | #230 |
 | 235 | v3: CI pipeline + preview deploy for redesign/v3 branch | — | devops | 2026-03-24 | `feature/issue-235-preview-deploy` | #245 |
 | 236 | v3: Split layout shells (public + dashboard) | — | feature, ui/ux | 2026-03-24 | `feature/issue-236-split-layout-shells` | #247 |
+| 249 | CI/CD: auto-merge passing PRs and auto-deploy on release | high | devops | 2026-03-25 | `feature/ci-automerge-autodeploy` | #250 |
 ---
 
 ## Revision Log
@@ -135,3 +136,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-24 | Auto-closed #164 (We will need a curator profile editor). Added to Completed. PR #230. |
 | 2026-03-24 | Auto-closed #235 (v3: CI pipeline + preview deploy for redesign/v3 branch). Added to Completed. PR #245. |
 | 2026-03-24 | Auto-closed #236 (v3: Split layout shells (public + dashboard)). Added to Completed. PR #247. |
+| 2026-03-25 | Auto-closed #249 (CI/CD: auto-merge passing PRs and auto-deploy on release). Added to Completed. PR #250. |
