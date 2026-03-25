@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSearch } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,7 +36,14 @@ const sortOptions = [
 ];
 
 export default function Store() {
-  const [searchQuery, setSearchQuery] = useState("");
+  const search = useSearch();
+  const initialSearch = new URLSearchParams(search).get("search") ?? "";
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
+
+  useEffect(() => {
+    const q = new URLSearchParams(search).get("search") ?? "";
+    if (q) setSearchQuery(q);
+  }, [search]);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [sortBy, setSortBy] = useState("newest");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -45,9 +53,11 @@ export default function Store() {
     queryKey: ["/api/artworks"],
   });
 
+  const isGlobalSearch = !!new URLSearchParams(search).get("search");
+
   const filteredArtworks =
     artworks
-      ?.filter((artwork) => artwork.isForSale)
+      ?.filter((artwork) => isGlobalSearch && searchQuery ? true : artwork.isForSale)
       .filter((artwork) =>
         selectedCategory === "All" ? true : artwork.category === selectedCategory
       )
