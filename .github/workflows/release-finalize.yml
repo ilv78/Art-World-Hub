@@ -82,6 +82,15 @@ jobs:
         run: |
           printf '%s\n' "$CHANGELOG_BODY" | gh release create "$TAG" --title "$TAG" --notes-file -
 
+      - name: Trigger production deploy
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          echo "Dispatching production deploy with image tag: latest"
+          gh workflow run deploy-production.yml -f image_tag=latest
+          echo "Production deploy triggered for $TAG"
+
       - name: 'Remove "release: next" labels'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
