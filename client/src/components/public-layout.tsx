@@ -1,5 +1,5 @@
-import { Link } from "wouter";
 import { TopNav } from "@/components/top-nav";
+import { Footer } from "@/components/footer";
 
 export function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -11,15 +11,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
-      {/* Footer placeholder — will be built in #238 */}
-      <footer className="border-t py-6 px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto flex items-center justify-between text-xs text-muted-foreground">
-          <p>Discover. Collect. Create.</p>
-          <Link href="/changelog" className="hover:underline">
-            Changelog
-          </Link>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
