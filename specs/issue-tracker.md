@@ -88,6 +88,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 236 | v3: Split layout shells (public + dashboard) | — | feature, ui/ux | 2026-03-24 | `feature/issue-236-split-layout-shells` | #247 |
 | 249 | CI/CD: auto-merge passing PRs and auto-deploy on release | high | devops | 2026-03-25 | `feature/ci-automerge-autodeploy` | #250 |
 | 237 | v3: Top navigation bar | — | feature, ui/ux | 2026-03-25 | `feature/issue-237-top-nav` | #252 |
+| 238 | v3: Footer component | — | feature, ui/ux | 2026-03-25 | `worktree-v3-238` | #255 |
 ---
 
 ## Revision Log
@@ -139,3 +140,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-24 | Auto-closed #236 (v3: Split layout shells (public + dashboard)). Added to Completed. PR #247. |
 | 2026-03-25 | Auto-closed #249 (CI/CD: auto-merge passing PRs and auto-deploy on release). Added to Completed. PR #250. |
 | 2026-03-25 | Auto-closed #237 (v3: Top navigation bar). Added to Completed. PR #252. |
+| 2026-03-25 | Auto-closed #238 (v3: Footer component). Added to Completed. PR #255. |
