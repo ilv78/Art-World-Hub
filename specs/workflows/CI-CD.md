@@ -517,7 +517,11 @@ DB passwords and session secrets are stored in `.env` files on the VPS (not in G
                └──────────────────────────┘
 ```
 
-### 5.3 Production Deploy (deploy-production.yml — manual trigger)
+### 5.3 Auto-Merge (auto-merge.yml — automatic)
+
+Non-draft PRs by the repo owner are automatically approved and have auto-merge enabled (squash). GitHub waits for all required branch protection checks to pass before merging. Dependabot PRs are handled separately by `dependabot-auto-merge.yml`.
+
+### 5.4 Production Deploy (deploy-production.yml — automatic after release, manual fallback)
 
 ```
   gh workflow run deploy-production.yml -f image_tag=<sha>
@@ -539,7 +543,7 @@ DB passwords and session secrets are stored in `.env` files on the VPS (not in G
                └──────────────────────────┘
 ```
 
-### 5.4 Rollback (rollback-production.yml — manual trigger)
+### 5.5 Rollback (rollback-production.yml — manual trigger)
 
 ```
   gh workflow run rollback-production.yml [-f image_tag=<sha>]
@@ -690,7 +694,7 @@ Two-phase label-driven versioned releases (`vX.Y.Z`):
 
 **Script:** `.github/scripts/prepare-release.sh`
 
-Changes go through a PR, so CI validates the CHANGELOG update before it reaches main. Does NOT trigger production deploy — that remains a separate manual step via `deploy-production.yml`.
+Changes go through a PR, so CI validates the CHANGELOG update before it reaches main. After the release is finalized, production deploy is automatically triggered (dispatches `deploy-production.yml` with `image_tag=latest`).
 
 ---
 
@@ -718,3 +722,4 @@ Changes go through a PR, so CI validates the CHANGELOG update before it reaches 
 | 2026-03-14 | Added Section 6.6: Automated Release Workflow — label-driven versioned releases via `release.yml` + `prepare-release.sh`. Auto-detects PATCH/MINOR bump, updates CHANGELOG, creates git tag + GitHub Release, removes labels, Telegram notification. (Issue #110) |
 | 2026-03-15 | Added logging smoke test to staging deploy — verifies log file exists, has entries, valid JSON, and contains startup message. Updated test count from 32 to 52. (Issue [#39](https://github.com/ilv78/Art-World-Hub/issues/39)) |
 | 2026-03-23 | Skip Docker build and staging deploy for docs-only changes — added `changes` job with `dorny/paths-filter` to detect non-docs file changes. `build-image` and `deploy-staging` are skipped when only `specs/`, `docs/`, `**/*.md`, or `.github/ISSUE_TEMPLATE/` files changed. Updated pipeline diagram and job descriptions. (Issue [#206](https://github.com/ilv78/Art-World-Hub/issues/206)) |
+| 2026-03-25 | Auto-merge and auto-deploy — created `auto-merge.yml` to auto-approve and enable squash auto-merge for non-draft owner PRs. Added auto-deploy step to `release-finalize.yml` that dispatches `deploy-production.yml` with `image_tag=latest` after creating a release. (Issue [#249](https://github.com/ilv78/Art-World-Hub/issues/249)) |
