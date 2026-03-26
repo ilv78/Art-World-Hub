@@ -91,6 +91,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 238 | v3: Footer component | — | feature, ui/ux | 2026-03-25 | `worktree-v3-238` | #255 |
 | 239 | v3: Home page redesign | — | feature, ui/ux | 2026-03-26 | `feature/issue-239-home-page-redesign` | #258 |
 | 240 | v3: Gallery page full-width 3D + immersive mode | — | feature, ui/ux | 2026-03-26 | `feature/issue-239-home-page-redesign` | #260 |
+| 241 | v3: Store page grid improvements | — | enhancement, ui/ux | 2026-03-26 | — | — |
 ---
 
 ## Revision Log
@@ -145,3 +146,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-25 | Auto-closed #238 (v3: Footer component). Added to Completed. PR #255. |
 | 2026-03-26 | Auto-closed #239 (v3: Home page redesign). Added to Completed. PR #258. |
 | 2026-03-26 | Auto-closed #240 (v3: Gallery page full-width 3D + immersive mode). Added to Completed. PR #260. |
+| 2026-03-26 | Auto-closed #241 (v3: Store page grid improvements). Added to Completed. |
