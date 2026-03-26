@@ -18,6 +18,7 @@ import {
   Box,
   Frame,
 } from "lucide-react";
+import { useImmersiveMode } from "@/hooks/use-immersive-mode";
 import type { ArtworkWithArtist } from "@shared/schema";
 import { useCartStore } from "@/lib/cart-store";
 import { formatPrice } from "@/lib/utils";
@@ -34,6 +35,7 @@ interface ArtistRoom {
 export default function Gallery() {
   const isMobile = typeof window !== "undefined" && ("ontouchstart" in window || navigator.maxTouchPoints > 0);
   const [viewMode, setViewMode] = useState<ViewMode>(isMobile ? "classic" : "3d");
+  const { isImmersive, toggleImmersive } = useImmersiveMode();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [showInfo, setShowInfo] = useState(false);
@@ -157,7 +159,19 @@ export default function Gallery() {
   }
 
   return (
-    <div className="h-full flex flex-col relative overflow-hidden" ref={galleryRef}>
+    <div className={`flex flex-col relative overflow-hidden ${isImmersive ? "h-screen" : "h-full"}`} ref={galleryRef}>
+      {isImmersive && (
+        <Button
+          size="icon"
+          variant="secondary"
+          className="fixed top-4 right-4 z-50 shadow-lg"
+          onClick={toggleImmersive}
+          data-testid="button-exit-immersive"
+        >
+          <X className="w-5 h-5" />
+        </Button>
+      )}
+      {!isImmersive && (
       <div className="relative z-20 flex items-center justify-between p-4 border-b bg-background">
         <div>
           <h1 className="font-serif text-2xl font-bold">Virtual Gallery</h1>
@@ -192,11 +206,12 @@ export default function Gallery() {
           )}
         </div>
       </div>
+      )}
 
       {viewMode === "3d" && (
         <div className="flex-1 relative">
           {hallwayData && hallwayData.length > 0 ? (
-            <HallwayGallery3D artistRooms={hallwayData} curatorRooms={curatedData} museumTemplate={siteSettings?.galleryTemplate} />
+            <HallwayGallery3D artistRooms={hallwayData} curatorRooms={curatedData} museumTemplate={siteSettings?.galleryTemplate} isImmersive={isImmersive} onRequestImmersive={toggleImmersive} />
           ) : (
             <div className="h-full flex items-center justify-center">
               <div className="text-center space-y-4">

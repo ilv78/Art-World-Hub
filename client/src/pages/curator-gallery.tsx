@@ -2,12 +2,15 @@ import { useQuery } from "@tanstack/react-query";
 import { useRoute } from "wouter";
 import { MazeGallery3D } from "@/components/maze-gallery-3d";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Box } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Box, X } from "lucide-react";
+import { useImmersiveMode } from "@/hooks/use-immersive-mode";
 import type { CuratorGalleryWithArtworks, MazeLayout } from "@shared/schema";
 
 export default function CuratorGalleryPage() {
   const [, params] = useRoute("/curator-gallery/:id");
   const galleryId = params?.id;
+  const { isImmersive, toggleImmersive } = useImmersiveMode();
 
   const { data: gallery, isLoading, error } = useQuery<CuratorGalleryWithArtworks>({
     queryKey: [`/api/curator-galleries/${galleryId}`],
@@ -51,14 +54,27 @@ export default function CuratorGalleryPage() {
   })();
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
-      <div className="p-4 border-b bg-background">
-        <h1 className="font-serif text-2xl font-bold">{gallery.name}</h1>
-        <p className="text-sm text-muted-foreground">
-          Curated by {curatorName}
-          {gallery.description && ` — ${gallery.description}`}
-        </p>
-      </div>
+    <div className={`flex flex-col ${isImmersive ? "h-screen" : "h-[calc(100vh-4rem)]"}`}>
+      {isImmersive && (
+        <Button
+          size="icon"
+          variant="secondary"
+          className="fixed top-4 right-4 z-50 shadow-lg"
+          onClick={toggleImmersive}
+          data-testid="button-exit-immersive"
+        >
+          <X className="w-5 h-5" />
+        </Button>
+      )}
+      {!isImmersive && (
+        <div className="p-4 border-b bg-background">
+          <h1 className="font-serif text-2xl font-bold">{gallery.name}</h1>
+          <p className="text-sm text-muted-foreground">
+            Curated by {curatorName}
+            {gallery.description && ` — ${gallery.description}`}
+          </p>
+        </div>
+      )}
       <div className="flex-1 relative">
         {gallery.artworks.length > 0 && layout ? (
           <MazeGallery3D
@@ -66,6 +82,8 @@ export default function CuratorGalleryPage() {
             layout={layout}
             galleryTemplate={gallery.galleryTemplate || "contemporary"}
             artist={{ id: gallery.id, name: gallery.name, avatarUrl: null, specialization: `Curated by ${curatorName}`, bio: posterBio, email: null, country: null, userId: null, galleryLayout: null, galleryTemplate: null, socialLinks: null }}
+            isImmersive={isImmersive}
+            onRequestImmersive={toggleImmersive}
           />
         ) : (
           <div className="flex items-center justify-center h-full">
