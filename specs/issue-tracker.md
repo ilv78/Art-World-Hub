@@ -89,6 +89,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 249 | CI/CD: auto-merge passing PRs and auto-deploy on release | high | devops | 2026-03-25 | `feature/ci-automerge-autodeploy` | #250 |
 | 237 | v3: Top navigation bar | — | feature, ui/ux | 2026-03-25 | `feature/issue-237-top-nav` | #252 |
 | 238 | v3: Footer component | — | feature, ui/ux | 2026-03-25 | `worktree-v3-238` | #255 |
+| 239 | v3: Home page redesign | — | feature, ui/ux | 2026-03-26 | `feature/issue-239-home-page-redesign` | #258 |
 ---
 
 ## Revision Log
@@ -141,3 +142,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-25 | Auto-closed #249 (CI/CD: auto-merge passing PRs and auto-deploy on release). Added to Completed. PR #250. |
 | 2026-03-25 | Auto-closed #237 (v3: Top navigation bar). Added to Completed. PR #252. |
 | 2026-03-25 | Auto-closed #238 (v3: Footer component). Added to Completed. PR #255. |
+| 2026-03-26 | Auto-closed #239 (v3: Home page redesign). Added to Completed. PR #258. |
