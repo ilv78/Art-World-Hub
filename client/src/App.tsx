@@ -21,6 +21,8 @@ import CuratorDashboard from "@/pages/curator-dashboard";
 import CuratorGalleryPage from "@/pages/curator-gallery";
 import Exhibitions from "@/pages/exhibitions";
 import Changelog from "@/pages/changelog";
+import Privacy from "@/pages/privacy";
+import Terms from "@/pages/terms";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -42,6 +44,8 @@ function Router() {
       <Route path="/auth" component={AuthPage} />
       <Route path="/auth/set-password" component={SetPassword} />
       <Route path="/changelog" component={Changelog} />
+      <Route path="/privacy" component={Privacy} />
+      <Route path="/terms" component={Terms} />
       <Route component={NotFound} />
     </Switch>
   );
