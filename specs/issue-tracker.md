@@ -93,6 +93,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 240 | v3: Gallery page full-width 3D + immersive mode | — | feature, ui/ux | 2026-03-26 | `feature/issue-239-home-page-redesign` | #260 |
 | 241 | v3: Store page grid improvements | — | enhancement, ui/ux | 2026-03-26 | — | — |
 | 242 | v3: Other page improvements (artists, exhibitions, blog) | — | enhancement, ui/ux | 2026-03-26 | `feature/issue-242-page-improvements` | #263 |
+| 243 | v3: Mobile navigation | — | enhancement, ui/ux | 2026-03-26 | `feature/issue-243-mobile-nav` | #265 |
 ---
 
 ## Revision Log
@@ -149,3 +150,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-26 | Auto-closed #240 (v3: Gallery page full-width 3D + immersive mode). Added to Completed. PR #260. |
 | 2026-03-26 | Auto-closed #241 (v3: Store page grid improvements). Added to Completed. |
 | 2026-03-26 | Auto-closed #242 (v3: Other page improvements (artists, exhibitions, blog)). Added to Completed. PR #263. |
+| 2026-03-26 | Auto-closed #243 (v3: Mobile navigation). Added to Completed. PR #265. |
