@@ -89,54 +89,52 @@ export default function Artists() {
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredArtists.map((artist) => (
-            <Card
-              key={artist.id}
-              className="overflow-hidden hover-elevate cursor-pointer group"
-              onClick={() => setSelectedArtist(artist)}
-              data-testid={`card-artist-${artist.id}`}
-            >
-              <CardContent className="p-6 text-center space-y-4">
-                <Avatar className="w-24 h-24 mx-auto ring-4 ring-background shadow-lg group-hover:ring-primary/20 transition-all">
-                  <AvatarImage src={artist.avatarUrl || undefined} />
-                  <AvatarFallback className="text-2xl font-serif">
-                    {artist.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
-                  </AvatarFallback>
-                </Avatar>
+          {filteredArtists.map((artist, index) => {
+            const isFeatured = index < 2;
+            return (
+              <Link key={artist.id} href={`/artists/${artist.id}`}>
+                <Card
+                  className={`overflow-hidden hover-elevate cursor-pointer group h-full ${isFeatured ? "sm:col-span-2" : ""}`}
+                  data-testid={`card-artist-${artist.id}`}
+                >
+                  <CardContent className={`${isFeatured ? "p-6 flex gap-6 items-center" : "p-6 text-center space-y-4"}`}>
+                    <Avatar className={`${isFeatured ? "w-32 h-32 shrink-0" : "w-28 h-28 mx-auto"} ring-4 ring-background shadow-lg group-hover:ring-primary/20 transition-all`}>
+                      <AvatarImage src={artist.avatarUrl || undefined} />
+                      <AvatarFallback className={`${isFeatured ? "text-4xl" : "text-2xl"} font-serif`}>
+                        {artist.name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")}
+                      </AvatarFallback>
+                    </Avatar>
 
-                <div>
-                  <h3 className="font-serif font-bold text-lg">{artist.name}</h3>
-                  {artist.country && (
-                    <p className="text-sm text-muted-foreground flex items-center justify-center gap-1 mt-1">
-                      <MapPin className="h-3 w-3" />
-                      {artist.country}
-                    </p>
-                  )}
-                </div>
+                    <div className={isFeatured ? "flex-1 min-w-0 space-y-2" : ""}>
+                      <div>
+                        <h3 className={`font-serif font-bold ${isFeatured ? "text-xl" : "text-lg"}`}>{artist.name}</h3>
+                        {artist.country && (
+                          <p className={`text-sm text-muted-foreground flex items-center gap-1 mt-1 ${isFeatured ? "" : "justify-center"}`}>
+                            <MapPin className="h-3 w-3" />
+                            {artist.country}
+                          </p>
+                        )}
+                      </div>
 
-                {artist.specialization && (
-                  <Badge variant="outline" className="mx-auto">
-                    <Palette className="h-3 w-3 mr-1" />
-                    {artist.specialization}
-                  </Badge>
-                )}
+                      {artist.specialization && (
+                        <Badge variant="outline" className={isFeatured ? "" : "mx-auto"}>
+                          <Palette className="h-3 w-3 mr-1" />
+                          {artist.specialization}
+                        </Badge>
+                      )}
 
-                <p className="text-sm text-muted-foreground line-clamp-3">
-                  {artist.bio}
-                </p>
-
-                <Link href={`/artists/${artist.id}`}>
-                  <Button variant="ghost" className="w-full bg-primary text-primary-foreground hover:bg-primary/90" data-testid={`button-view-artist-${artist.id}`}>
-                    View Profile
-                    <ExternalLink className="h-4 w-4 ml-2" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          ))}
+                      <p className={`text-sm text-muted-foreground ${isFeatured ? "line-clamp-2" : "line-clamp-3"}`}>
+                        {artist.bio}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
         </div>
       )}
 
