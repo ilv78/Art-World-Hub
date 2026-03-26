@@ -53,16 +53,21 @@ export default function Exhibitions() {
       ) : (
         <>
           {active.length > 0 && (
-            <section className="space-y-4">
+            <section className="space-y-6">
               <h2 className="font-serif text-2xl font-semibold flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
                 Now Open
               </h2>
-              <div className="grid gap-4 md:grid-cols-2">
-                {active.map(exhibition => (
-                  <ExhibitionCard key={exhibition.id} exhibition={exhibition} status="active" formatDate={formatDate} />
-                ))}
-              </div>
+              {/* Hero: first active exhibition */}
+              <HeroExhibition exhibition={active[0]} formatDate={formatDate} />
+              {/* Remaining active */}
+              {active.length > 1 && (
+                <div className="grid gap-4 md:grid-cols-2 mt-5">
+                  {active.slice(1).map(exhibition => (
+                    <ExhibitionCard key={exhibition.id} exhibition={exhibition} status="active" formatDate={formatDate} />
+                  ))}
+                </div>
+              )}
             </section>
           )}
 
@@ -74,7 +79,7 @@ export default function Exhibitions() {
               </h2>
               <div className="grid gap-4 md:grid-cols-2">
                 {upcoming.map(exhibition => (
-                  <ExhibitionCard key={exhibition.id} exhibition={exhibition} status="upcoming" formatDate={formatDate} />
+                  <ExhibitionCard key={exhibition.id} exhibition={exhibition} status="upcoming" formatDate={formatDate} variant="upcoming" />
                 ))}
               </div>
             </section>
@@ -85,10 +90,52 @@ export default function Exhibitions() {
   );
 }
 
-function ExhibitionCard({ exhibition, status, formatDate }: {
+function HeroExhibition({ exhibition, formatDate }: {
+  exhibition: CuratorGalleryWithArtworks;
+  formatDate: (d: string | Date | null | undefined, tz?: string | null) => string;
+}) {
+  const curatorName = [exhibition.curator.firstName, exhibition.curator.lastName].filter(Boolean).join(" ") || "Curator";
+  const heroImage = exhibition.artworks[0]?.imageUrl;
+
+  return (
+    <Link href={`/curator-gallery/${exhibition.id}`}>
+      <div className="relative rounded-2xl overflow-hidden group cursor-pointer">
+        {heroImage ? (
+          <img
+            src={heroImage}
+            alt={exhibition.name}
+            className="w-full h-64 sm:h-80 object-cover transition-transform duration-700 group-hover:scale-105"
+          />
+        ) : (
+          <div className="w-full h-64 sm:h-80 bg-muted flex items-center justify-center">
+            <ImageIcon className="w-16 h-16 text-muted-foreground/40" />
+          </div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
+          <Badge className="bg-green-600 mb-3">Open Now</Badge>
+          <h3 className="font-serif text-2xl sm:text-3xl font-bold text-white mb-1">{exhibition.name}</h3>
+          {exhibition.description && (
+            <p className="text-white/70 text-sm mb-2 line-clamp-2">{exhibition.description}</p>
+          )}
+          <p className="text-white/50 text-xs mb-4">
+            Curated by {curatorName} · {exhibition.artworks.length} artworks
+          </p>
+          <Button className="bg-white text-black hover:bg-white/90">
+            Enter Exhibition
+            <ArrowRight className="w-4 h-4 ml-2" />
+          </Button>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function ExhibitionCard({ exhibition, status, formatDate, variant }: {
   exhibition: CuratorGalleryWithArtworks;
   status: "active" | "upcoming";
   formatDate: (d: string | Date | null | undefined, tz?: string | null) => string;
+  variant?: "upcoming";
 }) {
   const curatorName = [exhibition.curator.firstName, exhibition.curator.lastName].filter(Boolean).join(" ") || "Curator";
   const tz = (exhibition as any).timezone || "UTC";
@@ -96,16 +143,16 @@ function ExhibitionCard({ exhibition, status, formatDate }: {
   const previewArtworks = exhibition.artworks.slice(0, 4);
 
   return (
-    <Card className="overflow-hidden hover-elevate">
+    <Card className={`overflow-hidden hover-elevate ${variant === "upcoming" ? "border-dashed opacity-80" : ""}`}>
       {/* Artwork preview strip */}
       {previewArtworks.length > 0 ? (
-        <div className="flex h-32 overflow-hidden">
+        <div className="flex h-48 overflow-hidden">
           {previewArtworks.map(aw => (
             <img key={aw.id} src={aw.imageUrl} alt={aw.title} className="flex-1 object-cover min-w-0" />
           ))}
         </div>
       ) : (
-        <div className="h-32 bg-muted flex items-center justify-center">
+        <div className="h-48 bg-muted flex items-center justify-center">
           <ImageIcon className="w-8 h-8 text-muted-foreground" />
         </div>
       )}
