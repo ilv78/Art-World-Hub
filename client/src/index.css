@@ -92,6 +92,26 @@
       height: 0;
     }
   }
+
+  --animate-ken-burns: ken-burns 12s ease-in-out infinite alternate;
+
+  @keyframes ken-burns {
+    0% {
+      transform: scale(1) translate(0, 0);
+    }
+    100% {
+      transform: scale(1.08) translate(-1%, -1%);
+    }
+  }
+}
+
+/* Scrollbar-hide utility for horizontal shelves */
+@utility scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /*
