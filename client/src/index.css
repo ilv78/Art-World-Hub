@@ -105,6 +105,17 @@
   }
 }
 
+/* Immersive mode — hide all page chrome, fill viewport */
+body.immersive-mode header,
+body.immersive-mode footer {
+  display: none !important;
+}
+body.immersive-mode main {
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+}
+
 /* Scrollbar-hide utility for horizontal shelves */
 @utility scrollbar-hide {
   -ms-overflow-style: none;

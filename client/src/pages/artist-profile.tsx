@@ -7,18 +7,20 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  MapPin, 
-  Palette, 
-  Image as ImageIcon, 
-  FileText, 
+import {
+  MapPin,
+  Palette,
+  Image as ImageIcon,
+  FileText,
   Calendar,
   ArrowLeft,
   ShoppingCart,
   Box,
   Globe,
-  ExternalLink
+  ExternalLink,
+  X
 } from "lucide-react";
+import { useImmersiveMode } from "@/hooks/use-immersive-mode";
 import { SiInstagram, SiX, SiFacebook, SiYoutube, SiTiktok, SiBehance, SiDribbble, SiDeviantart, SiPinterest } from "react-icons/si";
 import { FaLinkedin } from "react-icons/fa6";
 import { useCartStore } from "@/lib/cart-store";
@@ -52,6 +54,7 @@ export default function ArtistProfile() {
   const [selectedArtwork, setSelectedArtwork] = useState<ArtworkWithArtist | null>(null);
   const urlTab = new URLSearchParams(window.location.search).get("tab");
   const [activeTab, setActiveTab] = useState(urlTab === "portfolio" || urlTab === "blog" ? urlTab : "gallery");
+  const { isImmersive, toggleImmersive } = useImmersiveMode();
 
   const { data: artist, isLoading: artistLoading } = useQuery<Artist>({
     queryKey: ["/api/artists", params.id],
@@ -108,6 +111,31 @@ export default function ArtistProfile() {
             Back to Artists
           </Button>
         </Link>
+      </div>
+    );
+  }
+
+  if (isImmersive && galleryArtworks.length > 0 && galleryLayout) {
+    return (
+      <div className="h-screen w-full">
+        <Button
+          size="icon"
+          variant="secondary"
+          className="fixed top-4 right-4 z-50 shadow-lg"
+          onClick={toggleImmersive}
+          data-testid="button-exit-immersive"
+        >
+          <X className="w-5 h-5" />
+        </Button>
+        <MazeGallery3D
+          artworks={galleryArtworks}
+          layout={galleryLayout}
+          galleryTemplate={artist.galleryTemplate || "contemporary"}
+          artist={artist}
+          onExitGallery={() => { toggleImmersive(); setActiveTab("portfolio"); }}
+          isImmersive={true}
+          onRequestImmersive={toggleImmersive}
+        />
       </div>
     );
   }
@@ -207,6 +235,8 @@ export default function ArtistProfile() {
                   galleryTemplate={artist.galleryTemplate || "contemporary"}
                   artist={artist}
                   onExitGallery={() => setActiveTab("portfolio")}
+                  isImmersive={isImmersive}
+                  onRequestImmersive={toggleImmersive}
                 />
               </div>
             ) : (
