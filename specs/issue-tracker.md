@@ -97,6 +97,7 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 253 | v3: Privacy Policy & Terms of Service pages | low | feature, ui/ux | 2026-03-26 | `feature/issue-253-legal-pages` | #267 |
 | 233 | Artworks to be featured in the first page | high | enhancement | 2026-03-27 | — | — |
 | 254 | v3: Newsletter signup functionality | medium | feature | 2026-03-27 | `feature/issue-254-newsletter` | #270 |
+| 272 | v3 - Remove referrals at Romania in documents | — | — | 2026-03-27 | `feature/issue-272-remove-romania-refs` | #274 |
 ---
 
 ## Revision Log
@@ -157,3 +158,4 @@ This ensures traceability, keeps the team aligned, and prevents work from gettin
 | 2026-03-26 | Auto-closed #253 (v3: Privacy Policy & Terms of Service pages). Added to Completed. PR #267. |
 | 2026-03-27 | Auto-closed #233 (Artworks to be featured in the first page). Added to Completed. |
 | 2026-03-27 | Auto-closed #254 (v3: Newsletter signup functionality). Added to Completed. PR #270. |
+| 2026-03-27 | Auto-closed #272 (v3 - Remove referrals at Romania in documents). Added to Completed. PR #274. |
