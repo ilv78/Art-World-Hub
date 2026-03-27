@@ -17,6 +17,7 @@ import {
   artists, artworks, auctions, bids, orders, exhibitions, exhibitionArtworks, blogPosts,
   curatorGalleries, curatorGalleryArtworks,
   type SiteSettings, siteSettings,
+  newsletterSubscribers,
 } from "@shared/schema";
 import { type User, type UserRole, users } from "@shared/models/auth";
 import { sessions } from "@shared/models/auth";
@@ -102,6 +103,9 @@ export interface IStorage {
   getAllBlogPosts(): Promise<BlogPostWithArtist[]>;
   getSiteSettings(): Promise<SiteSettings>;
   updateSiteSettings(data: Partial<Pick<SiteSettings, "galleryTemplate">>): Promise<SiteSettings>;
+
+  // Newsletter
+  subscribeNewsletter(email: string): Promise<{ alreadySubscribed: boolean }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -626,6 +630,21 @@ export class DatabaseStorage implements IStorage {
       .where(eq(siteSettings.id, "default"))
       .returning();
     return updated;
+  }
+
+  async subscribeNewsletter(email: string): Promise<{ alreadySubscribed: boolean }> {
+    const [existing] = await db.select().from(newsletterSubscribers).where(eq(newsletterSubscribers.email, email.toLowerCase()));
+    if (existing) {
+      if (existing.unsubscribedAt) {
+        await db.update(newsletterSubscribers)
+          .set({ unsubscribedAt: null, subscribedAt: new Date() })
+          .where(eq(newsletterSubscribers.id, existing.id));
+        return { alreadySubscribed: false };
+      }
+      return { alreadySubscribed: true };
+    }
+    await db.insert(newsletterSubscribers).values({ email: email.toLowerCase() });
+    return { alreadySubscribed: false };
   }
 }
 

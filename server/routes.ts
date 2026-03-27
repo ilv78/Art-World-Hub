@@ -1250,5 +1250,18 @@ export async function registerRoutes(
     res.type("text/plain").send(cachedChangelog);
   });
 
+  // Newsletter subscribe
+  app.post("/api/newsletter/subscribe", async (req, res) => {
+    const { email } = req.body ?? {};
+    if (!email || typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: "Please provide a valid email address." });
+    }
+    const result = await storage.subscribeNewsletter(email);
+    if (result.alreadySubscribed) {
+      return res.json({ message: "You're already subscribed!", alreadySubscribed: true });
+    }
+    return res.json({ message: "Thanks for subscribing!", alreadySubscribed: false });
+  });
+
   return httpServer;
 }
