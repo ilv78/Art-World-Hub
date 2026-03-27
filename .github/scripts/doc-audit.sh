@@ -65,15 +65,6 @@ for f in specs/architecture/ADR/*.md; do
   fi
 done
 
-# S-005: Bug files must follow naming pattern BUG-XXXX-*.md
-for f in specs/bugs/*.md; do
-  [ -e "$f" ] || continue
-  basename="$(basename "$f")"
-  if [[ ! "$basename" =~ ^BUG-[0-9]{4}-.+\.md$ ]]; then
-    ERRORS+=("[S-005] Bug file \`$f\` does not follow naming pattern \`BUG-XXXX-title.md\`.")
-  fi
-done
-
 # S-006
 if [ ! -s "CLAUDE.md" ]; then
   ERRORS+=("[S-006] \`CLAUDE.md\` must exist at the repo root.")

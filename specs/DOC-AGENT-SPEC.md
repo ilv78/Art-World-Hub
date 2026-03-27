@@ -43,9 +43,6 @@ specs/
 │   ├── CI-CD.md                 # Pipeline explanation and gates
 │   └── DEPLOYMENT.md            # VPS deployment steps and rollback
 │
-├── bugs/
-│   └── BUG-XXXX-title.md        # One file per tracked bug
-│
 ├── decisions/
 │   └── DECISION-LOG.md          # Lightweight log for minor decisions (not ADR-worthy)
 │
@@ -80,7 +77,6 @@ The agent enforces rules at three severity levels: **ERROR** (blocks merge), **W
 | S-002 | `specs/workflows/LOCAL-DEV.md` must exist and be non-empty |
 | S-003 | `specs/workflows/CI-CD.md` must exist and be non-empty |
 | S-004 | Every ADR file must follow naming pattern `ADR-XXXX-*.md` |
-| S-005 | Every bug file must follow naming pattern `BUG-XXXX-*.md` |
 | S-006 | `CLAUDE.md` must exist at the repo root |
 
 ### 3.2 Staleness Rules (WARNING)
@@ -101,7 +97,6 @@ The agent enforces rules at three severity levels: **ERROR** (blocks merge), **W
 | C-002 | A PR that introduces a new top-level Express route must have a corresponding SPEC.md entry or feature spec |
 | C-003 | A PR that changes `CLAUDE.md` must have an entry in `specs/decisions/DECISION-LOG.md` |
 | C-004 | A PR marked `breaking-change` in its title must have an ADR linked in the PR description |
-| C-005 | Bug files with status `Open` older than 30 days must have a `## Workaround` section |
 
 ### 3.4 Quality Rules (INFO)
 
@@ -258,9 +253,8 @@ All documentation lives in `specs/`. Before starting any task:
 2. If adding a new feature → create or update `specs/features/<name>/SPEC.md`.
 3. If changing the database schema → update `specs/architecture/DATA-MODEL.md`.
 4. If making an architectural decision → create `specs/architecture/ADR/ADR-XXXX.md`.
-5. If fixing a bug → create or update `specs/bugs/BUG-XXXX-title.md`.
 
-The Documentation Agent enforces these rules on every PR. 
+The Documentation Agent enforces these rules on every PR.
 Undocumented changes will block merge.
 ```
 
@@ -323,33 +317,6 @@ List of other features or specs this depends on.
 
 ## Open Questions
 - [ ] Question 1
-```
-
-### 7.3 Bug Report Template (`specs/bugs/BUG-XXXX-title.md`)
-
-```markdown
-# BUG-XXXX: [Bug Title]
-
-**Status:** Open | In Progress | Resolved  
-**Severity:** Critical | High | Medium | Low  
-**Last Updated:** YYYY-MM-DD  
-**Reporter:** [name]
-
-## Description
-What is happening and what is expected.
-
-## Reproduction Steps
-1. Step 1
-2. Step 2
-
-## Root Cause
-(fill in when known)
-
-## Fix
-(fill in when resolved — reference PR)
-
-## Workaround
-(required if Open > 30 days — see Rule C-005)
 ```
 
 ---

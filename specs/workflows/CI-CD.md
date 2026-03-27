@@ -633,7 +633,7 @@ All third-party actions across all workflow files are **pinned to commit SHAs** 
 | `dorny/paths-filter` | `de90cc6fb38fc0963ad72b210f1f284cd68cea36` |
 | `anthropics/claude-code-action` | `5d0cc745cd0cce4c0e9e0b3511de26c3bc285eb5` |
 
-**Applies to:** `ci.yml`, `deploy-production.yml`, `rollback-production.yml`, `doc-agent.yml`, `issue-tracker.yml`
+**Applies to:** `ci.yml`, `deploy-production.yml`, `rollback-production.yml`, `doc-agent.yml`
 
 ### 6.2 Shell Injection Prevention
 
@@ -651,8 +651,6 @@ All workflow files now declare explicit `permissions:` blocks at the top level a
 | `deploy-production.yml` | `contents: read` |
 | `rollback-production.yml` | `contents: read` |
 | `doc-agent.yml` | `contents: read`, `pull-requests: write` (enforce), `issues: write` (audit) |
-| `issue-tracker.yml` | `contents: write`, `pull-requests: read` |
-
 ### 6.4 Security Scanning Pipeline
 
 `.github/workflows/security.yml` runs 7 security scanning jobs on every push and PR:
@@ -671,21 +669,7 @@ All actions in `security.yml` are pinned to commit SHAs. The pipeline has explic
 
 **Spec:** `specs/SECURITY_AGENT.md` defines the audit scope and methodology.
 
-### 6.5 Issue Tracker Auto-Update
-
-`.github/workflows/issue-tracker.yml` triggers on `issues: closed` events and automatically updates `specs/issue-tracker.md`:
-
-1. **Parses labels** — extracts priority (`priority: *`) and category (`bug`, `feature`, etc.) from issue labels
-2. **Finds linked PR** — searches merged PRs that reference the closed issue to get PR number and branch name
-3. **Updates tracker** — if the issue is in the Active table, moves it to Completed; otherwise appends to Completed with date, branch, and PR link
-4. **Revision log** — appends an auto-generated entry to the revision log
-5. **Bug doc** — if the issue is labeled `bug`, creates `specs/bugs/BUG-XXXX-title.md` (or updates an existing one to "Resolved")
-
-Commits and pushes directly to `main`. Skips issues labeled `docs-audit` (automated audit issues).
-
-**Script:** `.github/scripts/update-issue-tracker.sh`
-
-### 6.6 Automated Release Workflow
+### 6.5 Automated Release Workflow
 
 Two-phase label-driven versioned releases (`vX.Y.Z`):
 
@@ -717,7 +701,6 @@ Changes go through a PR, so CI validates the CHANGELOG update before it reaches 
 | 2026-03-11 | Replaced old pipeline diagram with 5 comprehensive diagrams: development workflow, CI/CD pipeline, production deploy, rollback, and infrastructure overview. Updated Telegram secrets status to Set. |
 | 2026-03-11 | Updated Telegram notification format: added @racu8_bot header, repo name, environment URLs. Removed "View run" link. (Issue #26, PR #27) |
 | 2026-03-13 | Added Section 6: Security hardening — SHA-pinned actions, shell injection prevention, explicit permissions blocks, security scanning pipeline documentation. (Issue #77, PR #85) |
-| 2026-03-13 | Added Section 6.5: Issue Tracker Auto-Update workflow — auto-updates issue-tracker.md and creates bug docs on issue close. (Issue #89) |
 | 2026-03-13 | Release management (Issue #35): 3-tag Docker images (latest+sha+run_number), `/health` endpoint, APP_VERSION build arg, post-deploy smoke tests, production auto-rollback on failure, git release tags (`release-N`), CHANGELOG.md. Added `STAGING_URL` and `PRODUCTION_URL` to secrets inventory. |
 | 2026-03-14 | Added Section 6.6: Automated Release Workflow — label-driven versioned releases via `release.yml` + `prepare-release.sh`. Auto-detects PATCH/MINOR bump, updates CHANGELOG, creates git tag + GitHub Release, removes labels, Telegram notification. (Issue #110) |
 | 2026-03-15 | Added logging smoke test to staging deploy — verifies log file exists, has entries, valid JSON, and contains startup message. Updated test count from 32 to 52. (Issue [#39](https://github.com/ilv78/Art-World-Hub/issues/39)) |
