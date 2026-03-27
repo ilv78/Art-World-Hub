@@ -1250,6 +1250,20 @@ export async function registerRoutes(
     res.type("text/plain").send(cachedChangelog);
   });
 
+  // Newsletter admin (requires admin role)
+  app.get("/api/newsletter/subscribers", isAdmin, async (_req, res) => {
+    const subscribers = await storage.getNewsletterSubscribers();
+    res.json(subscribers);
+  });
+
+  app.delete("/api/newsletter/subscribers/:id", isAdmin, async (req: any, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid ID" });
+    const deleted = await storage.deleteNewsletterSubscriber(id);
+    if (!deleted) return res.status(404).json({ error: "Subscriber not found" });
+    res.json({ success: true });
+  });
+
   // Newsletter subscribe
   app.post("/api/newsletter/subscribe", async (req, res) => {
     const { email } = req.body ?? {};

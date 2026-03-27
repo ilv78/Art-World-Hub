@@ -61,6 +61,8 @@ const { mockStorage } = vi.hoisted(() => {
     getSiteSettings: fn().mockResolvedValue({ id: "default", galleryTemplate: "contemporary", updatedAt: new Date() }),
     updateSiteSettings: fn().mockResolvedValue({ id: "default", galleryTemplate: "contemporary", updatedAt: new Date() }),
     subscribeNewsletter: fn().mockResolvedValue({ alreadySubscribed: false }),
+    getNewsletterSubscribers: fn().mockResolvedValue([]),
+    deleteNewsletterSubscriber: fn().mockResolvedValue(true),
   };
   return { mockStorage };
 });
