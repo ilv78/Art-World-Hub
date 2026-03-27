@@ -17,6 +17,7 @@ import {
   artists, artworks, auctions, bids, orders, exhibitions, exhibitionArtworks, blogPosts,
   curatorGalleries, curatorGalleryArtworks,
   type SiteSettings, siteSettings,
+  newsletterSubscribers,
 } from "@shared/schema";
 import { type User, type UserRole, users } from "@shared/models/auth";
 import { sessions } from "@shared/models/auth";
@@ -102,6 +103,11 @@ export interface IStorage {
   getAllBlogPosts(): Promise<BlogPostWithArtist[]>;
   getSiteSettings(): Promise<SiteSettings>;
   updateSiteSettings(data: Partial<Pick<SiteSettings, "galleryTemplate">>): Promise<SiteSettings>;
+
+  // Newsletter
+  subscribeNewsletter(email: string): Promise<{ alreadySubscribed: boolean }>;
+  getNewsletterSubscribers(): Promise<{ id: number; email: string; subscribedAt: Date; unsubscribedAt: Date | null }[]>;
+  deleteNewsletterSubscriber(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -626,6 +632,30 @@ export class DatabaseStorage implements IStorage {
       .where(eq(siteSettings.id, "default"))
       .returning();
     return updated;
+  }
+
+  async subscribeNewsletter(email: string): Promise<{ alreadySubscribed: boolean }> {
+    const [existing] = await db.select().from(newsletterSubscribers).where(eq(newsletterSubscribers.email, email.toLowerCase()));
+    if (existing) {
+      if (existing.unsubscribedAt) {
+        await db.update(newsletterSubscribers)
+          .set({ unsubscribedAt: null, subscribedAt: new Date() })
+          .where(eq(newsletterSubscribers.id, existing.id));
+        return { alreadySubscribed: false };
+      }
+      return { alreadySubscribed: true };
+    }
+    await db.insert(newsletterSubscribers).values({ email: email.toLowerCase() });
+    return { alreadySubscribed: false };
+  }
+
+  async getNewsletterSubscribers() {
+    return db.select().from(newsletterSubscribers).orderBy(newsletterSubscribers.subscribedAt);
+  }
+
+  async deleteNewsletterSubscriber(id: number): Promise<boolean> {
+    const result = await db.delete(newsletterSubscribers).where(eq(newsletterSubscribers.id, id)).returning();
+    return result.length > 0;
   }
 }
 

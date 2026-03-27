@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Link } from "wouter";
-import { Instagram, Twitter, Facebook, Youtube, Send } from "lucide-react";
+import { Instagram, Twitter, Facebook, Youtube, Send, Check, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 const navLinks = [
   { title: "Gallery", url: "/gallery" },
@@ -24,6 +26,38 @@ const socialLinks = [
 ];
 
 export function Footer() {
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "success">("idle");
+  const { toast } = useToast();
+
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast({ title: "Invalid email", description: "Please enter a valid email address.", variant: "destructive" });
+      return;
+    }
+    setStatus("loading");
+    try {
+      const res = await fetch("/api/newsletter/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: "Error", description: data.error, variant: "destructive" });
+        setStatus("idle");
+        return;
+      }
+      toast({ title: data.alreadySubscribed ? "Already subscribed" : "Subscribed!", description: data.message });
+      setStatus("success");
+      setEmail("");
+      setTimeout(() => setStatus("idle"), 3000);
+    } catch {
+      toast({ title: "Error", description: "Something went wrong. Please try again.", variant: "destructive" });
+      setStatus("idle");
+    }
+  };
   const year = new Date().getFullYear();
 
   return (
@@ -108,17 +142,17 @@ export function Footer() {
             <p className="text-sm text-muted-foreground mb-3">
               Get notified about new exhibitions and featured artists.
             </p>
-            <form
-              onSubmit={(e) => e.preventDefault()}
-              className="flex gap-2"
-            >
+            <form onSubmit={handleSubscribe} className="flex gap-2">
               <Input
                 type="email"
                 placeholder="your@email.com"
                 className="h-9 text-sm"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={status === "loading"}
               />
-              <Button type="submit" size="sm" className="shrink-0">
-                <Send className="w-4 h-4" />
+              <Button type="submit" size="sm" className="shrink-0" disabled={status === "loading" || status === "success"}>
+                {status === "loading" ? <Loader2 className="w-4 h-4 animate-spin" /> : status === "success" ? <Check className="w-4 h-4" /> : <Send className="w-4 h-4" />}
               </Button>
             </form>
           </div>
