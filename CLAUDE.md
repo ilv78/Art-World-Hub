@@ -120,7 +120,6 @@ All documentation lives in `specs/`. Before starting any task:
 2. If adding a new feature → create or update `specs/features/<name>/SPEC.md`.
 3. If changing the database schema → update `specs/architecture/DATA-MODEL.md`.
 4. If making an architectural decision → create `specs/architecture/ADR/ADR-XXXX.md`.
-5. If fixing a bug → create or update `specs/bugs/BUG-XXXX-title.md`.
 
 The Documentation Agent enforces these rules on every PR.
 Undocumented changes will block merge.

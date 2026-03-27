@@ -66,7 +66,6 @@ It's fine to batch multiple features/fixes into a single release. A natural rhyt
    git push origin vX.Y.Z
    gh release create vX.Y.Z --title "vX.Y.Z" --notes "See CHANGELOG.md for details"
    ```
-5. **Update `specs/issue-tracker.md`** revision log noting the release
 
 ## Relationship to Deployment Tags
 
