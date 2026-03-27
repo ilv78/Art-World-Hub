@@ -129,11 +129,10 @@ export default function Privacy() {
             <p>
               If you believe your data protection rights have been violated, you
               have the right to lodge a complaint with your local data protection
-              supervisory authority. In Romania, the relevant authority is the
-              Autoritatea Nationala de Supraveghere a Prelucrarii Datelor cu
-              Caracter Personal (ANSPDCP) —{" "}
-              <a href="https://www.dataprotection.ro" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
-                www.dataprotection.ro
+              supervisory authority. In the Netherlands, the relevant authority is
+              the Autoriteit Persoonsgegevens (AP) —{" "}
+              <a href="https://www.autoriteitpersoonsgegevens.nl" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
+                www.autoriteitpersoonsgegevens.nl
               </a>.
             </p>
           </section>

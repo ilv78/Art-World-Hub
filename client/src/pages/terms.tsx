@@ -15,8 +15,8 @@ export default function Terms() {
               account or using the platform, you agree to be bound by these Terms.
             </p>
             <p>
-              ArtVerse is operated from Romania within the European Union. These
-              Terms are governed by Romanian law and applicable EU regulations.
+              ArtVerse is operated from the Netherlands within the European Union.
+              These Terms are governed by Dutch law and applicable EU regulations.
             </p>
           </section>
 
@@ -137,7 +137,7 @@ export default function Terms() {
             <p>
               Nothing in these Terms excludes or limits liability for death or
               personal injury caused by negligence, fraud, or any other liability
-              that cannot be excluded under applicable EU or Romanian law.
+              that cannot be excluded under applicable EU or Dutch law.
             </p>
           </section>
 
@@ -146,7 +146,7 @@ export default function Terms() {
             <p>
               We encourage you to contact us first to resolve any disputes
               informally. If a dispute cannot be resolved amicably, it shall be
-              subject to the jurisdiction of the competent courts in Romania.
+              subject to the jurisdiction of the competent courts in the Netherlands.
             </p>
             <p>
               EU consumers may also use the European Commission's Online Dispute
