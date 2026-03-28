@@ -123,13 +123,15 @@ ssh -i ~/.ssh/artverse-deploy root@artverse.idata.ro          # Root (for Nginx,
 |------|---------|
 | `/home/staging/app/` | Staging docker-compose + .env |
 | `/home/production/app/` | Production docker-compose + .env |
-| `/etc/nginx/sites-enabled/` | Nginx configs (staging + production) |
+| `/home/preview/app/` | Preview docker-compose + .env |
+| `/etc/nginx/sites-enabled/` | Nginx configs (staging + production + preview) |
 | `/etc/letsencrypt/` | SSL certificates (auto-renewed by certbot) |
 
 ### Docker project names
 
 - `artverse-staging` — staging containers (`artverse-staging-app-1`, `artverse-staging-db-1`)
 - `artverse-production` — production containers (`artverse-production-app-1`, `artverse-production-db-1`)
+- `artverse-preview` — preview containers (`artverse-preview-app-1`, `artverse-preview-db-1`)
 
 ### Ports (all localhost-only)
 
@@ -139,6 +141,8 @@ ssh -i ~/.ssh/artverse-deploy root@artverse.idata.ro          # Root (for Nginx,
 | 5435 | Staging PostgreSQL |
 | 5002 | Production app |
 | 5434 | Production PostgreSQL |
+| 5004 | Preview app |
+| 5436 | Preview PostgreSQL |
 
 ---
 
@@ -197,6 +201,7 @@ Database passwords and session secrets are stored in `.env` files on the VPS, no
 Deploy notifications are sent to Telegram automatically. You'll receive a message for:
 
 - **Staging deploys** — after every push to `main` (success or failure)
+- **Preview deploys** — after every push to `redesign/v3` (success or failure)
 - **Production deploys** — after manual deploy (success or failure)
 - **Production rollbacks** — after rollback (success or failure)
 

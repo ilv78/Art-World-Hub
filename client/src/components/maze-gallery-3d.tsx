@@ -22,6 +22,8 @@ interface MazeGallery3DProps {
   galleryTemplate?: string;
   artist?: Artist;
   onExitGallery?: () => void;
+  isImmersive?: boolean;
+  onRequestImmersive?: () => void;
 }
 
 // Default maze layout - a simple gallery with multiple rooms
@@ -92,7 +94,7 @@ function artworkScale(dimensions: string | null | undefined, maxSize: number): {
   return { w: finalW, h: finalH };
 }
 
-export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = false, galleryTemplate: templateId, artist, onExitGallery }: MazeGallery3DProps) {
+export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = false, galleryTemplate: templateId, artist, onExitGallery, isImmersive, onRequestImmersive }: MazeGallery3DProps) {
   // Resolve template: explicit galleryTemplate prop takes priority, then whiteRoom legacy fallback
   const tmpl: GalleryTemplate = getTemplate(templateId || (whiteRoom ? "contemporary" : undefined));
   const isLightTheme = tmpl.ambientIntensity >= 0.8;
@@ -109,7 +111,6 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
   const [selectedArtwork, setSelectedArtwork] = useState<ArtworkWithArtist | null>(null);
   const [showArtistDialog, setShowArtistDialog] = useState(false);
   const [isPointerLocked, setIsPointerLocked] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [webglError, setWebglError] = useState<string | null>(null);
   const [showMinimap, setShowMinimap] = useState(true);
@@ -1582,20 +1583,10 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
     }
   };
 
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      containerRef.current?.requestFullscreen();
-      setIsFullscreen(true);
-    } else {
-      document.exitFullscreen();
-      setIsFullscreen(false);
-    }
-  };
-
   // Fallback UI when WebGL is not available
   if (webglError) {
     return (
-      <div className="relative w-full bg-linear-to-b from-stone-900 to-black rounded-lg overflow-hidden flex items-center justify-center h-[60vh] min-h-[300px] max-h-[600px]" data-testid="webgl-fallback">
+      <div className={`relative w-full bg-linear-to-b from-stone-900 to-black overflow-hidden flex items-center justify-center ${isImmersive ? "h-full" : "rounded-lg h-[60vh] min-h-[300px] max-h-[800px]"}`} data-testid="webgl-fallback">
         <Card className="p-8 max-w-md text-center space-y-4">
           <Box className="w-16 h-16 mx-auto text-muted-foreground" />
           <h2 className="font-serif text-2xl font-bold">3D Gallery Unavailable</h2>
@@ -1609,7 +1600,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
   }
 
   return (
-    <div className="relative w-full rounded-lg overflow-hidden h-[60vh] min-h-[300px] max-h-[600px]">
+    <div className={`relative w-full overflow-hidden ${isImmersive ? "h-full" : "rounded-lg h-[60vh] min-h-[300px] max-h-[800px]"}`}>
       <div ref={containerRef} className="absolute inset-0 cursor-crosshair" style={{ zIndex: 0 }} />
 
       {/* Controls overlay */}
@@ -1690,7 +1681,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
         </div>
       )}
 
-      {/* Mobile D-pad + exit button */}
+      {/* Mobile D-pad + exit */}
       {isPointerLocked && isMobile && (
         <div style={{ zIndex: 10 }}>
           {/* Exit button */}
@@ -1744,16 +1735,17 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
       )}
 
       {/* Fullscreen button */}
-      <Button
-        size="icon"
-        variant="ghost"
-        className="absolute top-4 right-4 text-white/70"
-        onClick={toggleFullscreen}
-        data-testid="button-fullscreen"
-        style={{ zIndex: 5 }}
-      >
-        {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
-      </Button>
+      {onRequestImmersive && !isMobile && (
+        <button
+          className="absolute top-4 right-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/50 backdrop-blur-md text-white text-sm font-medium hover:bg-black/70 transition-colors"
+          onClick={onRequestImmersive}
+          data-testid="button-fullscreen"
+          style={{ zIndex: 20 }}
+        >
+          {isImmersive ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+          {isImmersive ? "Exit" : "Immersive Mode"}
+        </button>
+      )}
 
       {/* Minimap toggle button - only show when pointer locked */}
       {isPointerLocked && (

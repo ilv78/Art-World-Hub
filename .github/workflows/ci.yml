@@ -4,7 +4,7 @@ on:
   push:
     branches: ["**"]
   pull_request:
-    branches: [main]
+    branches: [main, redesign/v3]
 
 permissions:
   contents: read
@@ -81,7 +81,7 @@ jobs:
   changes:
     name: Detect Code Changes
     needs: ci
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/redesign/v3') && github.event_name == 'push'
     runs-on: ubuntu-latest
 
     permissions:
@@ -107,7 +107,7 @@ jobs:
   build-image:
     name: Build & Push Docker Image
     needs: [ci, changes]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.changes.outputs.code == 'true'
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/redesign/v3') && github.event_name == 'push' && needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
 
     permissions:
@@ -186,6 +186,7 @@ jobs:
   deploy-staging:
     name: Deploy to Staging
     needs: scan-image
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     permissions:
@@ -299,4 +300,98 @@ jobs:
           Staging address: https://staging.artverse.idata.ro
           Tag: <code>${DEPLOY_SHA}</code>
           Release: <code>release-${RUN_NUMBER}</code>
+          By: ${TRIGGERED_BY}"
+
+  deploy-preview:
+    name: Deploy to Preview
+    needs: scan-image
+    if: github.ref == 'refs/heads/redesign/v3'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Sync docker-compose to VPS
+        uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345 # v1.0.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: preview
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          source: deploy/preview/docker-compose.yml
+          target: ~/app/
+          strip_components: 2
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
+        env:
+          DEPLOY_SHA: ${{ github.sha }}
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: preview
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          envs: DEPLOY_SHA
+          script: |
+            cd ~/app
+            docker pull ghcr.io/ilv78/art-world-hub:$DEPLOY_SHA
+            sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$DEPLOY_SHA/" .env || echo "IMAGE_TAG=$DEPLOY_SHA" >> .env
+            # Ensure upload subdirs exist on the Docker volume (new subdirs may be missing)
+            docker compose run --rm --no-deps --user root --entrypoint sh app -c "mkdir -p /app/uploads/artworks /app/uploads/blog-covers /app/uploads/avatars /app/logs && chown -R appuser:appgroup /app/uploads /app/logs"
+            docker compose up -d --remove-orphans
+            # Run pending database migrations (push mode, like staging)
+            echo "Running database schema push..."
+            docker compose exec -T app npx drizzle-kit push --force || echo "Warning: schema push failed"
+            echo "Waiting for app to be healthy..."
+            for i in $(seq 1 60); do
+              if docker compose exec -T app node -e "fetch('http://localhost:5000/health').then(r => { if (!r.ok) process.exit(1) })" 2>/dev/null; then
+                echo "Preview is healthy after ${i}s"
+                exit 0
+              fi
+              sleep 2
+            done
+            echo "Health check failed"
+            docker compose logs --tail=50 app
+            exit 1
+
+      - name: Smoke test — health check
+        env:
+          PREVIEW_URL: ${{ secrets.PREVIEW_URL }}
+        run: |
+          if [ -z "$PREVIEW_URL" ]; then
+            echo "PREVIEW_URL secret not set, skipping external smoke test"
+            exit 0
+          fi
+          echo "Waiting for container to boot..."
+          sleep 15
+          HEALTH_URL="${PREVIEW_URL}/health"
+          HTTP_STATUS=$(curl --silent --output /dev/null --write-out "%{http_code}" "$HEALTH_URL")
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "Health check failed — HTTP $HTTP_STATUS"
+            exit 1
+          fi
+          echo "Health check passed — preview deployment verified"
+
+      - name: Notify Telegram
+        if: always()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          DEPLOY_STATUS: ${{ job.status }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          DEPLOY_SHA: ${{ github.sha }}
+          TRIGGERED_BY: ${{ github.actor }}
+        run: |
+          if [ -z "$TELEGRAM_BOT_TOKEN" ]; then exit 0; fi
+          if [ "$DEPLOY_STATUS" = "success" ]; then EMOJI="✅"; else EMOJI="❌"; fi
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            -d parse_mode="HTML" \
+            -d text="@racu8_bot
+          ${EMOJI} <b>Preview deployment: ${DEPLOY_STATUS}</b> [${REPO_NAME}]
+          Preview address: https://preview.artverse.idata.ro
+          Branch: redesign/v3
+          Tag: <code>${DEPLOY_SHA}</code>
           By: ${TRIGGERED_BY}"

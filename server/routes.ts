@@ -76,7 +76,7 @@ async function sendOrderNotificationEmail(
       <p style="color: #666; font-size: 14px; margin-top: 30px;">
         Please prepare the artwork for shipping. You can view all your orders in your artist dashboard.
       </p>
-      <p style="color: #999; font-size: 12px;">This is an automated notification from ArtVerse.</p>
+      <p style="color: #999; font-size: 12px;">This is an automated notification from Vernis9.</p>
     </div>
   `;
 
@@ -132,7 +132,7 @@ async function sendBuyerConfirmationEmail(
       <p style="color: #666; font-size: 14px; margin-top: 30px;">
         The artist will prepare your artwork for shipping. You will be contacted if any additional information is needed.
       </p>
-      <p style="color: #999; font-size: 12px;">This is an automated confirmation from ArtVerse.</p>
+      <p style="color: #999; font-size: 12px;">This is an automated confirmation from Vernis9.</p>
     </div>
   `;
 
@@ -1248,6 +1248,33 @@ export async function registerRoutes(
   app.get("/api/changelog", (_req, res) => {
     if (!cachedChangelog) return res.status(404).json({ error: "Changelog not found" });
     res.type("text/plain").send(cachedChangelog);
+  });
+
+  // Newsletter admin (requires admin role)
+  app.get("/api/newsletter/subscribers", isAdmin, async (_req, res) => {
+    const subscribers = await storage.getNewsletterSubscribers();
+    res.json(subscribers);
+  });
+
+  app.delete("/api/newsletter/subscribers/:id", isAdmin, async (req: any, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid ID" });
+    const deleted = await storage.deleteNewsletterSubscriber(id);
+    if (!deleted) return res.status(404).json({ error: "Subscriber not found" });
+    res.json({ success: true });
+  });
+
+  // Newsletter subscribe
+  app.post("/api/newsletter/subscribe", async (req, res) => {
+    const { email } = req.body ?? {};
+    if (!email || typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: "Please provide a valid email address." });
+    }
+    const result = await storage.subscribeNewsletter(email);
+    if (result.alreadySubscribed) {
+      return res.json({ message: "You're already subscribed!", alreadySubscribed: true });
+    }
+    return res.json({ message: "Thanks for subscribing!", alreadySubscribed: false });
   });
 
   return httpServer;

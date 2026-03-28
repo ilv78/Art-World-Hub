@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { AlertTriangle, Shield, Trash2, Users, Palette, Image, Calendar, BookOpen, Settings } from "lucide-react";
+import { AlertTriangle, Shield, Trash2, Users, Palette, Image, Calendar, BookOpen, Settings, Mail, Download } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { GALLERY_TEMPLATES } from "@/lib/gallery-templates";
 import { formatPrice } from "@/lib/utils";
 import {
@@ -117,6 +118,49 @@ export default function AdminPage() {
     queryFn: () => apiFetch("/api/site-settings"),
     enabled: user?.role === "admin",
   });
+
+  const { data: subscribers = [] } = useQuery<{ id: number; email: string; subscribedAt: string; unsubscribedAt: string | null }[]>({
+    queryKey: ["/api/newsletter/subscribers"],
+    queryFn: () => apiFetch("/api/newsletter/subscribers"),
+    enabled: user?.role === "admin",
+    staleTime: 0,
+  });
+
+  const [exportFields, setExportFields] = useState({ email: true, subscribedAt: false });
+  const [subscriberPage, setSubscriberPage] = useState(0);
+  const subscribersPerPage = 20;
+  const totalPages = Math.ceil(subscribers.length / subscribersPerPage);
+  const paginatedSubscribers = subscribers.slice(subscriberPage * subscribersPerPage, (subscriberPage + 1) * subscribersPerPage);
+
+  const deleteSubscriberMutation = useMutation({
+    mutationFn: (id: number) => apiFetch(`/api/newsletter/subscribers/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      queryClient.resetQueries({ queryKey: ["/api/newsletter/subscribers"] });
+      toast({ title: "Subscriber deleted" });
+    },
+  });
+
+  const exportCsv = () => {
+    const headers: string[] = [];
+    if (exportFields.email) headers.push("email");
+    if (exportFields.subscribedAt) headers.push("subscribed_at");
+    const rows = subscribers
+      .filter((s) => !s.unsubscribedAt)
+      .map((s) => {
+        const cols: string[] = [];
+        if (exportFields.email) cols.push(s.email);
+        if (exportFields.subscribedAt) cols.push(new Date(s.subscribedAt).toISOString());
+        return cols.join(",");
+      });
+    const csv = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `newsletter-subscribers-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const updateSettingsMutation = useMutation({
     mutationFn: (data: { galleryTemplate: string }) =>
@@ -282,6 +326,7 @@ export default function AdminPage() {
           <TabsTrigger value="artworks"><Image className="w-4 h-4 mr-2" />Artworks</TabsTrigger>
           <TabsTrigger value="exhibitions"><Calendar className="w-4 h-4 mr-2" />Exhibitions</TabsTrigger>
           <TabsTrigger value="blog"><BookOpen className="w-4 h-4 mr-2" />Blog</TabsTrigger>
+          <TabsTrigger value="newsletter"><Mail className="w-4 h-4 mr-2" />Newsletter</TabsTrigger>
           <TabsTrigger value="settings"><Settings className="w-4 h-4 mr-2" />Settings</TabsTrigger>
         </TabsList>
 
@@ -548,6 +593,82 @@ export default function AdminPage() {
                     ))}
                   </TableBody>
                 </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="newsletter">
+          <Card>
+            <CardHeader>
+              <CardTitle>Newsletter Subscribers</CardTitle>
+              <CardDescription>{subscribers.filter((s) => !s.unsubscribedAt).length} active subscribers</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-6">
+                <span className="text-sm font-medium">Export fields:</span>
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox checked={exportFields.email} onCheckedChange={(c) => setExportFields((f) => ({ ...f, email: !!c }))} />
+                  Email
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox checked={exportFields.subscribedAt} onCheckedChange={(c) => setExportFields((f) => ({ ...f, subscribedAt: !!c }))} />
+                  Subscribed Date
+                </label>
+                <Button size="sm" onClick={exportCsv} disabled={!exportFields.email && !exportFields.subscribedAt}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Export CSV
+                </Button>
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Subscribed</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="w-16"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedSubscribers.map((s) => (
+                    <TableRow key={s.id}>
+                      <TableCell>{s.email}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{new Date(s.subscribedAt).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <Badge variant={s.unsubscribedAt ? "secondary" : "default"}>
+                          {s.unsubscribedAt ? "Unsubscribed" : "Active"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => deleteSubscriberMutation.mutate(s.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {subscribers.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                        No subscribers yet
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-4">
+                  <span className="text-sm text-muted-foreground">
+                    Showing {subscriberPage * subscribersPerPage + 1}–{Math.min((subscriberPage + 1) * subscribersPerPage, subscribers.length)} of {subscribers.length}
+                  </span>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" disabled={subscriberPage === 0} onClick={() => setSubscriberPage((p) => p - 1)}>
+                      Previous
+                    </Button>
+                    <Button variant="outline" size="sm" disabled={subscriberPage >= totalPages - 1} onClick={() => setSubscriberPage((p) => p + 1)}>
+                      Next
+                    </Button>
+                  </div>
+                </div>
               )}
             </CardContent>
           </Card>

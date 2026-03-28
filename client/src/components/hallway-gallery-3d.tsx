@@ -40,6 +40,8 @@ interface HallwayGallery3DProps {
   artistRooms: ArtistRoom[];
   curatorRooms?: CuratorRoom[];
   museumTemplate?: string;
+  isImmersive?: boolean;
+  onRequestImmersive?: () => void;
 }
 
 const CELL_SIZE = 2.5;
@@ -369,7 +371,7 @@ function Minimap({ artistRooms, curatorRooms, placements, hallLeft, hallRight, h
   );
 }
 
-export function HallwayGallery3D({ artistRooms, curatorRooms, museumTemplate }: HallwayGallery3DProps) {
+export function HallwayGallery3D({ artistRooms, curatorRooms, museumTemplate, isImmersive, onRequestImmersive }: HallwayGallery3DProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -380,7 +382,6 @@ export function HallwayGallery3D({ artistRooms, curatorRooms, museumTemplate }: 
 
   const [selectedArtwork, setSelectedArtwork] = useState<ArtworkWithArtist | null>(null);
   const [isPointerLocked, setIsPointerLocked] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [webglError, setWebglError] = useState<string | null>(null);
   const [showMinimap, setShowMinimap] = useState(true);
   const [playerPosition, setPlayerPosition] = useState({ x: 0, z: 0, rotation: 0 });
@@ -1387,19 +1388,9 @@ export function HallwayGallery3D({ artistRooms, curatorRooms, museumTemplate }: 
     }
   };
 
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      containerRef.current?.requestFullscreen();
-      setIsFullscreen(true);
-    } else {
-      document.exitFullscreen();
-      setIsFullscreen(false);
-    }
-  };
-
   if (webglError) {
     return (
-      <div className="relative w-full bg-linear-to-b from-stone-900 to-black rounded-lg overflow-hidden flex items-center justify-center h-[60vh] min-h-[300px] max-h-[600px]" data-testid="webgl-fallback">
+      <div className={`relative w-full bg-linear-to-b from-stone-900 to-black overflow-hidden flex items-center justify-center ${isImmersive ? "h-full" : "rounded-lg h-[60vh] min-h-[300px] max-h-[800px]"}`} data-testid="webgl-fallback">
         <Card className="p-8 max-w-md text-center space-y-4">
           <Box className="w-16 h-16 mx-auto text-muted-foreground" />
           <h2 className="font-serif text-2xl font-bold">3D Gallery Unavailable</h2>
@@ -1410,7 +1401,7 @@ export function HallwayGallery3D({ artistRooms, curatorRooms, museumTemplate }: 
   }
 
   return (
-    <div className="relative w-full rounded-lg overflow-hidden h-[60vh] min-h-[300px] max-h-[600px]">
+    <div className={`relative w-full overflow-hidden ${isImmersive ? "h-full" : "rounded-lg h-[60vh] min-h-[300px] max-h-[800px]"}`}>
       <div ref={containerRef} className="absolute inset-0 cursor-crosshair" style={{ zIndex: 0 }} />
 
       {!isPointerLocked && !selectedArtwork && (
@@ -1509,9 +1500,17 @@ export function HallwayGallery3D({ artistRooms, curatorRooms, museumTemplate }: 
         </div>
       )}
 
-      <Button size="icon" variant="ghost" className="absolute top-4 right-4 text-white/70" onClick={toggleFullscreen} data-testid="button-fullscreen" style={{ zIndex: 5 }}>
-        {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
-      </Button>
+      {onRequestImmersive && !isMobile && (
+        <button
+          className="absolute top-4 right-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/50 backdrop-blur-md text-white text-sm font-medium hover:bg-black/70 transition-colors"
+          onClick={onRequestImmersive}
+          data-testid="button-fullscreen"
+          style={{ zIndex: 20 }}
+        >
+          {isImmersive ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+          {isImmersive ? "Exit" : "Immersive Mode"}
+        </button>
+      )}
 
       {isPointerLocked && (
         <Button size="icon" variant="ghost" className="absolute top-4 right-16 text-white/70" onClick={() => setShowMinimap(!showMinimap)} data-testid="button-toggle-minimap" style={{ zIndex: 5 }}>

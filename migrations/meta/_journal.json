@@ -43,6 +43,13 @@
       "when": 1774046316444,
       "tag": "0005_funny_moonstone",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1774618261647,
+      "tag": "0006_real_landau",
+      "breakpoints": true
     }
   ]
 }
