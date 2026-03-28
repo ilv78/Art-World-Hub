@@ -8,12 +8,11 @@ Analyze the pull request diff and check documentation rules.
 
 1. Read `specs/DOC-AGENT-SPEC.md` for the full rule set.
 2. Look at which files changed in this PR.
-3. Apply consistency rules (C-001 through C-005) against the changed files:
+3. Apply consistency rules (C-001 through C-004) against the changed files:
    - C-001: If a new migration file is added, check that `specs/architecture/DATA-MODEL.md` is also updated or an ADR is linked.
    - C-002: If a new Express route is added in `server/routes.ts`, check that a feature spec exists or is updated.
    - C-003: If `CLAUDE.md` is changed, check that `specs/decisions/DECISION-LOG.md` has a new entry.
    - C-004: If the PR title contains "breaking-change", check that an ADR is linked in the PR description.
-   - C-005: Check any bug files in `specs/bugs/` with status Open older than 30 days for a `## Workaround` section.
 4. Apply structure rules (S-001 through S-006) — verify required files exist.
 5. Check staleness rules (ST-001 through ST-005) if relevant files were modified.
 6. Check quality rules (Q-001 through Q-004) on any spec files in the diff.
