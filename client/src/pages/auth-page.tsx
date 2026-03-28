@@ -188,7 +188,7 @@ export default function AuthPage() {
             <CardHeader>
               <CardTitle className="font-serif text-2xl">Sign in</CardTitle>
               <CardDescription>
-                Welcome back to ArtVerse.
+                Welcome back to Vernis9.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

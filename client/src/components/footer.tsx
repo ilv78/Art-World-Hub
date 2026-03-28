@@ -69,12 +69,12 @@ export function Footer() {
           <div className="space-y-4">
             <Link href="/" className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-md bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-serif font-bold text-lg">
-                  A
+                <span className="text-primary-foreground font-bold text-lg" style={{ fontFamily: "'Tenor Sans', sans-serif" }}>
+                  V9
                 </span>
               </div>
-              <span className="font-serif text-xl font-bold tracking-tight">
-                ArtVerse
+              <span className="text-xl tracking-tight" style={{ fontFamily: "'Tenor Sans', sans-serif" }}>
+                Vernis<span className="ml-0.5">9</span>
               </span>
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed">
@@ -162,7 +162,7 @@ export function Footer() {
       {/* Bottom bar */}
       <div className="border-t">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
-          <p>&copy; {year} ArtVerse. All rights reserved.</p>
+          <p>&copy; {year} Vernis9. All rights reserved.</p>
           <div className="flex items-center gap-4">
             <Link
               href="/privacy"

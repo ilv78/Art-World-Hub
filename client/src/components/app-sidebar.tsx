@@ -60,10 +60,10 @@ export function AppSidebar() {
       <SidebarHeader className="p-4 border-b border-sidebar-border">
         <Link href="/" className="flex items-center gap-3" data-testid="link-logo" onClick={closeMobileSidebar}>
           <div className="w-10 h-10 rounded-md bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-serif font-bold text-xl">A</span>
+            <span className="text-primary-foreground font-bold text-xl" style={{ fontFamily: "'Tenor Sans', sans-serif" }}>V9</span>
           </div>
           <div>
-            <h1 className="font-serif text-xl font-bold tracking-tight">ArtVerse</h1>
+            <h1 className="text-xl tracking-tight" style={{ fontFamily: "'Tenor Sans', sans-serif" }}>Vernis<span className="ml-0.5">9</span></h1>
             <p className="text-xs text-muted-foreground">Virtual Art Experience</p>
           </div>
         </Link>

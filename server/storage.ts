@@ -137,7 +137,7 @@ export class DatabaseStorage implements IStorage {
     const displayName = [opts.firstName, opts.lastName].filter(Boolean).join(" ") || "New Artist";
     return this.createArtist({
       name: displayName,
-      bio: "Welcome to my gallery! I'm a new artist on ArtVerse.",
+      bio: "Welcome to my gallery! I'm a new artist on Vernis9.",
       userId,
       email: opts.email || undefined,
     });

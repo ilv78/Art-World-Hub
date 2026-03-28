@@ -76,7 +76,7 @@ async function sendOrderNotificationEmail(
       <p style="color: #666; font-size: 14px; margin-top: 30px;">
         Please prepare the artwork for shipping. You can view all your orders in your artist dashboard.
       </p>
-      <p style="color: #999; font-size: 12px;">This is an automated notification from ArtVerse.</p>
+      <p style="color: #999; font-size: 12px;">This is an automated notification from Vernis9.</p>
     </div>
   `;
 
@@ -132,7 +132,7 @@ async function sendBuyerConfirmationEmail(
       <p style="color: #666; font-size: 14px; margin-top: 30px;">
         The artist will prepare your artwork for shipping. You will be contacted if any additional information is needed.
       </p>
-      <p style="color: #999; font-size: 12px;">This is an automated confirmation from ArtVerse.</p>
+      <p style="color: #999; font-size: 12px;">This is an automated confirmation from Vernis9.</p>
     </div>
   `;
 
