@@ -77,10 +77,10 @@ export function TopNav() {
         {/* Left: Logo */}
         <Link href="/" className="flex items-center gap-3 shrink-0">
           <div className="w-9 h-9 rounded-md bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-serif font-bold text-lg">A</span>
+            <span className="text-primary-foreground font-bold text-lg" style={{ fontFamily: "'Tenor Sans', sans-serif" }}>V9</span>
           </div>
-          <span className="font-serif text-xl font-bold tracking-tight hidden sm:inline">
-            ArtVerse
+          <span className="text-xl tracking-tight hidden sm:inline" style={{ fontFamily: "'Tenor Sans', sans-serif" }}>
+            Vernis<span className="ml-0.5">9</span>
           </span>
         </Link>
 

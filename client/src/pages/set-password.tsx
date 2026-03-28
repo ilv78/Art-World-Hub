@@ -51,7 +51,7 @@ export default function SetPassword() {
               <CheckCircle className="w-8 h-8 text-green-600" />
             </div>
             <CardTitle className="font-serif text-2xl">You're all set!</CardTitle>
-            <CardDescription>Redirecting to ArtVerse...</CardDescription>
+            <CardDescription>Redirecting to Vernis9...</CardDescription>
           </CardHeader>
         ) : (
           <>

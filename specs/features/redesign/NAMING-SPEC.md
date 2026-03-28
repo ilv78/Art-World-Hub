@@ -1,8 +1,9 @@
 # Brand Naming Specification
 
-**Status:** Draft — Selection Pending
+**Status:** DECIDED — **vernis9.art**
 **Created:** 2026-03-24
-**Required TLDs:** .art, .nu, .ro, .nl
+**Decided:** 2026-03-28
+**Primary TLD:** .art
 
 ---
 
@@ -114,14 +115,40 @@ Worth considering if .nl could be acquired:
 
 ## 7. Selection
 
-**Status:** Pending user decision
+**Status:** DECIDED
+**Chosen name:** **vernis9**
+**Primary domain:** **vernis9.art**
+**Decided:** 2026-03-28
 
-Once a name is selected:
-1. Register all 4 TLDs immediately
+### Why vernis9
+
+- **"Vernis"** — from *vernissage*, the French term for an art gallery opening night (literally "varnishing day"). A deeply art-world insider word.
+- **"9"** — adds uniqueness, ensures domain availability, and keeps it short (7 chars).
+- **French sound, Dutch soul** — "vernissage" is used identically in both French and Dutch art worlds, making it a perfect Belgian/BeNeLux crossover.
+- **Memorable & pronounceable** — "ver-NEE-nine" flows naturally in any language.
+
+### Availability (verified 2026-03-28)
+
+| Domain | Status |
+|--------|--------|
+| vernis9.art | AVAILABLE |
+
+### Pricing (.art TLD)
+
+| Registrar | Registration | Renewal/yr |
+|-----------|-------------|------------|
+| Porkbun | $3.60 | $21.11 |
+| Namecheap | ~$2 | ~$20 |
+
+*Note: Verify at checkout — some names may be premium-priced.*
+
+### Next Steps
+
+1. Register **vernis9.art** immediately
 2. Update UI-SPEC.md with brand name
-3. Create GitHub issue for rebrand implementation
-4. Update logo, metadata, SEO, favicon, sidebar branding
+3. Create GitHub issue for rebrand implementation (#244)
+4. Update logo, metadata, SEO, favicon, navigation branding
 
 ---
 
-*Availability checked on 2026-03-24. Domain availability can change at any time — register promptly once a decision is made.*
+*Rounds 1–2 checked on 2026-03-24. Rounds 3–5 checked on 2026-03-28. Domain availability can change at any time — register promptly.*

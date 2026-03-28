@@ -9,13 +9,13 @@ export default function Terms() {
           <section>
             <h2 className="font-serif text-2xl font-semibold">1. Introduction</h2>
             <p>
-              Welcome to ArtVerse. These Terms of Service ("Terms") govern your
-              access to and use of the ArtVerse platform, including the website,
+              Welcome to Vernis9. These Terms of Service ("Terms") govern your
+              access to and use of the Vernis9 platform, including the website,
               virtual gallery, marketplace, and all related services. By creating an
               account or using the platform, you agree to be bound by these Terms.
             </p>
             <p>
-              ArtVerse is operated from the Netherlands within the European Union.
+              Vernis9 is operated from the Netherlands within the European Union.
               These Terms are governed by Dutch law and applicable EU regulations.
             </p>
           </section>
@@ -23,7 +23,7 @@ export default function Terms() {
           <section>
             <h2 className="font-serif text-2xl font-semibold">2. Eligibility</h2>
             <p>
-              You must be at least 16 years of age to create an account on ArtVerse.
+              You must be at least 16 years of age to create an account on Vernis9.
               If you are under 18, you may use the platform only with the involvement
               and consent of a parent or legal guardian. By using the platform, you
               represent that you meet these requirements.
@@ -44,9 +44,9 @@ export default function Terms() {
           <section>
             <h2 className="font-serif text-2xl font-semibold">4. Artist Accounts and Content</h2>
             <p>
-              Artists who create profiles and upload artworks to ArtVerse retain full
+              Artists who create profiles and upload artworks to Vernis9 retain full
               ownership and intellectual property rights over their original works.
-              By uploading content, you grant ArtVerse a non-exclusive, worldwide,
+              By uploading content, you grant Vernis9 a non-exclusive, worldwide,
               royalty-free licence to display, reproduce, and distribute your content
               within the platform for the purpose of operating the gallery, marketplace,
               and promotional activities.
@@ -62,13 +62,13 @@ export default function Terms() {
           <section>
             <h2 className="font-serif text-2xl font-semibold">5. Purchases and Transactions</h2>
             <p>
-              ArtVerse facilitates transactions between buyers and artists. When you
+              Vernis9 facilitates transactions between buyers and artists. When you
               purchase an artwork:
             </p>
             <ul className="list-disc pl-6 space-y-1">
               <li>All prices are displayed in the currency indicated on the listing</li>
               <li>You enter into a direct transaction with the artist</li>
-              <li>ArtVerse acts as an intermediary to facilitate communication and order tracking</li>
+              <li>Vernis9 acts as an intermediary to facilitate communication and order tracking</li>
               <li>Physical artwork shipping, packaging, and delivery are the responsibility of the artist</li>
             </ul>
             <p>
@@ -118,9 +118,9 @@ export default function Terms() {
           <section>
             <h2 className="font-serif text-2xl font-semibold">9. Intellectual Property</h2>
             <p>
-              The ArtVerse platform, including its design, code, branding, and
+              The Vernis9 platform, including its design, code, branding, and
               original content (excluding user-uploaded artworks), is the property
-              of ArtVerse and is protected by copyright and intellectual property
+              of Vernis9 and is protected by copyright and intellectual property
               laws. You may not reproduce, distribute, or create derivative works
               from platform content without our express written permission.
             </p>
@@ -129,7 +129,7 @@ export default function Terms() {
           <section>
             <h2 className="font-serif text-2xl font-semibold">10. Limitation of Liability</h2>
             <p>
-              To the maximum extent permitted by applicable law, ArtVerse shall not
+              To the maximum extent permitted by applicable law, Vernis9 shall not
               be liable for any indirect, incidental, special, consequential, or
               punitive damages arising from your use of the platform. This includes,
               but is not limited to, loss of profits, data, or goodwill.
@@ -183,7 +183,7 @@ export default function Terms() {
             <h2 className="font-serif text-2xl font-semibold">14. Contact</h2>
             <p>
               For questions about these Terms, please contact us at:{" "}
-              <a href="mailto:legal@artverse.idata.ro" className="text-primary hover:underline">legal@artverse.idata.ro</a>
+              <a href="mailto:legal@vernis9.art" className="text-primary hover:underline">legal@vernis9.art</a>
             </p>
           </section>
         </div>

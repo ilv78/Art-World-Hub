@@ -14,7 +14,7 @@ export function getResendClient(): Resend {
 }
 
 export function getFromEmail(): string {
-  return process.env.RESEND_FROM_EMAIL || "ArtVerse <gallery@idata.ro>";
+  return process.env.RESEND_FROM_EMAIL || "Vernis9 <gallery@idata.ro>";
 }
 
 export async function sendMagicLinkEmail(
@@ -28,11 +28,11 @@ export async function sendMagicLinkEmail(
   await client.emails.send({
     from: getFromEmail(),
     to: email,
-    subject: "Verify your email - ArtVerse",
+    subject: "Verify your email - Vernis9",
     html: `
       <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h1 style="color: #1a1a2e; border-bottom: 2px solid #F97316; padding-bottom: 10px;">
-          Welcome to ArtVerse
+          Welcome to Vernis9
         </h1>
         <p>Click the button below to verify your email and create your account:</p>
         <div style="text-align: center; margin: 30px 0;">
@@ -45,7 +45,7 @@ export async function sendMagicLinkEmail(
           This link expires in 1 hour. If you didn't request this, you can safely ignore this email.
         </p>
         <p style="color: #999; font-size: 12px; margin-top: 30px;">
-          ArtVerse — Discover. Collect. Create.
+          Vernis9 — Discover. Collect. Create.
         </p>
       </div>
     `,

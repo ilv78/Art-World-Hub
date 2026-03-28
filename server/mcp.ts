@@ -15,7 +15,7 @@ const storage = new DatabaseStorage();
 export function createMcpServer(): McpServer {
   const mcp = new McpServer(
     {
-      name: "artverse-mcp",
+      name: "vernis9-mcp",
       version: "1.0.0",
     },
     {
@@ -31,12 +31,12 @@ export function createMcpServer(): McpServer {
 
   mcp.resource(
     "all-artists",
-    "artverse://artists",
-    { description: "List all artists on ArtVerse" },
+    "vernis9://artists",
+    { description: "List all artists on Vernis9" },
     async () => ({
       contents: [
         {
-          uri: "artverse://artists",
+          uri: "vernis9://artists",
           mimeType: "application/json",
           text: JSON.stringify(await storage.getArtists(), null, 2),
         },
@@ -46,7 +46,7 @@ export function createMcpServer(): McpServer {
 
   mcp.resource(
     "artist-by-id",
-    new ResourceTemplate("artverse://artists/{artistId}", { list: undefined }),
+    new ResourceTemplate("vernis9://artists/{artistId}", { list: undefined }),
     { description: "Get a specific artist's profile by ID" },
     async (uri, params) => {
       const artist = await storage.getArtist(params.artistId as string);
@@ -64,12 +64,12 @@ export function createMcpServer(): McpServer {
 
   mcp.resource(
     "all-artworks",
-    "artverse://artworks",
+    "vernis9://artworks",
     { description: "List all artworks with artist information" },
     async () => ({
       contents: [
         {
-          uri: "artverse://artworks",
+          uri: "vernis9://artworks",
           mimeType: "application/json",
           text: JSON.stringify(await storage.getArtworks(), null, 2),
         },
@@ -79,7 +79,7 @@ export function createMcpServer(): McpServer {
 
   mcp.resource(
     "artworks-by-artist",
-    new ResourceTemplate("artverse://artists/{artistId}/artworks", { list: undefined }),
+    new ResourceTemplate("vernis9://artists/{artistId}/artworks", { list: undefined }),
     { description: "Get all artworks by a specific artist" },
     async (uri, params) => {
       const artworks = await storage.getArtworksByArtist(params.artistId as string);
@@ -97,7 +97,7 @@ export function createMcpServer(): McpServer {
 
   mcp.resource(
     "artwork-by-id",
-    new ResourceTemplate("artverse://artworks/{artworkId}", { list: undefined }),
+    new ResourceTemplate("vernis9://artworks/{artworkId}", { list: undefined }),
     { description: "Get a specific artwork by ID" },
     async (uri, params) => {
       const artwork = await storage.getArtwork(params.artworkId as string);
@@ -115,12 +115,12 @@ export function createMcpServer(): McpServer {
 
   mcp.resource(
     "all-auctions",
-    "artverse://auctions",
+    "vernis9://auctions",
     { description: "List all auctions" },
     async () => ({
       contents: [
         {
-          uri: "artverse://auctions",
+          uri: "vernis9://auctions",
           mimeType: "application/json",
           text: JSON.stringify(await storage.getAuctions(), null, 2),
         },
@@ -130,7 +130,7 @@ export function createMcpServer(): McpServer {
 
   mcp.resource(
     "auction-by-id",
-    new ResourceTemplate("artverse://auctions/{auctionId}", { list: undefined }),
+    new ResourceTemplate("vernis9://auctions/{auctionId}", { list: undefined }),
     { description: "Get a specific auction with details" },
     async (uri, params) => {
       const auction = await storage.getAuction(params.auctionId as string);
@@ -148,7 +148,7 @@ export function createMcpServer(): McpServer {
 
   mcp.resource(
     "auction-bids",
-    new ResourceTemplate("artverse://auctions/{auctionId}/bids", { list: undefined }),
+    new ResourceTemplate("vernis9://auctions/{auctionId}/bids", { list: undefined }),
     { description: "Get all bids for a specific auction" },
     async (uri, params) => {
       const bids = await storage.getBidsByAuction(params.auctionId as string);
@@ -166,7 +166,7 @@ export function createMcpServer(): McpServer {
 
   mcp.resource(
     "orders-by-artist",
-    new ResourceTemplate("artverse://artists/{artistId}/orders", { list: undefined }),
+    new ResourceTemplate("vernis9://artists/{artistId}/orders", { list: undefined }),
     { description: "Get all orders for a specific artist's artworks" },
     async (uri, params) => {
       const orders = await storage.getOrdersByArtist(params.artistId as string);
@@ -184,12 +184,12 @@ export function createMcpServer(): McpServer {
 
   mcp.resource(
     "blog-posts",
-    "artverse://blog",
+    "vernis9://blog",
     { description: "List all published blog posts" },
     async () => ({
       contents: [
         {
-          uri: "artverse://blog",
+          uri: "vernis9://blog",
           mimeType: "application/json",
           text: JSON.stringify(await storage.getBlogPosts(), null, 2),
         },
@@ -199,7 +199,7 @@ export function createMcpServer(): McpServer {
 
   mcp.resource(
     "blog-posts-by-artist",
-    new ResourceTemplate("artverse://artists/{artistId}/blog", { list: undefined }),
+    new ResourceTemplate("vernis9://artists/{artistId}/blog", { list: undefined }),
     { description: "Get all blog posts by a specific artist" },
     async (uri, params) => {
       const posts = await storage.getBlogPostsByArtist(params.artistId as string);
@@ -217,7 +217,7 @@ export function createMcpServer(): McpServer {
 
   mcp.resource(
     "artist-gallery",
-    new ResourceTemplate("artverse://artists/{artistId}/gallery", { list: undefined }),
+    new ResourceTemplate("vernis9://artists/{artistId}/gallery", { list: undefined }),
     { description: "Get an artist's personal gallery layout and exhibition-ready artworks" },
     async (uri, params) => {
       const artistId = params.artistId as string;
@@ -239,12 +239,12 @@ export function createMcpServer(): McpServer {
 
   mcp.resource(
     "exhibitions",
-    "artverse://exhibitions",
+    "vernis9://exhibitions",
     { description: "List all exhibitions" },
     async () => ({
       contents: [
         {
-          uri: "artverse://exhibitions",
+          uri: "vernis9://exhibitions",
           mimeType: "application/json",
           text: JSON.stringify(await storage.getExhibitions(), null, 2),
         },
@@ -775,7 +775,7 @@ Write 2-3 paragraphs that capture the essence of the piece, its visual qualities
           role: "user",
           content: {
             type: "text",
-            text: `Draft a blog post for the artist ${args.artistName}'s profile on ArtVerse.
+            text: `Draft a blog post for the artist ${args.artistName}'s profile on Vernis9.
 
 Topic: ${args.topic}
 ${args.tone ? `Tone: ${args.tone}` : "Tone: reflective and personal"}
@@ -845,7 +845,7 @@ Keep the summary clear and actionable.`,
           role: "user",
           content: {
             type: "text",
-            text: `Write a professional artist biography for ${args.name} to display on their ArtVerse profile.
+            text: `Write a professional artist biography for ${args.name} to display on their Vernis9 profile.
 
 ${args.specialization ? `Specialization: ${args.specialization}` : ""}
 ${args.country ? `Based in: ${args.country}` : ""}

@@ -9,12 +9,12 @@ export default function Privacy() {
           <section>
             <h2 className="font-serif text-2xl font-semibold">1. Data Controller</h2>
             <p>
-              ArtVerse ("we", "us", "our") is the data controller responsible for
+              Vernis9 ("we", "us", "our") is the data controller responsible for
               processing your personal data. If you have any questions about this
               Privacy Policy or our data practices, please contact us at:
             </p>
             <p>
-              Email: <a href="mailto:privacy@artverse.idata.ro" className="text-primary hover:underline">privacy@artverse.idata.ro</a>
+              Email: <a href="mailto:privacy@vernis9.art" className="text-primary hover:underline">privacy@vernis9.art</a>
             </p>
           </section>
 
@@ -110,7 +110,7 @@ export default function Privacy() {
             </ul>
             <p>
               To exercise any of these rights, contact us at{" "}
-              <a href="mailto:privacy@artverse.idata.ro" className="text-primary hover:underline">privacy@artverse.idata.ro</a>.
+              <a href="mailto:privacy@vernis9.art" className="text-primary hover:underline">privacy@vernis9.art</a>.
               We will respond within 30 days as required by the GDPR.
             </p>
           </section>
@@ -129,10 +129,11 @@ export default function Privacy() {
             <p>
               If you believe your data protection rights have been violated, you
               have the right to lodge a complaint with your local data protection
-              supervisory authority. In the Netherlands, the relevant authority is
-              the Autoriteit Persoonsgegevens (AP) —{" "}
-              <a href="https://www.autoriteitpersoonsgegevens.nl" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
-                www.autoriteitpersoonsgegevens.nl
+              supervisory authority. Under the GDPR, you may contact the
+              supervisory authority in your EU/EEA member state of residence. A
+              full list of EU data protection authorities is available at{" "}
+              <a href="https://edpb.europa.eu/about-edpb/about-edpb/members_en" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
+                edpb.europa.eu
               </a>.
             </p>
           </section>
@@ -142,7 +143,7 @@ export default function Privacy() {
             <p>
               We may update this Privacy Policy from time to time. Material changes
               will be communicated via email or a prominent notice on the platform.
-              Your continued use of ArtVerse after changes constitutes acceptance of
+              Your continued use of Vernis9 after changes constitutes acceptance of
               the updated policy.
             </p>
           </section>

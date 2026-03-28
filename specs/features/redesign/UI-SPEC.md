@@ -384,7 +384,7 @@ These issues can be worked on in parallel once the public shell, top nav, and fo
 **Priority:** Medium — deliberately last, easier once layout is settled.
 
 **Scope:**
-- Apply new brand name (see `NAMING-SPEC.md` — selection pending)
+- Apply new brand name: **Vernis9** (see `NAMING-SPEC.md` — decided 2026-03-28)
 - Update logo, favicon, meta tags, OpenGraph images
 - Update sidebar brand section (dashboard shell)
 - Update top nav brand section (public shell)
@@ -400,7 +400,7 @@ These issues can be worked on in parallel once the public shell, top nav, and fo
 - `client/src/components/footer.tsx` — brand name
 - All page components with hardcoded "ArtVerse" references
 
-**Depends on:** Brand name selection from NAMING-SPEC.md
+**Brand name:** Vernis9 (from "vernissage" — art gallery opening night). See NAMING-SPEC.md.
 
 ---
 
