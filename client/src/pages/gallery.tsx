@@ -24,6 +24,7 @@ import { useCartStore } from "@/lib/cart-store";
 import { formatPrice } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { HallwayGallery3D } from "@/components/hallway-gallery-3d";
+import { ArtworkDetailDialog } from "@/components/artwork-detail-dialog";
 
 type ViewMode = "3d" | "classic";
 
@@ -34,11 +35,14 @@ interface ArtistRoom {
 
 export default function Gallery() {
   const isMobile = typeof window !== "undefined" && ("ontouchstart" in window || navigator.maxTouchPoints > 0);
-  const [viewMode, setViewMode] = useState<ViewMode>(isMobile ? "classic" : "3d");
+  const searchParams = new URLSearchParams(window.location.search);
+  const requestedView = searchParams.get("view");
+  const [viewMode, setViewMode] = useState<ViewMode>(requestedView === "classic" ? "classic" : isMobile ? "classic" : "3d");
   const { isImmersive, toggleImmersive } = useImmersiveMode();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [showInfo, setShowInfo] = useState(false);
+  const [selectedArtwork, setSelectedArtwork] = useState<ArtworkWithArtist | null>(null);
   const galleryRef = useRef<HTMLDivElement>(null);
 
   const { data: artworks, isLoading: artworksLoading } = useQuery<ArtworkWithArtist[]>({
@@ -247,8 +251,9 @@ export default function Gallery() {
             </Button>
 
             <div
-              className="relative transition-transform duration-500 ease-out"
+              className="relative transition-transform duration-500 ease-out cursor-pointer"
               style={{ transform: `scale(${zoom})` }}
+              onClick={() => setSelectedArtwork(currentArtwork)}
             >
               <img
                 src={currentArtwork.imageUrl}
@@ -388,6 +393,12 @@ export default function Gallery() {
           )}
         </>
       )}
+
+      <ArtworkDetailDialog
+        artwork={selectedArtwork}
+        open={!!selectedArtwork}
+        onOpenChange={(open) => !open && setSelectedArtwork(null)}
+      />
     </div>
   );
 }

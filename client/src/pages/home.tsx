@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { ArtworkDetailDialog } from "@/components/artwork-detail-dialog";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -486,6 +487,8 @@ function HomeSkeleton() {
 // ---------------------------------------------------------------------------
 
 export default function Home() {
+  const [selectedArtwork, setSelectedArtwork] = useState<ArtworkWithArtist | null>(null);
+
   const { data: artworks, isLoading: artworksLoading } = useQuery<
     ArtworkWithArtist[]
   >({
@@ -535,7 +538,7 @@ export default function Home() {
           title="Featured Artworks"
           subtitle="Handpicked masterpieces from our collection"
           action={
-            <Link href="/gallery">
+            <Link href="/gallery?view=classic">
               <Button variant="ghost" size="sm">
                 View All <ArrowRight className="h-4 w-4 ml-1" />
               </Button>
@@ -546,9 +549,7 @@ export default function Home() {
             <ShelfItem key={artwork.id}>
               <ArtworkCard
                 artwork={artwork}
-                onViewDetails={() => {
-                  window.location.href = `/gallery`;
-                }}
+                onViewDetails={() => setSelectedArtwork(artwork)}
               />
             </ShelfItem>
           ))}
@@ -561,7 +562,7 @@ export default function Home() {
           title="New This Week"
           subtitle="Recently added to our collection"
           action={
-            <Link href="/gallery">
+            <Link href="/gallery?view=classic">
               <Button variant="ghost" size="sm">
                 Browse All <ArrowRight className="h-4 w-4 ml-1" />
               </Button>
@@ -572,9 +573,7 @@ export default function Home() {
             <ShelfItem key={artwork.id}>
               <ArtworkCard
                 artwork={artwork}
-                onViewDetails={() => {
-                  window.location.href = `/gallery`;
-                }}
+                onViewDetails={() => setSelectedArtwork(artwork)}
               />
             </ShelfItem>
           ))}
@@ -598,6 +597,12 @@ export default function Home() {
 
       {/* 7. CTA */}
       <CTASection />
+
+      <ArtworkDetailDialog
+        artwork={selectedArtwork}
+        open={!!selectedArtwork}
+        onOpenChange={(open) => !open && setSelectedArtwork(null)}
+      />
     </div>
   );
 }
