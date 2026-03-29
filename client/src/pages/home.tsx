@@ -517,8 +517,9 @@ export default function Home() {
   if (artworksLoading) return <HomeSkeleton />;
 
   const allArtworks = artworks ?? [];
-  // Use gallery artworks for the hero, remaining for the shelf
-  const heroArtworks = allArtworks.filter((a) => a.isInGallery).slice(0, 5);
+  // Use #featured artworks for the hero; fall back to isInGallery
+  const featuredArtworks = allArtworks.filter((a) => a.description?.includes("#featured"));
+  const heroArtworks = (featuredArtworks.length > 0 ? featuredArtworks : allArtworks.filter((a) => a.isInGallery)).slice(0, 5);
   const heroIds = new Set(heroArtworks.map((a) => a.id));
   const shelfArtworks = allArtworks.slice(0, 12);
   // "New This Week" — artworks not already in the hero, reversed to show newest first

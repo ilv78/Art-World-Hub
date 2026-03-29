@@ -254,7 +254,7 @@ export default function Store() {
                 <h3 className="font-serif font-semibold truncate">{artwork.title}</h3>
                 <p className="text-sm text-muted-foreground">{artwork.artist.name}</p>
                 <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                  {artwork.description}
+                  {artwork.description?.replace(/#featured\b/gi, "").trim()}
                 </p>
               </div>
               <div className="text-right shrink-0">
