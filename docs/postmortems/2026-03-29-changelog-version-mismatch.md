@@ -179,10 +179,10 @@ N/A — no security incident.
 
 | # | Action Item | Type | Priority | Owner | Issue |
 |---|-------------|------|----------|-------|-------|
-| 1 | Add CI check that validates CHANGELOG.md contains an entry matching the version tag before release finalization | prevent | P1 | [developer] | [GH-???] |
-| 2 | Add `/api/version` and `/api/changelog` content check to production deploy smoke test — verify version matches deployed tag | detect | P1 | [developer] | [GH-???] |
-| 3 | Rebuild and redeploy production with current `main` to fix the stale changelog | repair | P0 | [developer] | [GH-???] |
-| 4 | Update release workflow documentation to include "update CHANGELOG.md" as a prerequisite step before tagging | document | P2 | [developer] | [GH-???] |
+| 1 | Add CI check that validates CHANGELOG.md contains an entry matching the version tag before release finalization | prevent | P1 | [developer] | [#295](https://github.com/ilv78/Art-World-Hub/issues/295) |
+| 2 | Add `/api/version` and `/api/changelog` content check to production deploy smoke test — verify version matches deployed tag | detect | P1 | [developer] | [#296](https://github.com/ilv78/Art-World-Hub/issues/296) |
+| 3 | Rebuild and redeploy production with current `main` to fix the stale changelog | repair | P0 | [developer] | [#297](https://github.com/ilv78/Art-World-Hub/issues/297) |
+| 4 | Update release workflow documentation to include "update CHANGELOG.md" as a prerequisite step before tagging | document | P2 | [developer] | [#298](https://github.com/ilv78/Art-World-Hub/issues/298) |
 
 ---
 
