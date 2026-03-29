@@ -10,14 +10,14 @@ import { ArtworkShelf, ShelfItem } from "@/components/artwork-shelf";
 import {
   ArrowRight,
   Image,
-  Palette,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import type {
   ArtworkWithArtist,
   Artist,
-  ExhibitionWithArtworks,
+  CuratorGalleryWithArtworks,
   BlogPostWithArtist,
 } from "@shared/schema";
 
@@ -190,92 +190,6 @@ function HeroFallback() {
 // ---------------------------------------------------------------------------
 // Exhibition Spotlight
 // ---------------------------------------------------------------------------
-
-function ExhibitionSpotlight({
-  exhibition,
-}: {
-  exhibition: ExhibitionWithArtworks;
-}) {
-  // Pick up to 3 artwork images for the mosaic
-  const previewImages = exhibition.artworks
-    .slice(0, 3)
-    .map((ea) => ea.artwork);
-
-  return (
-    <section className="py-12 sm:py-16">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="relative overflow-hidden rounded-2xl bg-card border">
-          <div className="grid lg:grid-cols-2 gap-0">
-            {/* Image mosaic */}
-            <div className="relative h-64 sm:h-80 lg:h-auto lg:min-h-[360px]">
-              {previewImages.length >= 3 ? (
-                <div className="grid grid-cols-2 grid-rows-2 h-full gap-0.5">
-                  <div className="row-span-2">
-                    <img
-                      src={previewImages[0].imageUrl}
-                      alt={previewImages[0].title}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div>
-                    <img
-                      src={previewImages[1].imageUrl}
-                      alt={previewImages[1].title}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div>
-                    <img
-                      src={previewImages[2].imageUrl}
-                      alt={previewImages[2].title}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                </div>
-              ) : previewImages.length > 0 ? (
-                <img
-                  src={previewImages[0].imageUrl}
-                  alt={previewImages[0].title}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-muted flex items-center justify-center">
-                  <Palette className="h-12 w-12 text-muted-foreground/40" />
-                </div>
-              )}
-            </div>
-
-            {/* Text */}
-            <div className="p-8 sm:p-10 lg:p-12 flex flex-col justify-center">
-              <p className="text-xs font-medium tracking-wider uppercase text-primary mb-3">
-                Now Showing
-              </p>
-              <h2 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight mb-3">
-                {exhibition.name}
-              </h2>
-              {exhibition.description && (
-                <p className="text-muted-foreground text-sm leading-relaxed mb-6 line-clamp-3">
-                  {exhibition.description}
-                </p>
-              )}
-              <div className="flex items-center gap-3">
-                <Link href={`/exhibitions/${exhibition.id}`}>
-                  <Button>
-                    Enter Exhibition
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </Link>
-                <Link href="/exhibitions">
-                  <Button variant="ghost">All Exhibitions</Button>
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Artist Spotlight
@@ -499,15 +413,8 @@ export default function Home() {
     queryKey: ["/api/artists"],
   });
 
-  const { data: activeExhibition } = useQuery<ExhibitionWithArtworks>({
-    queryKey: ["/api/exhibitions/active"],
-    queryFn: async () => {
-      const res = await fetch("/api/exhibitions/active", {
-        credentials: "include",
-      });
-      if (!res.ok) return null;
-      return res.json();
-    },
+  const { data: curatedExhibitions } = useQuery<CuratorGalleryWithArtworks[]>({
+    queryKey: ["/api/curated-exhibitions"],
   });
 
   const { data: blogPosts } = useQuery<BlogPostWithArtist[]>({
@@ -520,13 +427,18 @@ export default function Home() {
   // Use #featured artworks for the hero; fall back to isInGallery
   const featuredArtworks = allArtworks.filter((a) => a.description?.includes("#featured"));
   const heroArtworks = (featuredArtworks.length > 0 ? featuredArtworks : allArtworks.filter((a) => a.isInGallery)).slice(0, 5);
-  const heroIds = new Set(heroArtworks.map((a) => a.id));
   const shelfArtworks = allArtworks.slice(0, 12);
-  // "New This Week" — artworks not already in the hero, reversed to show newest first
-  const newArtworks = allArtworks
-    .filter((a) => !heroIds.has(a.id))
-    .slice(-8)
-    .reverse();
+
+  // Split exhibitions into active and upcoming
+  const now = new Date();
+  const isActive = (g: CuratorGalleryWithArtworks) => {
+    if (g.startDate && now < new Date(g.startDate)) return false;
+    if (g.endDate && now > new Date(g.endDate)) return false;
+    return true;
+  };
+  const activeExhibitions = curatedExhibitions?.filter(isActive) || [];
+  const upcomingExhibitions = curatedExhibitions?.filter(g => !isActive(g)) || [];
+  const allExhibitions = [...activeExhibitions, ...upcomingExhibitions];
 
   return (
     <div className="min-h-screen">
@@ -557,33 +469,60 @@ export default function Home() {
         </ArtworkShelf>
       )}
 
-      {/* 3. New This Week Shelf */}
-      {newArtworks.length > 0 && (
-        <ArtworkShelf
-          title="New This Week"
-          subtitle="Recently added to our collection"
-          action={
-            <Link href="/gallery?view=classic">
-              <Button variant="ghost" size="sm">
-                Browse All <ArrowRight className="h-4 w-4 ml-1" />
-              </Button>
-            </Link>
-          }
-        >
-          {newArtworks.map((artwork) => (
-            <ShelfItem key={artwork.id}>
-              <ArtworkCard
-                artwork={artwork}
-                onViewDetails={() => setSelectedArtwork(artwork)}
-              />
-            </ShelfItem>
-          ))}
-        </ArtworkShelf>
-      )}
-
-      {/* 4. Exhibition Spotlight */}
-      {activeExhibition && (
-        <ExhibitionSpotlight exhibition={activeExhibition} />
+      {/* 3. Exhibitions */}
+      {allExhibitions.length > 0 && (
+        <section className="py-12 sm:py-16">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight">Exhibitions</h2>
+                <p className="text-muted-foreground text-sm mt-1">Currently on display and coming soon</p>
+              </div>
+              <Link href="/exhibitions">
+                <Button variant="ghost" size="sm">
+                  View All <ArrowRight className="h-4 w-4 ml-1" />
+                </Button>
+              </Link>
+            </div>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {allExhibitions.slice(0, 6).map((exhibition) => {
+                const active = isActive(exhibition);
+                const curatorName = [exhibition.curator.firstName, exhibition.curator.lastName].filter(Boolean).join(" ") || "Curator";
+                const heroImage = exhibition.artworks[0]?.imageUrl;
+                return (
+                  <Link key={exhibition.id} href={`/curator-gallery/${exhibition.id}`}>
+                    <Card className="overflow-hidden group cursor-pointer hover-elevate h-full">
+                      <div className="relative h-48 overflow-hidden">
+                        {heroImage ? (
+                          <img
+                            src={heroImage}
+                            alt={exhibition.name}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-muted flex items-center justify-center">
+                            <Image className="h-10 w-10 text-muted-foreground/40" />
+                          </div>
+                        )}
+                        <div className="absolute top-3 left-3">
+                          <Badge className={active ? "bg-green-600" : "bg-amber-600"}>
+                            {active ? "Open Now" : "Coming Soon"}
+                          </Badge>
+                        </div>
+                      </div>
+                      <CardContent className="p-4">
+                        <h3 className="font-serif font-bold text-lg line-clamp-1">{exhibition.name}</h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Curated by {curatorName} · {exhibition.artworks.length} artworks
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </section>
       )}
 
       {/* 5. Artist Spotlight */}
