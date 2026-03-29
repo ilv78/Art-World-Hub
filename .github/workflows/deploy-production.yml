@@ -83,6 +83,28 @@ jobs:
           fi
           echo "Health check passed — production deployment verified"
 
+      - name: Smoke test — version and changelog
+        run: |
+          BASE_URL="${{ secrets.PRODUCTION_URL }}"
+
+          # Check /api/version returns a valid version (not "unknown")
+          VERSION=$(curl --silent --fail "$BASE_URL/api/version" | grep -o '"version":"[^"]*"' | cut -d'"' -f4)
+          if [ -z "$VERSION" ] || [ "$VERSION" = "unknown" ]; then
+            echo "WARNING: /api/version returned '${VERSION:-empty}' — CHANGELOG.md may be missing from the image"
+            echo "See postmortem: docs/postmortems/2026-03-29-changelog-version-mismatch.md"
+          else
+            echo "Version check passed — $VERSION"
+          fi
+
+          # Check /api/changelog returns content with at least one version entry
+          CHANGELOG=$(curl --silent --fail "$BASE_URL/api/changelog" | head -30)
+          if ! echo "$CHANGELOG" | grep -qE '## \[[0-9]+\.[0-9]+\.[0-9]+\]'; then
+            echo "WARNING: /api/changelog has no version entries — CHANGELOG.md may be stale"
+          else
+            LATEST=$(echo "$CHANGELOG" | grep -oE '## \[[0-9]+\.[0-9]+\.[0-9]+\]' | head -1)
+            echo "Changelog check passed — latest entry: $LATEST"
+          fi
+
       - name: Rollback on failure
         if: failure()
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
