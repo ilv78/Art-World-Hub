@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to [ArtVerse](https://github.com/ilv78/Art-World-Hub) will be documented in this file.
+All notable changes to [Vernis9](https://github.com/ilv78/Art-World-Hub) will be documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and this project adheres to [Semantic Versioning](https://semver.org/). See `specs/workflows/VERSIONING.md` for the full versioning policy.
 
@@ -8,7 +8,26 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
-_Nothing yet — all recent work included in v2.7.0 below._
+_Nothing yet — all recent work included in v3.0.0 below._
+
+## [3.0.0] - 2026-03-29
+
+### Added
+- Full UI redesign: top navigation bar, footer, mobile bottom tabs, PublicLayout shell ([#236](https://github.com/ilv78/Art-World-Hub/issues/236), [#237](https://github.com/ilv78/Art-World-Hub/issues/237), [#238](https://github.com/ilv78/Art-World-Hub/issues/238), [#243](https://github.com/ilv78/Art-World-Hub/issues/243))
+- Home page redesign with hero carousel, horizontal artwork shelves, content sections ([#239](https://github.com/ilv78/Art-World-Hub/issues/239))
+- Gallery full-width 3D rendering + immersive fullscreen mode ([#240](https://github.com/ilv78/Art-World-Hub/issues/240))
+- Store, Artists, Exhibitions, Blog page redesigns ([#241](https://github.com/ilv78/Art-World-Hub/issues/241), [#242](https://github.com/ilv78/Art-World-Hub/issues/242))
+- Newsletter signup with admin management ([#254](https://github.com/ilv78/Art-World-Hub/issues/254))
+- Privacy Policy and Terms of Service pages ([#253](https://github.com/ilv78/Art-World-Hub/issues/253))
+- Preview environment for redesign branches ([#235](https://github.com/ilv78/Art-World-Hub/issues/235))
+- Auto-merge workflow for owner PRs ([#249](https://github.com/ilv78/Art-World-Hub/issues/249))
+
+### Changed
+- **Rebrand: ArtVerse → Vernis9** — new brand name (from "vernissage"), Tenor Sans brand font, SVG favicon with V9 mark, contact emails on `@vernis9.art` domain ([#244](https://github.com/ilv78/Art-World-Hub/issues/244))
+- Privacy policy updated to EU-wide (EDPB) supervisory authority ([#272](https://github.com/ilv78/Art-World-Hub/issues/272))
+
+### Database
+- Migration `0006`: `newsletter_subscribers` table
 
 ## [2.7.0] - 2026-03-24
 
