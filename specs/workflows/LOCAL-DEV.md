@@ -1,4 +1,4 @@
-# ArtVerse — Local Development
+# Vernis9 — Local Development
 
 **Status:** Active
 **Last Updated:** 2026-03-12
@@ -10,8 +10,8 @@
 | Environment | URL | Deploys | Database |
 |-------------|-----|---------|----------|
 | **Local** | `http://localhost:5000` | `npm run dev` | Local PostgreSQL (port 5433) |
-| **Staging** | https://staging.artverse.idata.ro | Auto on push to `main` | Dedicated PostgreSQL on VPS |
-| **Production** | https://artverse.idata.ro | Manual trigger via GitHub Actions | Dedicated PostgreSQL on VPS |
+| **Staging** | https://staging.vernis9.art | Auto on push to `main` | Dedicated PostgreSQL on VPS |
+| **Production** | https://vernis9.art | Manual trigger via GitHub Actions | Dedicated PostgreSQL on VPS |
 
 ---
 
@@ -106,8 +106,8 @@ gh run view <run-id> --log-failed        # Debug failures
 ### Verifying staging
 
 ```bash
-curl -sf https://staging.artverse.idata.ro/api/artists | head -c 200
-curl -sf -o /dev/null -w "%{http_code}" https://staging.artverse.idata.ro/
+curl -sf https://staging.vernis9.art/api/artists | head -c 200
+curl -sf -o /dev/null -w "%{http_code}" https://staging.vernis9.art/
 ```
 
 ---

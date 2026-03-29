@@ -1,4 +1,4 @@
-# ArtVerse — CI/CD Pipeline Specification
+# Vernis9 — CI/CD Pipeline Specification
 
 **Status:** Active
 **Last Updated:** 2026-03-23
@@ -253,7 +253,7 @@ Configure GitHub branch protection on `main` to enforce quality gates.
 
 ### Step 6: Deploy to Staging (Auto on Merge)
 
-**Status: DONE — fully operational at https://staging.artverse.idata.ro**
+**Status: DONE — fully operational at https://staging.vernis9.art**
 
 Staging auto-deploys on every push to `main`. Pipeline: CI passes → Docker image pushed to GHCR → SSH to VPS as `staging` user → pull image → `docker compose up -d` → health check.
 
@@ -289,7 +289,7 @@ Created `.github/workflows/deploy-production.yml` with `workflow_dispatch` trigg
 3. Enter the image tag (commit SHA from a successful staging deploy, or `latest`)
 4. The workflow SSHes as `production` user, pulls the image, restarts, and health checks
 
-**Status: DONE — fully operational at https://artverse.idata.ro**
+**Status: DONE — fully operational at https://vernis9.art**
 
 First production deploy completed. Nginx swapped from port 5000 (old deployment) to port 5002.
 
@@ -368,7 +368,7 @@ Telegram notifications on every deploy, rollback, and failure.
 ```
 @racu8_bot
 ✅ Staging deployment: success [Art-World-Hub]
-Staging address: https://staging.artverse.idata.ro
+Staging address: https://staging.vernis9.art
 Tag: <commit-sha>
 By: username
 ```
@@ -394,9 +394,9 @@ By: username
 | `TELEGRAM_BOT_TOKEN` | Set | Deploy notifications | Telegram bot token from @BotFather |
 | `TELEGRAM_CHAT_ID` | Set | Deploy notifications | Telegram chat ID for notifications |
 
-| `STAGING_URL` | Needs setup | Staging smoke test | Full staging URL (`https://staging.artverse.idata.ro`) |
-| `PREVIEW_URL` | Needs setup | Preview smoke test | Full preview URL (`https://preview.artverse.idata.ro`) |
-| `PRODUCTION_URL` | Needs setup | Production smoke test | Full production URL (`https://artverse.idata.ro`) |
+| `STAGING_URL` | Needs setup | Staging smoke test | Full staging URL (`https://staging.vernis9.art`) |
+| `PREVIEW_URL` | Needs setup | Preview smoke test | Full preview URL (`https://preview.vernis9.art`) |
+| `PRODUCTION_URL` | Needs setup | Production smoke test | Full production URL (`https://vernis9.art`) |
 
 DB passwords and session secrets are stored in `.env` files on the VPS (not in GitHub Secrets), since the docker-compose files read them locally.
 
@@ -698,8 +698,8 @@ Changes go through a PR, so CI validates the CHANGELOG update before it reaches 
 | 2026-03-10 | Step 4 skipped — branch protection and rulesets both require GitHub Pro or public repo. Revisit when repo goes public or plan is upgraded. |
 | 2026-03-10 | Steps 5-8 done (config/workflow side) — chose VPS at Webdock (artverse.idata.ro), created deploy directory with docker-compose files for staging/production, Nginx configs, server setup script, deploy script. Added `deploy-staging` job to ci.yml, created `deploy-production.yml` (manual dispatch). Set `DEPLOY_HOST` and `DEPLOY_SSH_KEY` secrets. Health checks built into deploy scripts. |
 | 2026-03-10 | VPS setup completed — created staging/production users, SSH keys, Docker group. Ports adjusted to avoid conflicts with existing services (staging: 5003/5435, production: 5002/5434). Copied docker-compose and .env files to both users. Installed Nginx configs, SSL via certbot for staging.artverse.idata.ro. Production Nginx swap pending (existing config on port 5000 kept until new deployment is ready). |
-| 2026-03-10 | First successful end-to-end deploy to staging. Fixed: NODE_ENV in CI, unused @ts-expect-error, MCP SDK type errors, Docker tag casing, wget→node health check, added docker-entrypoint.sh for DB schema push. Staging live at https://staging.artverse.idata.ro |
-| 2026-03-10 | Production deployed. Swapped Nginx from port 5000→5002, added docker-compose project names (`artverse-staging`/`artverse-production`) to avoid container collisions, regenerated DB password (URL-safe hex). Both environments live: staging at https://staging.artverse.idata.ro, production at https://artverse.idata.ro |
+| 2026-03-10 | First successful end-to-end deploy to staging. Fixed: NODE_ENV in CI, unused @ts-expect-error, MCP SDK type errors, Docker tag casing, wget→node health check, added docker-entrypoint.sh for DB schema push. Staging live at https://staging.vernis9.art |
+| 2026-03-10 | Production deployed. Swapped Nginx from port 5000→5002, added docker-compose project names (`artverse-staging`/`artverse-production`) to avoid container collisions, regenerated DB password (URL-safe hex). Both environments live: staging at https://staging.vernis9.art, production at https://vernis9.art |
 | 2026-03-10 | Step 9 done — dual-mode DB schema management. Generated baseline migration (`migrations/0000_sturdy_frightful_four.sql`). Updated `docker-entrypoint.sh` to check `DB_MIGRATION_MODE` env var (push vs migrate). Production docker-compose sets `DB_MIGRATION_MODE=migrate`. Dockerfile copies `migrations/` directory. Added `npm run db:migrate` script. |
 | 2026-03-11 | Step 10 done — rollback mechanism. `deploy-production.yml` saves current tag to `.previous_image_tag` before deploying. Created `rollback-production.yml` workflow (auto-rollback to previous or specified tag). |
 | 2026-03-11 | Step 11 done — Telegram notifications on all deploy/rollback workflows. Requires `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` secrets. |
