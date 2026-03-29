@@ -580,9 +580,6 @@ export async function registerRoutes(
 
       const order = await storage.createOrder(validatedOrder);
 
-      // Mark artwork as sold
-      await storage.updateArtwork(orderData.artworkId, { isForSale: false });
-
       // Send email notifications
       try {
         const artist = await storage.getArtist(artwork.artist.id);
