@@ -1,11 +1,11 @@
 import { Link, useLocation } from "wouter";
-import { Home, Image, Store, Users, ShoppingCart } from "lucide-react";
+import { Home, Ticket, Store, Users, ShoppingCart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useCartStore } from "@/lib/cart-store";
 
 const tabs = [
   { label: "Home", icon: Home, href: "/" },
-  { label: "Gallery", icon: Image, href: "/gallery" },
+  { label: "Exhibitions", icon: Ticket, href: "/exhibitions" },
   { label: "Store", icon: Store, href: "/store" },
   { label: "Artists", icon: Users, href: "/artists" },
 ];
