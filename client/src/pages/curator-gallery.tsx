@@ -63,7 +63,7 @@ export default function CuratorGalleryPage() {
   })();
 
   return (
-    <div className={`flex flex-col ${isImmersive ? "h-screen" : "h-[calc(100vh-4rem)]"}`}>
+    <div className={`flex flex-col ${isImmersive ? "h-screen" : viewMode === "3d" ? "h-[calc(100vh-4rem)]" : "min-h-[calc(100vh-4rem)]"}`}>
       {isImmersive && (
         <Button
           size="icon"
@@ -106,7 +106,7 @@ export default function CuratorGalleryPage() {
               onRequestImmersive={toggleImmersive}
             />
           ) : (
-            <div className="p-4 sm:p-6 overflow-y-auto h-full">
+            <div className="p-4 sm:p-6">
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 {gallery.artworks.map((artwork) => (
                   <ArtworkCard
