@@ -95,7 +95,7 @@ export function ArtworkDetailDialog({
 
             <div className="space-y-4 flex-1">
               <p className="text-sm text-muted-foreground leading-relaxed">
-                {artwork.description}
+                {artwork.description?.replace(/#featured\b/gi, "").trim()}
               </p>
 
               <div className="grid grid-cols-2 gap-3">

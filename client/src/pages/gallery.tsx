@@ -337,7 +337,7 @@ export default function Gallery() {
                       <h3 className="font-serif text-xl font-bold">{currentArtwork.title}</h3>
                       <p className="text-muted-foreground">{currentArtwork.artist.name}</p>
                     </div>
-                    <p className="text-sm leading-relaxed">{currentArtwork.description}</p>
+                    <p className="text-sm leading-relaxed">{currentArtwork.description?.replace(/#featured\b/gi, "").trim()}</p>
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <span className="text-muted-foreground">Medium</span>
