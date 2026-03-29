@@ -67,6 +67,28 @@ jobs:
             echo "CHANGELOG_EOF"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Validate CHANGELOG.md has entry for this version
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+          CHANGELOG_BODY: ${{ steps.meta.outputs.changelog_body }}
+        run: |
+          # Check that ## [X.Y.Z] exists in CHANGELOG.md
+          if ! grep -qE "^## \[${VERSION}\]" CHANGELOG.md; then
+            echo "ERROR: CHANGELOG.md does not contain an entry for version ${VERSION}"
+            echo "Add a '## [${VERSION}] - YYYY-MM-DD' section to CHANGELOG.md before releasing."
+            echo "See: specs/workflows/VERSIONING.md and postmortem 2026-03-29"
+            exit 1
+          fi
+
+          # Check that the entry has actual content (not just a header)
+          TRIMMED=$(echo "$CHANGELOG_BODY" | sed '/^[[:space:]]*$/d')
+          if [ -z "$TRIMMED" ]; then
+            echo "ERROR: CHANGELOG.md entry for ${VERSION} is empty — add release notes before tagging."
+            exit 1
+          fi
+
+          echo "CHANGELOG.md validated — entry for ${VERSION} found with content."
+
       - name: Create and push tag
         env:
           TAG: ${{ steps.meta.outputs.tag }}
