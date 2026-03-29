@@ -465,7 +465,6 @@ export function createMcpServer(): McpServer {
           totalAmount: artwork.price,
           status: "pending",
         });
-        await storage.updateArtwork(args.artworkId, { isForSale: false });
         return {
           content: [{ type: "text", text: JSON.stringify(order, null, 2) }],
         };

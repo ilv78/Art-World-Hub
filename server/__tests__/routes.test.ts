@@ -217,7 +217,7 @@ describe("POST /api/orders", () => {
 
     expect(res.status).toBe(201);
     expect(mockStorage.createOrder).toHaveBeenCalled();
-    expect(mockStorage.updateArtwork).toHaveBeenCalledWith("a1", { isForSale: false });
+    expect(mockStorage.updateArtwork).not.toHaveBeenCalled();
   });
 
   it("uses DB price instead of client-sent price", async () => {
