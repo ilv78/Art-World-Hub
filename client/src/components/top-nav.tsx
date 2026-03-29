@@ -2,7 +2,6 @@ import { Link, useLocation } from "wouter";
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { PalettePicker } from "@/components/palette-picker";
 import { CartSheet } from "@/components/cart-sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -117,7 +116,6 @@ export function TopNav() {
           </Button>
 
           <CartSheet />
-          <PalettePicker />
           <ThemeToggle />
 
           {/* User menu (desktop) */}
