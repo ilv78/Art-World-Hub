@@ -581,7 +581,7 @@ export default function ArtistDashboard() {
                       handleImageUpload(
                         file,
                         "/api/upload/artwork",
-                        (url) => setArtworkForm({ ...artworkForm, imageUrl: url }),
+                        (url) => setArtworkForm(prev => ({ ...prev, imageUrl: url })),
                         setArtworkUploading,
                       )
                     }
@@ -677,7 +677,7 @@ export default function ArtistDashboard() {
                 <DialogFooter>
                   <Button 
                     onClick={handleArtworkSubmit}
-                    disabled={!artworkForm.title || !artworkForm.imageUrl || !artworkForm.price || createArtworkMutation.isPending || updateArtworkMutation.isPending}
+                    disabled={!artworkForm.title || !artworkForm.imageUrl || !artworkForm.price || artworkUploading || createArtworkMutation.isPending || updateArtworkMutation.isPending}
                     data-testid="button-save-artwork"
                   >
                     <Save className="h-4 w-4 mr-2" />
@@ -813,7 +813,7 @@ export default function ArtistDashboard() {
                       handleImageUpload(
                         file,
                         "/api/upload/blog-cover",
-                        (url) => setBlogForm({ ...blogForm, coverImageUrl: url }),
+                        (url) => setBlogForm(prev => ({ ...prev, coverImageUrl: url })),
                         setBlogCoverUploading,
                       )
                     }
@@ -842,7 +842,7 @@ export default function ArtistDashboard() {
                 <DialogFooter>
                   <Button 
                     onClick={handleBlogSubmit}
-                    disabled={!blogForm.title || !blogForm.content || createBlogPostMutation.isPending || updateBlogPostMutation.isPending}
+                    disabled={!blogForm.title || !blogForm.content || blogCoverUploading || createBlogPostMutation.isPending || updateBlogPostMutation.isPending}
                     data-testid="button-save-blog"
                   >
                     <Save className="h-4 w-4 mr-2" />
@@ -1147,7 +1147,7 @@ export default function ArtistDashboard() {
                     );
                     updateProfileMutation.mutate({ ...profileForm, socialLinks: cleanedLinks });
                   }}
-                  disabled={updateProfileMutation.isPending || !profileForm.name.trim()}
+                  disabled={updateProfileMutation.isPending || avatarUploading || !profileForm.name.trim()}
                   data-testid="button-save-profile"
                 >
                   <Save className="h-4 w-4 mr-2" />
@@ -1178,7 +1178,7 @@ export default function ArtistDashboard() {
                         handleImageUpload(
                           file,
                           "/api/upload/avatar",
-                          (imageUrl) => setProfileForm({ ...profileForm, avatarUrl: imageUrl }),
+                          (imageUrl) => setProfileForm(prev => ({ ...prev, avatarUrl: imageUrl })),
                           setAvatarUploading,
                         )
                       }
