@@ -84,6 +84,6 @@ jobs:
             -d parse_mode="HTML" \
             -d text="@racu8_bot
           ${EMOJI} <b>Production rollback: ${DEPLOY_STATUS}</b> [${REPO_NAME}]
-          Production address: https://artverse.idata.ro
+          Production address: https://vernis9.art
           Tag: <code>${IMAGE_TAG}</code>
           By: ${TRIGGERED_BY}"

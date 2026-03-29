@@ -1,4 +1,4 @@
-# ArtVerse — Deployment Procedures
+# Vernis9 — Deployment Procedures
 
 **Status:** Active
 **Last Updated:** 2026-03-23
@@ -11,7 +11,7 @@ Production deploys are **manual** — you choose when to promote a staging build
 
 ### Step 1: Verify staging is working
 
-Test the feature on https://staging.artverse.idata.ro. Make sure everything works as expected.
+Test the feature on https://staging.vernis9.art. Make sure everything works as expected.
 
 ### Step 2: Find the image tag (commit SHA)
 
@@ -44,7 +44,7 @@ gh workflow run deploy-production.yml -f image_tag=<commit-sha>
 
 ```bash
 gh run list --workflow=deploy-production.yml --limit 1     # Check deploy status
-curl -sf https://artverse.idata.ro/api/artists | head -c 200
+curl -sf https://vernis9.art/api/artists | head -c 200
 ```
 
 ---

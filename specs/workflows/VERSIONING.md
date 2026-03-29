@@ -55,7 +55,7 @@ It's fine to batch multiple features/fixes into a single release. A natural rhyt
 
 ### Manual (fallback)
 
-1. **Verify production is healthy** — check `https://artverse.idata.ro/health`
+1. **Verify production is healthy** — check `https://vernis9.art/health`
 2. **Update `CHANGELOG.md`**:
    - Move items from `[Unreleased]` into a new `[X.Y.Z] - YYYY-MM-DD` section
    - Group changes under: Added, Changed, Fixed, Security, Removed (as applicable)

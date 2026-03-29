@@ -297,7 +297,7 @@ jobs:
             -d parse_mode="HTML" \
             -d text="@racu8_bot
           ${EMOJI} <b>Staging deployment: ${DEPLOY_STATUS}</b> [${REPO_NAME}]
-          Staging address: https://staging.artverse.idata.ro
+          Staging address: https://staging.vernis9.art
           Tag: <code>${DEPLOY_SHA}</code>
           Release: <code>release-${RUN_NUMBER}</code>
           By: ${TRIGGERED_BY}"
@@ -391,7 +391,7 @@ jobs:
             -d parse_mode="HTML" \
             -d text="@racu8_bot
           ${EMOJI} <b>Preview deployment: ${DEPLOY_STATUS}</b> [${REPO_NAME}]
-          Preview address: https://preview.artverse.idata.ro
+          Preview address: https://preview.vernis9.art
           Branch: redesign/v3
           Tag: <code>${DEPLOY_SHA}</code>
           By: ${TRIGGERED_BY}"

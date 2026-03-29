@@ -1,8 +1,8 @@
-# ArtVerse
+# Vernis9
 
 A full-stack art gallery platform featuring a 3D virtual museum, marketplace, auction system, and artist dashboards.
 
-**Live:** [artverse.idata.ro](https://artverse.idata.ro) | **Staging:** [staging.artverse.idata.ro](https://staging.artverse.idata.ro)
+**Live:** [vernis9.art](https://vernis9.art) | **Staging:** [staging.vernis9.art](https://staging.vernis9.art)
 
 ## Tech Stack
 

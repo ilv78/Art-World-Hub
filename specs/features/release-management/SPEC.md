@@ -85,8 +85,8 @@ Two-phase label-driven release automation:
 
 ## Required Secrets
 
-- `STAGING_URL` — e.g. `https://staging.artverse.idata.ro`
-- `PRODUCTION_URL` — e.g. `https://artverse.idata.ro`
+- `STAGING_URL` — e.g. `https://staging.vernis9.art`
+- `PRODUCTION_URL` — e.g. `https://vernis9.art`
 
 ## Files Changed
 
