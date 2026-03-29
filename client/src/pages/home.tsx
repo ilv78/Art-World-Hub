@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { ArtworkDetailDialog } from "@/components/artwork-detail-dialog";
 import { useQuery } from "@tanstack/react-query";
+import { ArtworkDetailDialog } from "@/components/artwork-detail-dialog";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
