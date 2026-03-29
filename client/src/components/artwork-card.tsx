@@ -91,12 +91,12 @@ export function ArtworkCard({ artwork, onViewDetails, showAddToCart = true }: Ar
           <p className="text-sm text-muted-foreground line-clamp-1">
             {artwork.artist.name}
           </p>
-          <div className="flex items-center justify-between gap-2 pt-1">
+          <div className="flex items-center justify-between gap-2 pt-1 min-w-0">
             <Badge variant="outline" className="text-xs">
               {artwork.medium}
             </Badge>
             {artwork.isForSale && (
-              <span className="font-semibold text-primary" data-testid={`text-price-${artwork.id}`}>
+              <span className="font-semibold text-primary text-sm truncate" data-testid={`text-price-${artwork.id}`}>
                 {formatPrice(artwork.price)}
               </span>
             )}
