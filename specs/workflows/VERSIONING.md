@@ -2,7 +2,7 @@
 
 ## Version Scheme
 
-ArtVerse uses [Semantic Versioning](https://semver.org/) (`MAJOR.MINOR.PATCH`).
+Vernis9 uses [Semantic Versioning](https://semver.org/) (`MAJOR.MINOR.PATCH`).
 
 | Bump | When | Examples |
 |------|------|----------|
@@ -55,21 +55,27 @@ It's fine to batch multiple features/fixes into a single release. A natural rhyt
 
 ### Manual (fallback)
 
+> **⚠️ CHANGELOG.md must be updated and merged BEFORE tagging.**
+> The changelog is baked into the Docker image at build time (see `Dockerfile` line 26).
+> If you tag first and update the changelog later, the deployed image will serve stale version info.
+> See [postmortem 2026-03-29](../../docs/postmortems/2026-03-29-changelog-version-mismatch.md) for the incident this caused.
+
 1. **Verify production is healthy** — check `https://vernis9.art/health`
-2. **Update `CHANGELOG.md`**:
+2. **Update `CHANGELOG.md`** (must happen BEFORE step 4):
    - Move items from `[Unreleased]` into a new `[X.Y.Z] - YYYY-MM-DD` section
    - Group changes under: Added, Changed, Fixed, Security, Removed (as applicable)
-3. **Commit the CHANGELOG update** to main (via PR)
-4. **Create the git tag and GitHub Release**:
+3. **Commit the CHANGELOG update** to main (via PR) — wait for CI to build a new Docker image
+4. **Create the git tag and GitHub Release** (only after step 3 is merged and built):
    ```bash
-   git tag vX.Y.Z
+   git tag vX.Y.Z <commit-sha>   # use the merge commit SHA that includes the changelog
    git push origin vX.Y.Z
    gh release create vX.Y.Z --title "vX.Y.Z" --notes "See CHANGELOG.md for details"
    ```
+5. **Deploy to production** using the same commit SHA from step 4
 
 ## Relationship to Deployment Tags
 
-ArtVerse has two tagging systems that serve different purposes:
+Vernis9 has two tagging systems that serve different purposes:
 
 | Tag | Purpose | Created by | Example |
 |-----|---------|------------|---------|
@@ -87,3 +93,4 @@ Both are useful. `release-{N}` tags enable fast rollback to any deployment. `vX.
 | v1.3.0 | 2026-02-24 | Published app update |
 | v2.0.0 | 2026-03-11 | Full CI/CD pipeline (11 steps), testing, migrations, rollback, Telegram notifications |
 | v2.1.0 | 2026-03-14 | Email login, security hardening (P0+P1), profile pictures, release management, postmortem workflow |
+| v3.0.0 | 2026-03-29 | Full UI redesign, Vernis9 rebrand, newsletter, privacy/terms pages, immersive 3D gallery |

@@ -9,6 +9,8 @@
 
 Production deploys are **manual** — you choose when to promote a staging build.
 
+> **⚠️ If this is a versioned release (vX.Y.Z):** Update CHANGELOG.md and merge to `main` BEFORE tagging and deploying. The changelog is baked into the Docker image — deploying before updating it will serve stale version info on `/changelog` and `/api/version`. See `specs/workflows/VERSIONING.md` for the full release checklist.
+
 ### Step 1: Verify staging is working
 
 Test the feature on https://staging.vernis9.art. Make sure everything works as expected.
