@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { Instagram, Twitter, Facebook, Youtube, Send, Check, Loader2 } from "lucide-react";
+import { Send, Check, Loader2 } from "lucide-react";
+import { SiInstagram, SiX, SiFacebook, SiYoutube } from "react-icons/si";
 import { useTheme, ACCENT_COLORS } from "@/components/theme-provider";
 import { Vernis9Logo } from "@/components/vernis9-logo";
 import { Input } from "@/components/ui/input";
@@ -21,10 +22,10 @@ const artistLinks = [
 ];
 
 const socialLinks = [
-  { icon: Instagram, label: "Instagram", url: "#" },
-  { icon: Twitter, label: "X / Twitter", url: "#" },
-  { icon: Facebook, label: "Facebook", url: "#" },
-  { icon: Youtube, label: "YouTube", url: "#" },
+  { icon: SiInstagram, label: "Instagram", url: "#" },
+  { icon: SiX, label: "X / Twitter", url: "#" },
+  { icon: SiFacebook, label: "Facebook", url: "#" },
+  { icon: SiYoutube, label: "YouTube", url: "#" },
 ];
 
 export function Footer() {
