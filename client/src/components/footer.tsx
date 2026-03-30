@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { Instagram, Twitter, Facebook, Youtube, Send, Check, Loader2 } from "lucide-react";
+import { useTheme, ACCENT_COLORS } from "@/components/theme-provider";
+import { Vernis9Logo } from "@/components/vernis9-logo";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -28,6 +30,7 @@ const socialLinks = [
 export function Footer() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success">("idle");
+  const { accent } = useTheme();
   const { toast } = useToast();
 
   const handleSubscribe = async (e: React.FormEvent) => {
@@ -67,15 +70,8 @@ export function Footer() {
         <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4">
           {/* Column 1: Brand + tagline + social */}
           <div className="space-y-4">
-            <Link href="/" className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-md bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-lg" style={{ fontFamily: "'Tenor Sans', sans-serif" }}>
-                  V9
-                </span>
-              </div>
-              <span className="text-xl tracking-tight" style={{ fontFamily: "'Tenor Sans', sans-serif" }}>
-                Vernis<span className="ml-0.5">9</span>
-              </span>
+            <Link href="/" className="flex items-center">
+              <Vernis9Logo accent={ACCENT_COLORS[accent]} height={32} />
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Discover. Collect. Create.

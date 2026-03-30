@@ -1,7 +1,10 @@
 import { Link, useLocation } from "wouter";
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useTheme, ACCENT_COLORS } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { PaletteSwitcher } from "@/components/palette-switcher";
+import { Vernis9Logo } from "@/components/vernis9-logo";
 import { CartSheet } from "@/components/cart-sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +41,7 @@ const navLinks = [
 export function TopNav() {
   const [location, navigate] = useLocation();
   const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
+  const { accent } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -74,13 +78,18 @@ export function TopNav() {
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
       <div className="mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Left: Logo */}
-        <Link href="/" className="flex items-center gap-3 shrink-0">
-          <div className="w-9 h-9 rounded-md bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-lg" style={{ fontFamily: "'Tenor Sans', sans-serif" }}>V9</span>
-          </div>
-          <span className="text-xl tracking-tight hidden sm:inline" style={{ fontFamily: "'Tenor Sans', sans-serif" }}>
-            Vernis<span className="ml-0.5">9</span>
-          </span>
+        <Link href="/" className="flex items-center shrink-0">
+          <Vernis9Logo
+            accent={ACCENT_COLORS[accent]}
+            height={32}
+            showWordmark={false}
+            className="sm:hidden"
+          />
+          <Vernis9Logo
+            accent={ACCENT_COLORS[accent]}
+            height={32}
+            className="hidden sm:block"
+          />
         </Link>
 
         {/* Center: Nav links (desktop) */}
@@ -116,6 +125,7 @@ export function TopNav() {
           </Button>
 
           <CartSheet />
+          <PaletteSwitcher />
           <ThemeToggle />
 
           {/* User menu (desktop) */}
