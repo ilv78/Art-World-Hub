@@ -115,8 +115,9 @@ Nginx runs directly on the host (not containerized). Each environment has a serv
 | `artverse.idata.ro.conf` | `vernis9.art` | `http://127.0.0.1:5002` |
 | `staging.artverse.idata.ro.conf` | `staging.vernis9.art` | `http://127.0.0.1:5003` |
 | `preview.artverse.idata.ro.conf` | `preview.vernis9.art` | `http://127.0.0.1:5004` |
+| `vernis9.nl.conf` | `vernis9.nl`, `www.vernis9.nl` | 301 redirect to `https://vernis9.art` |
 
-> **Note:** The Nginx config filenames in the repo still reference `artverse.idata.ro` (the original domain). The live server configs have been updated to serve `vernis9.art`.
+> **Note:** The Nginx config filenames for the main environments still reference `artverse.idata.ro` (the original domain). The live server configs have been updated to serve `vernis9.art`.
 
 All configs:
 - Proxy HTTP/1.1 with WebSocket upgrade support (`Upgrade` + `Connection` headers)
