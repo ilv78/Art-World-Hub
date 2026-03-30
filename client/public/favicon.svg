@@ -1,4 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <rect width="128" height="128" rx="20" fill="#F97316"/>
-  <text x="64" y="72" text-anchor="middle" dominant-baseline="central" font-family="'Bodoni Moda', Georgia, serif" font-weight="bold" font-size="52" fill="white">V9</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60" width="60" height="60">
+  <path d="M30 4 L56 30 L30 56 L4 30 Z" fill="none" stroke="#1A1810" stroke-width="1.5"/>
+  <path d="M17 18 L30 44 L43 18" fill="none" stroke="#1A1810" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="30" cy="4" r="3" fill="#F97316"/>
+  <circle cx="56" cy="30" r="3" fill="#F97316"/>
+  <circle cx="30" cy="56" r="3" fill="#F97316"/>
+  <circle cx="4" cy="30" r="3" fill="#F97316"/>
 </svg>

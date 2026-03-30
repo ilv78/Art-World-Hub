@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" width="200" height="60">
+  <!-- Diamond mark -->
+  <path d="M30 4 L56 30 L30 56 L4 30 Z" fill="none" stroke="#1A1810" stroke-width="1.2"/>
+  <path d="M17 18 L30 44 L43 18" fill="none" stroke="#1A1810" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Accent dots — set fill to brand color (orange #F97316 or amber #C4910C) -->
+  <circle cx="30" cy="4"  r="2.2" fill="var(--accent, #F97316)"/>
+  <circle cx="56" cy="30" r="2.2" fill="var(--accent, #F97316)"/>
+  <circle cx="30" cy="56" r="2.2" fill="var(--accent, #F97316)"/>
+  <circle cx="4"  cy="30" r="2.2" fill="var(--accent, #F97316)"/>
+  <!-- Wordmark: vernis9 -->
+  <text x="68" y="34"
+        font-family="'Playfair Display', Georgia, serif"
+        font-size="22"
+        font-weight="400"
+        letter-spacing="0.03em"
+        fill="#1A1810">vernis9</text>
+  <!-- .art suffix — accent color, italic -->
+  <text x="155" y="34"
+        font-family="'Playfair Display', Georgia, serif"
+        font-size="13"
+        font-style="italic"
+        letter-spacing="0.18em"
+        fill="var(--accent, #F97316)">.art</text>
+</svg>
