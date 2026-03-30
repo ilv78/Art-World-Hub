@@ -8,7 +8,48 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
-_Nothing yet — all recent work included in v3.2.0 below._
+_Nothing yet — all recent work included in v3.3.0 below._
+
+## [3.3.0] - 2026-03-30
+
+### Added
+- Feature: Logo + Accent Palette Switcher ([#345](https://github.com/ilv78/Art-World-Hub/issues/345))
+- In the main page I need a section for exhibitions ([#329](https://github.com/ilv78/Art-World-Hub/issues/329))
+- For the main hero a trigger ([#318](https://github.com/ilv78/Art-World-Hub/issues/318))
+- On mobile transform the bottom menu link from Gallery to Exhibitions ([#313](https://github.com/ilv78/Art-World-Hub/issues/313))
+- Expected details of artwork but gallery page instead ([#312](https://github.com/ilv78/Art-World-Hub/issues/312))
+- v3: Merge redesign/v3 branch into main (v3.0.0 release) ([#281](https://github.com/ilv78/Art-World-Hub/issues/281))
+- v3: Rebrand (new name, logo, assets) ([#244](https://github.com/ilv78/Art-World-Hub/issues/244))
+- v3: Mobile navigation ([#243](https://github.com/ilv78/Art-World-Hub/issues/243))
+- v3: Other page improvements (artists, exhibitions, blog) ([#242](https://github.com/ilv78/Art-World-Hub/issues/242))
+- v3: Store page grid improvements ([#241](https://github.com/ilv78/Art-World-Hub/issues/241))
+- v3: Gallery page full-width 3D + immersive mode ([#240](https://github.com/ilv78/Art-World-Hub/issues/240))
+- v3: Home page redesign ([#239](https://github.com/ilv78/Art-World-Hub/issues/239))
+- v3: Footer component ([#238](https://github.com/ilv78/Art-World-Hub/issues/238))
+- v3: Top navigation bar ([#237](https://github.com/ilv78/Art-World-Hub/issues/237))
+- v3: Split layout shells (public + dashboard) ([#236](https://github.com/ilv78/Art-World-Hub/issues/236))
+- Epic: Full UI Redesign (v3.0) ([#234](https://github.com/ilv78/Art-World-Hub/issues/234))
+- Artworks to be featured in the first page ([#233](https://github.com/ilv78/Art-World-Hub/issues/233))
+
+### Fixed
+- mobile : when entering an exhibition use the 2d version ([#320](https://github.com/ilv78/Art-World-Hub/issues/320))
+- Check UI , at page change new page is scrolled down ([#310](https://github.com/ilv78/Art-World-Hub/issues/310))
+- Blog post image not visible in production ([#307](https://github.com/ilv78/Art-World-Hub/issues/307))
+- fix: resolve 3 npm audit vulnerabilities (path-to-regexp, picomatch, brace-expansion) ([#305](https://github.com/ilv78/Art-World-Hub/issues/305))
+
+### Changed
+- Remove color pallete chooser ([#314](https://github.com/ilv78/Art-World-Hub/issues/314))
+- Login with Oauth after migration to vernis9.art ([#308](https://github.com/ilv78/Art-World-Hub/issues/308))
+- 📋 Docs Audit: 2026-03-29 — 0 errors, 1 warnings, 0 info ([#300](https://github.com/ilv78/Art-World-Hub/issues/300))
+- Rebuild and redeploy production to fix stale CHANGELOG.md ([#297](https://github.com/ilv78/Art-World-Hub/issues/297))
+- Deploy smoke test: verify /api/version matches deployed tag ([#296](https://github.com/ilv78/Art-World-Hub/issues/296))
+- CI: validate CHANGELOG.md contains entry for release version before tagging ([#295](https://github.com/ilv78/Art-World-Hub/issues/295))
+- v3: Step 7 — Migrate production to vernis9.art domain ([#288](https://github.com/ilv78/Art-World-Hub/issues/288))
+- v3: Step 6 — Post-deploy verification ([#287](https://github.com/ilv78/Art-World-Hub/issues/287))
+- v3: Step 5 — Deploy to production ([#286](https://github.com/ilv78/Art-World-Hub/issues/286))
+- v3: Step 4 — Version bump to v3.0.0 ([#285](https://github.com/ilv78/Art-World-Hub/issues/285))
+- v3: Step 3 — Create merge PR (redesign/v3 → main) ([#284](https://github.com/ilv78/Art-World-Hub/issues/284))
+- CI/CD: auto-merge passing PRs and auto-deploy on release ([#249](https://github.com/ilv78/Art-World-Hub/issues/249))
 
 ## [3.2.0] - 2026-03-29
 
