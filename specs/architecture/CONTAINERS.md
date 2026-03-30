@@ -18,9 +18,8 @@ ArtVerse runs on a single VPS with three isolated environments (staging, product
                         +---------+
                         /    |    \
                        /     |     \
-     artverse.idata.ro  staging.   preview.
-                       artverse.   artverse.
-                       idata.ro    idata.ro
+        vernis9.art   staging.     preview.
+                      vernis9.art  vernis9.art
                         \    |    /
                          v   v   v
   +=======================================================+
@@ -94,9 +93,9 @@ All host ports are bound to `127.0.0.1` only (not externally accessible). Nginx 
 |---|---|---|---|---|---|---|---|
 | **Local dev** | `docker-compose.dev.yml` | — | 5433 | `artverse_dev` | — | Manual | localhost |
 | **Local full** | `docker-compose.yml` | 5000 | 5433 | (from .env) | push | Manual | localhost |
-| **Staging** | `artverse-staging` | 5003 | 5435 | `artverse_staging` | push | Auto (main push) | staging.artverse.idata.ro |
-| **Preview** | `artverse-preview` | 5004 | 5436 | `artverse_preview` | push | Auto (redesign/v3 push) | preview.artverse.idata.ro |
-| **Production** | `artverse-production` | 5002 | 5434 | `artverse_production` | migrate | Manual (workflow_dispatch) | artverse.idata.ro |
+| **Staging** | `artverse-staging` | 5003 | 5435 | `artverse_staging` | push | Auto (main push) | staging.vernis9.art |
+| **Preview** | `artverse-preview` | 5004 | 5436 | `artverse_preview` | push | Auto (redesign/v3 push) | preview.vernis9.art |
+| **Production** | `artverse-production` | 5002 | 5434 | `artverse_production` | migrate | Manual (workflow_dispatch) | vernis9.art |
 
 ### Database Mode
 
@@ -113,9 +112,11 @@ Nginx runs directly on the host (not containerized). Each environment has a serv
 
 | Config File | Domain | Upstream |
 |---|---|---|
-| `artverse.idata.ro.conf` | `artverse.idata.ro` | `http://127.0.0.1:5002` |
-| `staging.artverse.idata.ro.conf` | `staging.artverse.idata.ro` | `http://127.0.0.1:5003` |
-| `preview.artverse.idata.ro.conf` | `preview.artverse.idata.ro` | `http://127.0.0.1:5004` |
+| `artverse.idata.ro.conf` | `vernis9.art` | `http://127.0.0.1:5002` |
+| `staging.artverse.idata.ro.conf` | `staging.vernis9.art` | `http://127.0.0.1:5003` |
+| `preview.artverse.idata.ro.conf` | `preview.vernis9.art` | `http://127.0.0.1:5004` |
+
+> **Note:** The Nginx config filenames in the repo still reference `artverse.idata.ro` (the original domain). The live server configs have been updated to serve `vernis9.art`.
 
 All configs:
 - Proxy HTTP/1.1 with WebSocket upgrade support (`Upgrade` + `Connection` headers)
