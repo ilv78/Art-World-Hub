@@ -114,6 +114,7 @@ jobs:
           echo "Production deploy triggered for $TAG"
 
       - name: 'Remove "release: next" labels'
+        if: always() && steps.meta.outputs.issue_numbers != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NUMBERS: ${{ steps.meta.outputs.issue_numbers }}
