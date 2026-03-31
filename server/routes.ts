@@ -14,6 +14,7 @@ import path from "path";
 import fs from "fs";
 import crypto from "crypto";
 import { logger, logFilePath } from "./logger";
+import sharp from "sharp";
 import readline from "readline";
 import rateLimit from "express-rate-limit";
 
@@ -247,7 +248,38 @@ export async function registerRoutes(
   const avatarUpload = createUploadMiddleware("avatars");
   app.post("/api/upload/artwork", isAuthenticated, createUploadHandler(artworkUpload, "artworks"));
   app.post("/api/upload/blog-cover", isAuthenticated, createUploadHandler(blogCoverUpload, "blog-covers"));
-  app.post("/api/upload/avatar", isAuthenticated, createUploadHandler(avatarUpload, "avatars"));
+  app.post("/api/upload/avatar", isAuthenticated, (req: any, res: any) => {
+    avatarUpload.single("image")(req, res, async (err: any) => {
+      if (err instanceof multer.MulterError) {
+        if (err.code === "LIMIT_FILE_SIZE") {
+          return res.status(400).json({ error: "File too large. Maximum size is 10MB." });
+        }
+        return res.status(400).json({ error: err.message });
+      }
+      if (err) {
+        return res.status(400).json({ error: err.message });
+      }
+      if (!req.file) {
+        return res.status(400).json({ error: "No image file provided" });
+      }
+      if (!validateMagicBytes(req.file.path, req.file.mimetype)) {
+        fs.unlinkSync(req.file.path);
+        return res.status(400).json({ error: "File content does not match an allowed image type" });
+      }
+      try {
+        const optimizedName = crypto.randomUUID() + ".webp";
+        const optimizedPath = path.join(path.dirname(req.file.path), optimizedName);
+        await sharp(req.file.path)
+          .resize(512, 512, { fit: "cover", position: "attention" })
+          .webp({ quality: 80 })
+          .toFile(optimizedPath);
+        fs.unlinkSync(req.file.path);
+        res.json({ imageUrl: `/uploads/avatars/${optimizedName}` });
+      } catch {
+        res.json({ imageUrl: `/uploads/avatars/${req.file.filename}` });
+      }
+    });
+  });
 
   // SSRF-safe image proxy: block private/internal IP ranges
   function isPrivateHostname(hostname: string): boolean {
