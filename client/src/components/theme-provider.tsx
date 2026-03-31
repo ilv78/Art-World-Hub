@@ -1,12 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
 type Theme = "dark" | "light" | "system";
-export type Accent = "orange" | "amber";
-
-export const ACCENT_COLORS: Record<Accent, string> = {
-  orange: "#F97316",
-  amber: "#C4910C",
-};
 
 type ThemeProviderProps = {
   children: React.ReactNode;
@@ -17,15 +11,11 @@ type ThemeProviderProps = {
 type ThemeProviderState = {
   theme: Theme;
   setTheme: (theme: Theme) => void;
-  accent: Accent;
-  setAccent: (accent: Accent) => void;
 };
 
 const initialState: ThemeProviderState = {
   theme: "system",
   setTheme: () => null,
-  accent: "orange",
-  setAccent: () => null,
 };
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
@@ -38,10 +28,6 @@ export function ThemeProvider({
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(
     () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
-  );
-
-  const [accent, setAccent] = useState<Accent>(
-    () => (localStorage.getItem("vernis9-accent") as Accent) || "orange"
   );
 
   useEffect(() => {
@@ -62,24 +48,11 @@ export function ThemeProvider({
     root.classList.add(theme);
   }, [theme]);
 
-  useEffect(() => {
-    const root = window.document.documentElement;
-    root.classList.remove("accent-amber");
-    if (accent === "amber") {
-      root.classList.add("accent-amber");
-    }
-  }, [accent]);
-
   const value = {
     theme,
     setTheme: (theme: Theme) => {
       localStorage.setItem(storageKey, theme);
       setTheme(theme);
-    },
-    accent,
-    setAccent: (accent: Accent) => {
-      localStorage.setItem("vernis9-accent", accent);
-      setAccent(accent);
     },
   };
 

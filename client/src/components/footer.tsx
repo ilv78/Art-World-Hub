@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { Send, Check, Loader2 } from "lucide-react";
 import { SiInstagram, SiX, SiFacebook, SiYoutube } from "react-icons/si";
-import { useTheme, ACCENT_COLORS } from "@/components/theme-provider";
 import { Vernis9Logo } from "@/components/vernis9-logo";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -31,7 +30,6 @@ const socialLinks = [
 export function Footer() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success">("idle");
-  const { accent } = useTheme();
   const { toast } = useToast();
 
   const handleSubscribe = async (e: React.FormEvent) => {
@@ -72,7 +70,7 @@ export function Footer() {
           {/* Column 1: Brand + tagline + social */}
           <div className="space-y-4">
             <Link href="/" className="flex items-center">
-              <Vernis9Logo accent={ACCENT_COLORS[accent]} height={32} />
+              <Vernis9Logo height={32} />
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Discover. Collect. Create.
