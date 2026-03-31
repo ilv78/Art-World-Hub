@@ -21,6 +21,9 @@ CVE-2026-26996
 CVE-2026-27903
 CVE-2026-27904
 
+# picomatch 4.0.3 via tinyglobby (our lockfile: 4.0.4)
+CVE-2026-33671
+
 # tar 6.2.1 (not used by our project directly)
 CVE-2026-23745
 CVE-2026-23950
