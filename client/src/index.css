@@ -546,11 +546,6 @@ body.immersive-mode main {
     );
   }
 
-  /* ACCENT PALETTE — amber override */
-  .accent-amber {
-    --primary: 43 89% 41%;
-    --ring: 43 89% 41%;
-  }
 }
 
 @layer base {

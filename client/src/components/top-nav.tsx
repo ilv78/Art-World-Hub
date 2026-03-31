@@ -1,9 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { useTheme, ACCENT_COLORS } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { PaletteSwitcher } from "@/components/palette-switcher";
 import { Vernis9Logo } from "@/components/vernis9-logo";
 import { CartSheet } from "@/components/cart-sheet";
 import { Button } from "@/components/ui/button";
@@ -41,7 +39,6 @@ const navLinks = [
 export function TopNav() {
   const [location, navigate] = useLocation();
   const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
-  const { accent } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -80,13 +77,11 @@ export function TopNav() {
         {/* Left: Logo */}
         <Link href="/" className="flex items-center shrink-0">
           <Vernis9Logo
-            accent={ACCENT_COLORS[accent]}
             height={32}
             showWordmark={false}
             className="sm:hidden"
           />
           <Vernis9Logo
-            accent={ACCENT_COLORS[accent]}
             height={32}
             className="hidden sm:block"
           />
@@ -125,7 +120,6 @@ export function TopNav() {
           </Button>
 
           <CartSheet />
-          <PaletteSwitcher />
           <ThemeToggle />
 
           {/* User menu (desktop) */}

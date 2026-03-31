@@ -1,7 +1,6 @@
 import { Home, Image, ShoppingBag, Users, LayoutDashboard, BookOpen, LogIn, LogOut, Shield, Brush, Calendar } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { useTheme, ACCENT_COLORS } from "@/components/theme-provider";
 import { Vernis9Logo } from "@/components/vernis9-logo";
 import { Button } from "@/components/ui/button";
 import {
@@ -54,7 +53,6 @@ const menuItems = [
 export function AppSidebar() {
   const [location] = useLocation();
   const { user, isAuthenticated, logout, isLoggingOut } = useAuth();
-  const { accent } = useTheme();
   const { isMobile, setOpenMobile } = useSidebar();
   const closeMobileSidebar = () => { if (isMobile) setOpenMobile(false); };
 
@@ -62,7 +60,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="p-4 border-b border-sidebar-border">
         <Link href="/" className="flex items-center gap-3" data-testid="link-logo" onClick={closeMobileSidebar}>
-          <Vernis9Logo accent={ACCENT_COLORS[accent]} height={36} />
+          <Vernis9Logo height={36} />
         </Link>
       </SidebarHeader>
       <SidebarContent>
