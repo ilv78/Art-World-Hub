@@ -8,6 +8,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { registerMcpRoutes } from "./mcp";
 import healthRouter from "./routes/health";
+import sitemapRouter from "./routes/sitemap";
 import { logger } from "./logger";
 
 const app = express();
@@ -40,8 +41,9 @@ app.use(
 
 app.use(express.urlencoded({ extended: false }));
 
-// Health check endpoint (registered before auth/session middleware)
+// Health check and sitemap (registered before auth/session middleware and Vite)
 app.use("/", healthRouter);
+app.use("/", sitemapRouter);
 
 // Structured request logging via pino-http
 app.use(
