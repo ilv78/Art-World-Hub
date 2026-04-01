@@ -1,12 +1,25 @@
 # SEO Feature Changelog
 
-## 2026-04-01 — Block Crawlers on Non-Production (#376)
+## 2026-04-01 — Allow Rich Results Test on staging (#379)
+- Changed non-production robots.txt from `Disallow: /` to permissive rules (same as production but without Sitemap)
+- `Disallow: /` was blocking Google Rich Results Test from fetching pages
+- Indexing prevention still enforced by `noindex` meta tag + `X-Robots-Tag` header (don't block fetching, only indexing)
+
+## 2026-04-01 — Add SITE_URL to docker-compose files (#378)
+- `SITE_URL` was missing from all three docker-compose deploy files
+- Without it, code defaulted to `https://vernis9.art` and staging/preview would not block crawlers
+- Added: staging=`https://staging.vernis9.art`, preview=`https://preview.vernis9.art`, production=`https://vernis9.art`
+
+## 2026-04-01 — Block Crawlers on Non-Production (#376, #377)
 - Converted static `robots.txt` to dynamic Express route (`server/routes/robots.ts`)
 - Production: permissive robots.txt (Allow /, Disallow private routes, Sitemap link)
-- Non-production: restrictive robots.txt (Disallow /)
-- Added `<meta name="robots" content="noindex, nofollow">` on non-production via meta injection
-- Added `X-Robots-Tag: noindex, nofollow` HTTP header on non-production
-- Three layers of protection keyed off `SITE_URL` env var
+- Non-production: `<meta name="robots" content="noindex, nofollow">` + `X-Robots-Tag` HTTP header
+- All keyed off `SITE_URL` env var at runtime (same Docker image, different behavior)
+
+## 2026-04-01 — Fix express.static serving raw index.html (#375)
+- `express.static` was serving `index.html` directly for `/` requests, bypassing meta injection
+- This caused `__JSON_LD__` placeholder to render as visible text
+- Fix: set `index: false` on `express.static` so all HTML requests go through the catch-all
 
 ## 2026-04-01 — Structured Data / JSON-LD (#367)
 - Extended `server/meta.ts` to generate JSON-LD structured data per route

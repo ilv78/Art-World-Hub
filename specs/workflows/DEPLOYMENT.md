@@ -146,6 +146,23 @@ ssh -i ~/.ssh/artverse-deploy root@artverse.idata.ro          # Root (for Nginx,
 | 5004 | Preview app |
 | 5436 | Preview PostgreSQL |
 
+### Runtime environment variables (docker-compose)
+
+All environments share the same Docker image. Behavior differences are controlled by environment variables set in each docker-compose file:
+
+| Variable | Staging | Preview | Production | Purpose |
+|----------|---------|---------|------------|---------|
+| `SITE_URL` | `https://staging.vernis9.art` | `https://preview.vernis9.art` | `https://vernis9.art` | Canonical URLs, OG tags, sitemap links, crawler blocking |
+| `DB_MIGRATION_MODE` | _(unset — uses push)_ | _(unset — uses push)_ | `migrate` | Schema migration strategy |
+| `NODE_ENV` | `production` | `production` | `production` | All deployed environments run in production mode |
+
+**SEO crawler blocking:** When `SITE_URL` is not `https://vernis9.art`, the app automatically:
+- Adds `<meta name="robots" content="noindex, nofollow">` to all pages
+- Adds `X-Robots-Tag: noindex, nofollow` HTTP header to all responses
+- Omits the Sitemap directive from `robots.txt`
+
+This ensures only production is indexed by search engines. Google Rich Results Test can still fetch staging pages for validation (the noindex signals prevent indexing but don't block fetching).
+
 ---
 
 ## 5. Docker Image Layout
