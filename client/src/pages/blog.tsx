@@ -56,6 +56,7 @@ export default function Blog() {
                     <img
                       src={posts[0].coverImageUrl}
                       alt={posts[0].title}
+                      loading="lazy"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                   </div>
@@ -107,6 +108,7 @@ export default function Blog() {
                       <img
                         src={post.coverImageUrl}
                         alt={post.title}
+                        loading="lazy"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     </div>

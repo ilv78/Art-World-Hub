@@ -83,6 +83,7 @@ function FileUploadField({
         <img
           src={imageUrl}
           alt={previewAlt}
+          loading="lazy"
           className="mt-2 rounded-md max-h-40 object-contain border"
         />
       )}
@@ -699,9 +700,10 @@ export default function ArtistDashboard() {
               {artworks.map((artwork) => (
                 <Card key={artwork.id} className="overflow-hidden" data-testid={`card-artwork-${artwork.id}`}>
                   <div className="aspect-4/3 relative">
-                    <img 
-                      src={artwork.imageUrl} 
+                    <img
+                      src={artwork.imageUrl}
                       alt={artwork.title}
+                      loading="lazy"
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
@@ -886,9 +888,10 @@ export default function ArtistDashboard() {
                       </CardDescription>
                     </div>
                     {post.coverImageUrl && (
-                      <img 
-                        src={post.coverImageUrl} 
+                      <img
+                        src={post.coverImageUrl}
                         alt={post.title}
+                        loading="lazy"
                         className="w-24 h-16 object-cover rounded-md"
                       />
                     )}
@@ -998,6 +1001,7 @@ export default function ArtistDashboard() {
                           <img
                             src={order.artwork.imageUrl}
                             alt={order.artwork.title}
+                            loading="lazy"
                             className="w-full h-full object-cover"
                           />
                         </div>

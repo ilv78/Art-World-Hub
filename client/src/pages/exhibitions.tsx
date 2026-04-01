@@ -107,6 +107,7 @@ function HeroExhibition({ exhibition, formatDate }: {
           <img
             src={heroImage}
             alt={exhibition.name}
+            loading="lazy"
             className="w-full h-64 sm:h-80 object-cover transition-transform duration-700 group-hover:scale-105"
           />
         ) : (
@@ -151,7 +152,7 @@ function ExhibitionCard({ exhibition, status, formatDate, variant }: {
       {previewArtworks.length > 0 ? (
         <div className="flex h-48 overflow-hidden">
           {previewArtworks.map(aw => (
-            <img key={aw.id} src={aw.imageUrl} alt={aw.title} className="flex-1 object-cover min-w-0" />
+            <img key={aw.id} src={aw.imageUrl} alt={aw.title} loading="lazy" className="flex-1 object-cover min-w-0" />
           ))}
         </div>
       ) : (

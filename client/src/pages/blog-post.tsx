@@ -54,6 +54,7 @@ export default function BlogPost({ params }: { params: { id: string } }) {
           <img
             src={post.coverImageUrl}
             alt={post.title}
+            loading="lazy"
             className="w-full h-full object-cover"
           />
         </div>

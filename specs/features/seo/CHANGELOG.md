@@ -1,5 +1,10 @@
 # SEO Feature Changelog
 
+## 2026-04-01 — Image Lazy Loading (#368)
+- Added `loading="lazy"` to 29 of 30 `<img>` tags across 16 files
+- Hero carousel images on homepage kept eager (no lazy) for LCP optimization
+- Covers: artwork cards, detail dialogs, store grid, blog covers, artist avatars, exhibitions, auctions, gallery views, dashboard images, cart thumbnails, 3D gallery overlays
+
 ## 2026-04-01 — Allow Rich Results Test on staging (#379)
 - Changed non-production robots.txt from `Disallow: /` to permissive rules (same as production but without Sitemap)
 - `Disallow: /` was blocking Google Rich Results Test from fetching pages

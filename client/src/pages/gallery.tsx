@@ -260,6 +260,7 @@ export default function Gallery() {
               <img
                 src={currentArtwork.imageUrl}
                 alt={currentArtwork.title}
+                loading="lazy"
                 className="max-w-[70vw] sm:max-w-lg max-h-[50vh] sm:max-h-[60vh] object-contain shadow-2xl rounded-sm"
                 data-testid="img-current-artwork"
               />
@@ -314,7 +315,7 @@ export default function Gallery() {
                     }`}
                     data-testid={`button-thumbnail-${artwork.id}`}
                   >
-                    <img src={artwork.imageUrl} alt={artwork.title} className="w-full h-full object-cover" />
+                    <img src={artwork.imageUrl} alt={artwork.title} loading="lazy" className="w-full h-full object-cover" />
                   </button>
                 ))}
               </div>
@@ -332,7 +333,7 @@ export default function Gallery() {
               <ScrollArea className="flex-1">
                 <div className="p-4 space-y-6">
                   <div className="aspect-4/3 rounded-lg overflow-hidden">
-                    <img src={currentArtwork.imageUrl} alt={currentArtwork.title} className="w-full h-full object-cover" />
+                    <img src={currentArtwork.imageUrl} alt={currentArtwork.title} loading="lazy" className="w-full h-full object-cover" />
                   </div>
                   <div className="space-y-4">
                     <div>

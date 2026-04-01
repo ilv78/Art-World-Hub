@@ -270,9 +270,10 @@ export default function ArtistProfile() {
                       data-testid={`card-profile-artwork-${artwork.id}`}
                     >
                       <div className="aspect-4/3 relative overflow-visible">
-                        <img 
-                          src={artwork.imageUrl} 
+                        <img
+                          src={artwork.imageUrl}
                           alt={artwork.title}
+                          loading="lazy"
                           className="w-full h-full object-cover"
                         />
                         <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
@@ -350,9 +351,10 @@ export default function ArtistProfile() {
                   >
                     {post.coverImageUrl && (
                       <div className="aspect-3/1 overflow-hidden">
-                        <img 
-                          src={post.coverImageUrl} 
+                        <img
+                          src={post.coverImageUrl}
                           alt={post.title}
+                          loading="lazy"
                           className="w-full h-full object-cover"
                         />
                       </div>

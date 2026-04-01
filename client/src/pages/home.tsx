@@ -228,6 +228,7 @@ function ArtistSpotlight({ artists }: { artists: Artist[] }) {
                     <img
                       src={artist.avatarUrl}
                       alt={artist.name}
+                      loading="lazy"
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                   ) : (
@@ -297,6 +298,7 @@ function BlogHighlights({ posts }: { posts: BlogPostWithArtist[] }) {
                     <img
                       src={post.coverImageUrl}
                       alt={post.title}
+                      loading="lazy"
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                   </div>
@@ -499,6 +501,7 @@ export default function Home() {
                           <img
                             src={heroImage}
                             alt={exhibition.name}
+                            loading="lazy"
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                           />
                         ) : (
