@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -218,6 +219,7 @@ export default function Auctions() {
 
   return (
     <div className="min-h-screen p-6 space-y-6">
+      <Helmet><title>Auctions — Vernis9</title></Helmet>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

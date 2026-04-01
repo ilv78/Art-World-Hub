@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Helmet } from "react-helmet-async";
 import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,6 +13,7 @@ export default function Blog() {
 
   return (
     <div className="min-h-screen p-6 space-y-6">
+      <Helmet><title>Blog — Vernis9</title></Helmet>
       <div className="space-y-1">
         <h1 className="font-serif text-3xl font-bold">Blog</h1>
         <p className="text-muted-foreground">

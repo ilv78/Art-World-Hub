@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Helmet } from "react-helmet-async";
 import ReactMarkdown from "react-markdown";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -15,6 +16,7 @@ export default function Changelog() {
 
   return (
     <div className="max-w-3xl mx-auto py-12 px-6">
+      <Helmet><title>Changelog — Vernis9</title></Helmet>
       {isLoading ? (
         <div className="space-y-4">
           <Skeleton className="h-10 w-1/3" />

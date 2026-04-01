@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { Helmet } from "react-helmet-async";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -164,6 +165,7 @@ export default function Gallery() {
 
   return (
     <div className={`flex flex-col relative overflow-hidden ${isImmersive ? "h-screen" : "h-full"}`} ref={galleryRef}>
+      <Helmet><title>3D Virtual Gallery — Vernis9</title></Helmet>
       {isImmersive && (
         <Button
           size="icon"

@@ -1,7 +1,7 @@
 # Feature: SEO (Search Engine Optimization)
 
-**Status:** Planned
-**Last Updated:** 2026-03-31
+**Status:** In Progress
+**Last Updated:** 2026-04-01
 **Owner:** Architecture
 
 ## Summary
@@ -12,14 +12,14 @@ Prepare Vernis9 for search engine discovery and social sharing. The site is a cl
 
 | Area | Status | Notes |
 |------|--------|-------|
-| `robots.txt` | Missing | Crawlers index /admin, /auth, /dashboard |
-| `sitemap.xml` | Missing | Search engines can't discover dynamic content |
-| Per-page meta tags | Missing | Every route returns the same `<title>` and `<meta>` |
+| `robots.txt` | Done | #364 — static file at `/robots.txt` |
+| `sitemap.xml` | Done | #365 — dynamic endpoint at `/sitemap.xml` |
+| Per-page meta tags | Done | #366 — server-side injection + react-helmet-async |
 | Structured data (JSON-LD) | Missing | No rich snippets in search results |
-| Twitter cards | Missing | Poor social sharing on Twitter/X |
-| Canonical URLs | Missing | Duplicate content risk |
+| Twitter cards | Done | #366 — `twitter:card`, `twitter:title`, `twitter:description`, `twitter:image` |
+| Canonical URLs | Done | #366 — `<link rel="canonical">` on every page |
 | Image lazy loading | Missing | Page speed penalty |
-| OG image | Missing | No preview image when sharing links |
+| OG image | Done | #366 — default `og-default.png` + per-entity images |
 | Semantic HTML | Good | Proper heading hierarchy, `<section>`, `<article>`, `<main>` |
 | URL structure | Good | Clean paths: `/artists/:id`, `/blog/:id` |
 | Alt text | Partial | Most images have alt, some decorator images missing |

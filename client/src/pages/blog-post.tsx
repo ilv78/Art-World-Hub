@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Helmet } from "react-helmet-async";
 import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ export default function BlogPost({ params }: { params: { id: string } }) {
 
   return (
     <div className="min-h-screen p-6 max-w-3xl mx-auto space-y-6">
+      <Helmet><title>{`${post.title} — Vernis9 Blog`}</title></Helmet>
       <Button asChild variant="ghost" size="sm">
         <Link href="/blog">
           <ArrowLeft className="h-4 w-4 mr-2" />
