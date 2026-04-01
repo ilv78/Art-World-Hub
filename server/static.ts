@@ -17,7 +17,9 @@ export function serveStatic(app: Express) {
     "utf-8",
   );
 
-  app.use(express.static(distPath));
+  // Disable automatic index.html serving so all HTML requests go through the
+  // catch-all below, which injects meta tags and JSON-LD before serving.
+  app.use(express.static(distPath, { index: false }));
 
   // SPA catch-all with meta tag injection
   app.use("/{*path}", async (req, res) => {
