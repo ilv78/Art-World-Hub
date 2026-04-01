@@ -8,7 +8,29 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
-_Nothing yet — all recent work included in v3.4.0 below._
+_Nothing yet — all recent work included in v3.5.0 below._
+
+## [3.5.0] - 2026-04-01
+
+### Added
+- SEO: block crawlers on non-production environments ([#376](https://github.com/ilv78/Art-World-Hub/issues/376))
+- SEO: alt text audit ([#369](https://github.com/ilv78/Art-World-Hub/issues/369))
+- SEO: image lazy loading ([#368](https://github.com/ilv78/Art-World-Hub/issues/368))
+- SEO: structured data (JSON-LD) ([#367](https://github.com/ilv78/Art-World-Hub/issues/367))
+- SEO: server-side meta tag injection + react-helmet-async ([#366](https://github.com/ilv78/Art-World-Hub/issues/366))
+- SEO: dynamic sitemap.xml endpoint ([#365](https://github.com/ilv78/Art-World-Hub/issues/365))
+- SEO: add robots.txt ([#364](https://github.com/ilv78/Art-World-Hub/issues/364))
+- v3: Gallery page full-width 3D + immersive mode ([#240](https://github.com/ilv78/Art-World-Hub/issues/240))
+- v3: Home page redesign ([#239](https://github.com/ilv78/Art-World-Hub/issues/239))
+- v3: Footer component ([#238](https://github.com/ilv78/Art-World-Hub/issues/238))
+- v3: Top navigation bar ([#237](https://github.com/ilv78/Art-World-Hub/issues/237))
+- v3: Split layout shells (public + dashboard) ([#236](https://github.com/ilv78/Art-World-Hub/issues/236))
+- Epic: Full UI Redesign (v3.0) ([#234](https://github.com/ilv78/Art-World-Hub/issues/234))
+- Artworks to be featured in the first page ([#233](https://github.com/ilv78/Art-World-Hub/issues/233))
+
+### Fixed
+- fix: "release: next" label not removed after release ([#361](https://github.com/ilv78/Art-World-Hub/issues/361))
+- Artist profile image scaling ([#359](https://github.com/ilv78/Art-World-Hub/issues/359))
 
 ## [3.4.0] - 2026-03-31
 
