@@ -32,6 +32,7 @@ services:
       OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-https://accounts.google.com}
       OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+      SITE_URL: https://staging.vernis9.art
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-}
     ports:
