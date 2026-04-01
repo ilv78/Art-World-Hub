@@ -1,5 +1,13 @@
 # SEO Feature Changelog
 
+## 2026-04-01 — Block Crawlers on Non-Production (#376)
+- Converted static `robots.txt` to dynamic Express route (`server/routes/robots.ts`)
+- Production: permissive robots.txt (Allow /, Disallow private routes, Sitemap link)
+- Non-production: restrictive robots.txt (Disallow /)
+- Added `<meta name="robots" content="noindex, nofollow">` on non-production via meta injection
+- Added `X-Robots-Tag: noindex, nofollow` HTTP header on non-production
+- Three layers of protection keyed off `SITE_URL` env var
+
 ## 2026-04-01 — Structured Data / JSON-LD (#367)
 - Extended `server/meta.ts` to generate JSON-LD structured data per route
 - Homepage: Organization schema (name, url, logo, description)

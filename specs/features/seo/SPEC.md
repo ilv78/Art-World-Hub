@@ -34,24 +34,16 @@ Prepare Vernis9 for search engine discovery and social sharing. The site is a cl
 **Effort:** Small
 
 **Implementation:**
-- Create `client/public/robots.txt` (Vite copies `public/` contents to build output as-is)
-- Content:
-  ```
-  User-agent: *
-  Allow: /
-  Disallow: /admin
-  Disallow: /auth
-  Disallow: /dashboard
-  Disallow: /curator
-  Disallow: /auth/set-password
-
-  Sitemap: https://vernis9.art/sitemap.xml
-  ```
+- Dynamic Express route at `server/routes/robots.ts` (replaces static file)
+- Production (`SITE_URL=https://vernis9.art`): permissive robots.txt with `Allow: /`
+- Non-production (staging, preview): restrictive `Disallow: /` to block all crawlers
+- Non-production also gets `<meta name="robots" content="noindex, nofollow">` and `X-Robots-Tag` HTTP header
 
 **Acceptance criteria:**
-- [ ] `GET https://vernis9.art/robots.txt` returns valid robots.txt
-- [ ] Private routes are disallowed
-- [ ] Sitemap URL is declared
+- [x] `GET https://vernis9.art/robots.txt` returns valid robots.txt
+- [x] Private routes are disallowed
+- [x] Sitemap URL is declared
+- [x] Non-production environments block all crawlers (robots.txt, meta tag, HTTP header)
 
 ---
 
