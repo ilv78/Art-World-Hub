@@ -15,8 +15,15 @@ Disallow: /curator
 Sitemap: ${PRODUCTION_URL}/sitemap.xml
 `;
 
+// Allow fetching (so Google Rich Results Test works) but omit Sitemap
+// so crawlers aren't guided to discover content. The noindex meta tag
+// and X-Robots-Tag header prevent actual indexing.
 const nonProductionRobots = `User-agent: *
-Disallow: /
+Allow: /
+Disallow: /admin
+Disallow: /auth
+Disallow: /dashboard
+Disallow: /curator
 `;
 
 router.get("/robots.txt", (_req, res) => {
