@@ -132,7 +132,7 @@ export function TopNav() {
                   className="hidden sm:flex rounded-full"
                 >
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={user.profileImageUrl ?? undefined} />
+                    <AvatarImage src={user.profileImageUrl ?? undefined} alt={user.firstName || "User"} />
                     <AvatarFallback className="text-xs font-medium">
                       {userInitials}
                     </AvatarFallback>

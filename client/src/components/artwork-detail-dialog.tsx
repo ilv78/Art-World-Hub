@@ -69,7 +69,7 @@ export function ArtworkDetailDialog({
               <DialogDescription asChild>
                 <div className="flex items-center gap-3 pt-2">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={artwork.artist.avatarUrl || undefined} />
+                    <AvatarImage src={artwork.artist.avatarUrl || undefined} alt={artwork.artist.name} />
                     <AvatarFallback className="text-xs">
                       {artwork.artist.name
                         .split(" ")

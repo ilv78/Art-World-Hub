@@ -76,7 +76,7 @@ export default function Blog() {
                   )}
                   <div className="flex items-center gap-3 text-sm text-muted-foreground pt-2">
                     <Avatar className="w-6 h-6">
-                      <AvatarImage src={posts[0].artist.avatarUrl || undefined} />
+                      <AvatarImage src={posts[0].artist.avatarUrl || undefined} alt={posts[0].artist.name} />
                       <AvatarFallback className="text-xs">{posts[0].artist.name[0]}</AvatarFallback>
                     </Avatar>
                     <span>{posts[0].artist.name}</span>
@@ -128,7 +128,7 @@ export default function Blog() {
                     )}
                     <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
                       <Avatar className="w-5 h-5">
-                        <AvatarImage src={post.artist.avatarUrl || undefined} />
+                        <AvatarImage src={post.artist.avatarUrl || undefined} alt={post.artist.name} />
                         <AvatarFallback className="text-[10px]">{post.artist.name[0]}</AvatarFallback>
                       </Avatar>
                       <span>{post.artist.name}</span>

@@ -1933,7 +1933,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
             <DialogHeader>
               <div className="flex items-center gap-4">
                 <Avatar className="w-16 h-16 ring-2 ring-primary/20">
-                  <AvatarImage src={artist.avatarUrl || undefined} />
+                  <AvatarImage src={artist.avatarUrl || undefined} alt={artist.name} />
                   <AvatarFallback className="text-xl font-serif">
                     {artist.name
                       .split(" ")
