@@ -12,7 +12,7 @@ Prepare Vernis9 for search engine discovery and social sharing. The site is a cl
 
 | Area | Status | Notes |
 |------|--------|-------|
-| `robots.txt` | Done | #364 — static file at `/robots.txt` |
+| `robots.txt` | Done | #364, #376 — dynamic route at `/robots.txt` (blocks indexing on non-production) |
 | `sitemap.xml` | Done | #365 — dynamic endpoint at `/sitemap.xml` |
 | Per-page meta tags | Done | #366 — server-side injection + react-helmet-async |
 | Structured data (JSON-LD) | Done | #367 — Organization, Person, BlogPosting, BreadcrumbList |
