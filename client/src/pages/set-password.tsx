@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, CheckCircle } from "lucide-react";
+import { PageMeta } from "@/components/page-meta";
 
 export default function SetPassword() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -44,6 +45,7 @@ export default function SetPassword() {
 
   return (
     <div className="flex items-center justify-center min-h-[80vh] p-4">
+      <PageMeta title="Set Password" />
       <Card className="w-full max-w-md">
         {setPasswordMutation.isSuccess ? (
           <CardHeader className="text-center">

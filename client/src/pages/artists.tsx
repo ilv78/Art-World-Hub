@@ -16,6 +16,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, MapPin, Palette, Image, ExternalLink } from "lucide-react";
 import { Link } from "wouter";
+import { PageMeta } from "@/components/page-meta";
 import type { Artist, ArtworkWithArtist } from "@shared/schema";
 
 export default function Artists() {
@@ -43,6 +44,7 @@ export default function Artists() {
 
   return (
     <div className="min-h-screen p-6 space-y-6">
+      <PageMeta title="Artists" />
       {/* Header */}
       <div className="space-y-1">
         <h1 className="font-serif text-3xl font-bold">Featured Artists</h1>

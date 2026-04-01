@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Box, X, Frame } from "lucide-react";
 import { useImmersiveMode } from "@/hooks/use-immersive-mode";
+import { PageMeta } from "@/components/page-meta";
 import type { ArtworkWithArtist, CuratorGalleryWithArtworks, MazeLayout } from "@shared/schema";
 
 type ViewMode = "3d" | "classic";
@@ -64,6 +65,7 @@ export default function CuratorGalleryPage() {
 
   return (
     <div className={`flex flex-col ${isImmersive ? "h-screen" : viewMode === "3d" ? "h-[calc(100vh-4rem)]" : "min-h-[calc(100vh-4rem)]"}`}>
+      <PageMeta title="Curator Gallery" />
       {isImmersive && (
         <Button
           size="icon"

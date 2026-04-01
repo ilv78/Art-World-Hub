@@ -44,6 +44,7 @@ import { FaLinkedin } from "react-icons/fa6";
 import type { Artist, ArtworkWithArtist, BlogPost, InsertArtwork, InsertBlogPost, OrderWithArtwork } from "@shared/schema";
 import { ORDER_STATUSES, ORDER_TRANSITIONS } from "@shared/schema";
 import { ShoppingBag, Package, Mail, Search, Filter, ChevronRight, Ban, ArrowRight } from "lucide-react";
+import { PageMeta } from "@/components/page-meta";
 
 function FileUploadField({
   id,
@@ -501,6 +502,7 @@ export default function ArtistDashboard() {
 
   return (
     <div className="p-6 space-y-6">
+      <PageMeta title="Artist Dashboard" />
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-4">
           <Avatar className="h-12 w-12">

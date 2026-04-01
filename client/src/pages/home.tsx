@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { PageMeta } from "@/components/page-meta";
 import { useQuery } from "@tanstack/react-query";
 import { ArtworkDetailDialog } from "@/components/artwork-detail-dialog";
 import { Link } from "wouter";
@@ -442,6 +443,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
+      <PageMeta />
       {/* 1. Hero Carousel */}
       <HeroCarousel artworks={heroArtworks.length > 0 ? heroArtworks : allArtworks.slice(0, 5)} />
 

@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BookOpen } from "lucide-react";
+import { PageMeta } from "@/components/page-meta";
 import type { BlogPostWithArtist } from "@shared/schema";
 
 export default function Blog() {
@@ -12,6 +13,7 @@ export default function Blog() {
 
   return (
     <div className="min-h-screen p-6 space-y-6">
+      <PageMeta title="Blog" />
       <div className="space-y-1">
         <h1 className="font-serif text-3xl font-bold">Blog</h1>
         <p className="text-muted-foreground">

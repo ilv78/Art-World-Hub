@@ -27,6 +27,7 @@ import { useCartStore } from "@/lib/cart-store";
 import { formatPrice } from "@/lib/utils";
 import { MazeGallery3D } from "@/components/maze-gallery-3d";
 import { ArtworkDetailDialog } from "@/components/artwork-detail-dialog";
+import { PageMeta } from "@/components/page-meta";
 import type { Artist, ArtworkWithArtist, BlogPostWithArtist, MazeLayout } from "@shared/schema";
 
 interface GalleryData {
@@ -142,6 +143,7 @@ export default function ArtistProfile() {
 
   return (
     <div className="min-h-screen">
+      <PageMeta title={artist?.name} />
       <div className="relative h-48 bg-linear-to-br from-primary/20 via-primary/10 to-background">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMtOS45NDEgMC0xOCA4LjA1OS0xOCAxOHM4LjA1OSAxOCAxOCAxOCAxOC04LjA1OSAxOC0xOC04LjA1OS0xOC0xOC0xOHoiIHN0cm9rZT0icmdiYSgwLDAsMCwwLjAzKSIgc3Ryb2tlLXdpZHRoPSIyIi8+PC9nPjwvc3ZnPg==')] opacity-30" />
       </div>

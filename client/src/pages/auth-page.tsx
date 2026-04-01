@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Mail, ArrowLeft } from "lucide-react";
+import { PageMeta } from "@/components/page-meta";
 
 type AuthMode = "login" | "signup" | "check-email";
 
@@ -108,6 +109,7 @@ export default function AuthPage() {
 
   return (
     <div className="flex items-center justify-center min-h-[80vh] p-4">
+      <PageMeta title="Sign In" />
       <Card className="w-full max-w-md">
         {mode === "check-email" ? (
           <>

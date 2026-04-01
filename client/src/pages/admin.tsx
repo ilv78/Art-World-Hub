@@ -12,6 +12,7 @@ import { AlertTriangle, Shield, Trash2, Users, Palette, Image, Calendar, BookOpe
 import { Checkbox } from "@/components/ui/checkbox";
 import { GALLERY_TEMPLATES } from "@/lib/gallery-templates";
 import { formatPrice } from "@/lib/utils";
+import { PageMeta } from "@/components/page-meta";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -278,6 +279,7 @@ export default function AdminPage() {
 
   return (
     <div className="container mx-auto p-6 max-w-6xl">
+      <PageMeta title="Admin Dashboard" />
       <div className="flex items-center gap-3 mb-6">
         <Shield className="w-8 h-8 text-primary" />
         <div>

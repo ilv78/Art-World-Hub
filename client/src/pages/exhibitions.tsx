@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowRight, Calendar, Clock, Image as ImageIcon } from "lucide-react";
+import { PageMeta } from "@/components/page-meta";
 import type { CuratorGalleryWithArtworks } from "@shared/schema";
 
 export default function Exhibitions() {
@@ -34,6 +35,7 @@ export default function Exhibitions() {
 
   return (
     <div className="container mx-auto p-6 max-w-5xl space-y-10">
+      <PageMeta title="Exhibitions" />
       <div>
         <h1 className="text-3xl font-bold font-serif">Exhibitions</h1>
         <p className="text-muted-foreground mt-1">Curated art experiences — walk through each exhibition in 3D</p>

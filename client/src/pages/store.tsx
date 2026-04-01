@@ -16,6 +16,7 @@ import { Search, SlidersHorizontal, Grid3X3, LayoutList, X } from "lucide-react"
 import { ArtworkCard } from "@/components/artwork-card";
 import { formatPrice } from "@/lib/utils";
 import { ArtworkDetailDialog } from "@/components/artwork-detail-dialog";
+import { PageMeta } from "@/components/page-meta";
 import type { ArtworkWithArtist } from "@shared/schema";
 
 const categories = [
@@ -93,6 +94,7 @@ export default function Store() {
 
   return (
     <div className="min-h-screen p-6 space-y-6">
+      <PageMeta title="Art Store" />
       {/* Header */}
       <div className="space-y-1">
         <h1 className="font-serif text-3xl font-bold">Art Store</h1>

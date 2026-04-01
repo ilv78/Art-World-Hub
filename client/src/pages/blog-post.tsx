@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { PageMeta } from "@/components/page-meta";
 import type { BlogPostWithArtist } from "@shared/schema";
 
 export default function BlogPost({ params }: { params: { id: string } }) {
@@ -40,6 +41,7 @@ export default function BlogPost({ params }: { params: { id: string } }) {
 
   return (
     <div className="min-h-screen p-6 max-w-3xl mx-auto space-y-6">
+      <PageMeta title={post?.title ? `${post.title}` : "Blog"} description={post?.excerpt ?? undefined} />
       <Button asChild variant="ghost" size="sm">
         <Link href="/blog">
           <ArrowLeft className="h-4 w-4 mr-2" />

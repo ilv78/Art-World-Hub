@@ -1,6 +1,9 @@
+import { PageMeta } from "@/components/page-meta";
+
 export default function Terms() {
   return (
     <div className="min-h-screen">
+      <PageMeta title="Terms of Service" />
       <div className="mx-auto max-w-3xl px-6 py-12 sm:py-16">
         <h1 className="font-serif text-4xl font-bold mb-2">Terms of Service</h1>
         <p className="text-sm text-muted-foreground mb-10">Last updated: 26 March 2026</p>

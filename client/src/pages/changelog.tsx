@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageMeta } from "@/components/page-meta";
 
 export default function Changelog() {
   const { data: markdown, isLoading } = useQuery<string>({
@@ -15,6 +16,7 @@ export default function Changelog() {
 
   return (
     <div className="max-w-3xl mx-auto py-12 px-6">
+      <PageMeta title="Changelog" />
       {isLoading ? (
         <div className="space-y-4">
           <Skeleton className="h-10 w-1/3" />

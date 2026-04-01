@@ -25,6 +25,7 @@ import { formatPrice } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { HallwayGallery3D } from "@/components/hallway-gallery-3d";
 import { ArtworkDetailDialog } from "@/components/artwork-detail-dialog";
+import { PageMeta } from "@/components/page-meta";
 
 type ViewMode = "3d" | "classic";
 
@@ -164,6 +165,7 @@ export default function Gallery() {
 
   return (
     <div className={`flex flex-col relative overflow-hidden ${isImmersive ? "h-screen" : "h-full"}`} ref={galleryRef}>
+      <PageMeta title="3D Virtual Gallery" />
       {isImmersive && (
         <Button
           size="icon"

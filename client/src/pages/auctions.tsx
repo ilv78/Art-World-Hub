@@ -33,6 +33,7 @@ import type { AuctionWithArtwork, Bid } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatPrice } from "@/lib/utils";
+import { PageMeta } from "@/components/page-meta";
 
 const bidSchema = z.object({
   bidderName: z.string().min(2, "Name must be at least 2 characters"),
@@ -218,6 +219,7 @@ export default function Auctions() {
 
   return (
     <div className="min-h-screen p-6 space-y-6">
+      <PageMeta title="Auctions" />
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

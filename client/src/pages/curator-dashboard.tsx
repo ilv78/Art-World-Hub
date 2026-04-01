@@ -32,6 +32,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Plus, Trash2, Save, Loader2, Image as ImageIcon, GripVertical, LogIn, Pencil } from "lucide-react";
+import { PageMeta } from "@/components/page-meta";
 import type { CuratorGalleryWithArtworks, ArtworkWithArtist } from "@shared/schema";
 
 export default function CuratorDashboard() {
@@ -125,6 +126,7 @@ export default function CuratorDashboard() {
 
   return (
     <div className="container mx-auto p-6 max-w-5xl space-y-6">
+      <PageMeta title="Curator Dashboard" />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold font-serif">Curator Dashboard</h1>
