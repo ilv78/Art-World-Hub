@@ -15,7 +15,7 @@ Prepare Vernis9 for search engine discovery and social sharing. The site is a cl
 | `robots.txt` | Done | #364 — static file at `/robots.txt` |
 | `sitemap.xml` | Done | #365 — dynamic endpoint at `/sitemap.xml` |
 | Per-page meta tags | Done | #366 — server-side injection + react-helmet-async |
-| Structured data (JSON-LD) | Missing | No rich snippets in search results |
+| Structured data (JSON-LD) | Done | #367 — Organization, Person, BlogPosting, BreadcrumbList |
 | Twitter cards | Done | #366 — `twitter:card`, `twitter:title`, `twitter:description`, `twitter:image` |
 | Canonical URLs | Done | #366 — `<link rel="canonical">` on every page |
 | Image lazy loading | Missing | Page speed penalty |
