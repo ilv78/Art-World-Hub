@@ -1,6 +1,7 @@
 import express, { type Express } from "express";
 import fs from "fs";
 import path from "path";
+import { resolveMetaTags, injectMetaTags } from "./meta";
 
 export function serveStatic(app: Express) {
   const distPath = path.resolve(__dirname, "public");
@@ -10,10 +11,18 @@ export function serveStatic(app: Express) {
     );
   }
 
+  // Cache the raw HTML template in memory
+  const templateHtml = fs.readFileSync(
+    path.resolve(distPath, "index.html"),
+    "utf-8",
+  );
+
   app.use(express.static(distPath));
 
-  // fall through to index.html if the file doesn't exist
-  app.use("/{*path}", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+  // SPA catch-all with meta tag injection
+  app.use("/{*path}", async (req, res) => {
+    const meta = await resolveMetaTags(req.originalUrl);
+    const html = injectMetaTags(templateHtml, meta);
+    res.status(200).set({ "Content-Type": "text/html" }).end(html);
   });
 }

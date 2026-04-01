@@ -18,6 +18,8 @@ import { Search, MapPin, Palette, Image, ExternalLink } from "lucide-react";
 import { Link } from "wouter";
 import type { Artist, ArtworkWithArtist } from "@shared/schema";
 
+import { Helmet } from "react-helmet-async";
+
 export default function Artists() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
@@ -43,6 +45,7 @@ export default function Artists() {
 
   return (
     <div className="min-h-screen p-6 space-y-6">
+      <Helmet><title>Artists — Vernis9</title></Helmet>
       {/* Header */}
       <div className="space-y-1">
         <h1 className="font-serif text-3xl font-bold">Featured Artists</h1>

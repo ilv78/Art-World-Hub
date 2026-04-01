@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Helmet } from "react-helmet-async";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "wouter";
 import { Input } from "@/components/ui/input";
@@ -93,6 +94,7 @@ export default function Store() {
 
   return (
     <div className="min-h-screen p-6 space-y-6">
+      <Helmet><title>Art Store — Vernis9</title></Helmet>
       {/* Header */}
       <div className="space-y-1">
         <h1 className="font-serif text-3xl font-bold">Art Store</h1>

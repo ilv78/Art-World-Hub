@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { Helmet } from "react-helmet-async";
 import { useQuery } from "@tanstack/react-query";
 import { ArtworkDetailDialog } from "@/components/artwork-detail-dialog";
 import { Link } from "wouter";
@@ -442,6 +443,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
+      <Helmet><title>Vernis9 — Virtual Art Gallery & Marketplace</title></Helmet>
       {/* 1. Hero Carousel */}
       <HeroCarousel artworks={heroArtworks.length > 0 ? heroArtworks : allArtworks.slice(0, 5)} />
 

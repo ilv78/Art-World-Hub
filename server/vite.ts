@@ -5,6 +5,7 @@ import viteConfig from "../vite.config";
 import fs from "fs";
 import path from "path";
 import { nanoid } from "nanoid";
+import { resolveMetaTags, injectMetaTags } from "./meta";
 
 const viteLogger = createLogger();
 
@@ -48,6 +49,9 @@ export async function setupVite(server: Server, app: Express) {
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`,
       );
+      // Inject route-specific meta tags before Vite transforms
+      const meta = await resolveMetaTags(url);
+      template = injectMetaTags(template, meta);
       const page = await vite.transformIndexHtml(url, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
