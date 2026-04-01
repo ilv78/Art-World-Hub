@@ -8,6 +8,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { registerMcpRoutes } from "./mcp";
 import healthRouter from "./routes/health";
+import robotsRouter from "./routes/robots";
 import sitemapRouter from "./routes/sitemap";
 import { logger } from "./logger";
 
@@ -41,9 +42,19 @@ app.use(
 
 app.use(express.urlencoded({ extended: false }));
 
-// Health check and sitemap (registered before auth/session middleware and Vite)
+// Health check, robots.txt, and sitemap (registered before auth/session middleware and Vite)
 app.use("/", healthRouter);
+app.use("/", robotsRouter);
 app.use("/", sitemapRouter);
+
+// Block search engine indexing on non-production environments
+const SITE_URL = process.env.SITE_URL || "https://vernis9.art";
+if (SITE_URL !== "https://vernis9.art") {
+  app.use((_req, res, next) => {
+    res.set("X-Robots-Tag", "noindex, nofollow");
+    next();
+  });
+}
 
 // Structured request logging via pino-http
 app.use(

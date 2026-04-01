@@ -1,6 +1,8 @@
 import { storage } from "./storage";
 
 const SITE_URL = process.env.SITE_URL || "https://vernis9.art";
+const PRODUCTION_URL = "https://vernis9.art";
+const isProduction = SITE_URL === PRODUCTION_URL;
 const DEFAULT_TITLE = "Vernis9 \u2014 Virtual Art Gallery & Marketplace";
 const DEFAULT_DESCRIPTION =
   "Experience art like never before. Explore our immersive 3D virtual gallery, discover stunning artworks from talented artists, and participate in exclusive auctions.";
@@ -231,6 +233,7 @@ export function injectMetaTags(html: string, meta: MetaTags): string {
     .replace(/__META_OG_TYPE__/g, escapeHtml(meta.ogType))
     .replace(/__META_OG_URL__/g, escapeHtml(meta.ogUrl))
     .replace(/__META_OG_IMAGE__/g, escapeHtml(meta.ogImage))
+    .replace(/__META_ROBOTS__/g, isProduction ? "" : '<meta name="robots" content="noindex, nofollow" />')
     .replace(/__JSON_LD__/g, jsonLdScripts);
 }
 
