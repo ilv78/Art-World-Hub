@@ -14,6 +14,7 @@ interface MetaTags {
   ogType: string;
   ogUrl: string;
   ogImage: string;
+  jsonLd: Record<string, unknown>[];
 }
 
 const STATIC_ROUTES: Record<string, Pick<MetaTags, "title" | "ogType">> = {
@@ -29,6 +30,43 @@ const STATIC_ROUTES: Record<string, Pick<MetaTags, "title" | "ogType">> = {
   "/terms": { title: "Terms of Service \u2014 Vernis9", ogType: "website" },
 };
 
+const STATIC_ROUTE_NAMES: Record<string, string> = {
+  "/": "Home",
+  "/gallery": "3D Virtual Gallery",
+  "/exhibitions": "Exhibitions",
+  "/store": "Art Store",
+  "/auctions": "Auctions",
+  "/artists": "Artists",
+  "/blog": "Blog",
+  "/changelog": "Changelog",
+  "/privacy": "Privacy Policy",
+  "/terms": "Terms of Service",
+};
+
+function breadcrumb(...items: { name: string; url?: string }[]): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: items.map((item, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: item.name,
+      ...(item.url ? { item: item.url } : {}),
+    })),
+  };
+}
+
+function organizationLd(): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "Vernis9",
+    url: SITE_URL,
+    logo: `${SITE_URL}/favicon.svg`,
+    description: "Virtual art gallery and marketplace",
+  };
+}
+
 /** Strip query string and hash, normalize trailing slash */
 function normalizePath(url: string): string {
   const path = url.split("?")[0].split("#")[0];
@@ -41,6 +79,17 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
   // Static routes
   const staticRoute = STATIC_ROUTES[path];
   if (staticRoute) {
+    const jsonLd: Record<string, unknown>[] = [];
+    if (path === "/") {
+      jsonLd.push(organizationLd());
+      jsonLd.push(breadcrumb({ name: "Home", url: SITE_URL }));
+    } else {
+      const name = STATIC_ROUTE_NAMES[path] || staticRoute.title;
+      jsonLd.push(breadcrumb(
+        { name: "Home", url: SITE_URL },
+        { name },
+      ));
+    }
     return {
       title: staticRoute.title,
       description: DEFAULT_DESCRIPTION,
@@ -49,6 +98,7 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
       ogType: staticRoute.ogType,
       ogUrl: `${SITE_URL}${path === "/" ? "" : path}`,
       ogImage: DEFAULT_OG_IMAGE,
+      jsonLd,
     };
   }
 
@@ -64,14 +114,33 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
         const image = artist.avatarUrl
           ? toAbsoluteUrl(artist.avatarUrl)
           : DEFAULT_OG_IMAGE;
+        const artistUrl = `${SITE_URL}/artists/${artist.id}`;
+        const personLd: Record<string, unknown> = {
+          "@context": "https://schema.org",
+          "@type": "Person",
+          name: artist.name,
+          url: artistUrl,
+          description: artist.bio || undefined,
+          jobTitle: "Artist",
+          ...(artist.avatarUrl ? { image: toAbsoluteUrl(artist.avatarUrl) } : {}),
+          ...(artist.specialization ? { knowsAbout: artist.specialization } : {}),
+        };
         return {
           title: `${artist.name} \u2014 Vernis9`,
           description,
           ogTitle: `${artist.name} \u2014 Vernis9`,
           ogDescription: description,
           ogType: "profile",
-          ogUrl: `${SITE_URL}/artists/${artist.id}`,
+          ogUrl: artistUrl,
           ogImage: image,
+          jsonLd: [
+            personLd,
+            breadcrumb(
+              { name: "Home", url: SITE_URL },
+              { name: "Artists", url: `${SITE_URL}/artists` },
+              { name: artist.name },
+            ),
+          ],
         };
       }
     } catch {
@@ -91,14 +160,43 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
         const image = post.coverImageUrl
           ? toAbsoluteUrl(post.coverImageUrl)
           : DEFAULT_OG_IMAGE;
+        const postUrl = `${SITE_URL}/blog/${post.id}`;
+        const blogPostingLd: Record<string, unknown> = {
+          "@context": "https://schema.org",
+          "@type": "BlogPosting",
+          headline: post.title,
+          description,
+          url: postUrl,
+          datePublished: post.createdAt,
+          dateModified: post.updatedAt,
+          author: {
+            "@type": "Person",
+            name: post.artist.name,
+            ...(post.artist.avatarUrl ? { image: toAbsoluteUrl(post.artist.avatarUrl) } : {}),
+          },
+          publisher: {
+            "@type": "Organization",
+            name: "Vernis9",
+            logo: { "@type": "ImageObject", url: `${SITE_URL}/favicon.svg` },
+          },
+          ...(post.coverImageUrl ? { image: toAbsoluteUrl(post.coverImageUrl) } : {}),
+        };
         return {
           title: `${post.title} \u2014 Vernis9 Blog`,
           description,
           ogTitle: `${post.title} \u2014 Vernis9 Blog`,
           ogDescription: description,
           ogType: "article",
-          ogUrl: `${SITE_URL}/blog/${post.id}`,
+          ogUrl: postUrl,
           ogImage: image,
+          jsonLd: [
+            blogPostingLd,
+            breadcrumb(
+              { name: "Home", url: SITE_URL },
+              { name: "Blog", url: `${SITE_URL}/blog` },
+              { name: post.title },
+            ),
+          ],
         };
       }
     } catch {
@@ -115,10 +213,15 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
     ogType: "website",
     ogUrl: `${SITE_URL}${path}`,
     ogImage: DEFAULT_OG_IMAGE,
+    jsonLd: [breadcrumb({ name: "Home", url: SITE_URL })],
   };
 }
 
 export function injectMetaTags(html: string, meta: MetaTags): string {
+  const jsonLdScripts = meta.jsonLd
+    .map((ld) => `<script type="application/ld+json">${JSON.stringify(ld)}</script>`)
+    .join("\n    ");
+
   return html
     .replace(/__META_TITLE__/g, escapeHtml(meta.title))
     .replace(/__META_DESCRIPTION__/g, escapeHtml(meta.description))
@@ -127,7 +230,8 @@ export function injectMetaTags(html: string, meta: MetaTags): string {
     .replace(/__META_OG_DESCRIPTION__/g, escapeHtml(meta.ogDescription))
     .replace(/__META_OG_TYPE__/g, escapeHtml(meta.ogType))
     .replace(/__META_OG_URL__/g, escapeHtml(meta.ogUrl))
-    .replace(/__META_OG_IMAGE__/g, escapeHtml(meta.ogImage));
+    .replace(/__META_OG_IMAGE__/g, escapeHtml(meta.ogImage))
+    .replace(/__JSON_LD__/g, jsonLdScripts);
 }
 
 function toAbsoluteUrl(url: string): string {

@@ -1,5 +1,14 @@
 # SEO Feature Changelog
 
+## 2026-04-01 — Structured Data / JSON-LD (#367)
+- Extended `server/meta.ts` to generate JSON-LD structured data per route
+- Homepage: Organization schema (name, url, logo, description)
+- Artist pages: Person schema (name, image, description, jobTitle, knowsAbout)
+- Blog posts: BlogPosting schema (headline, image, datePublished, author, publisher)
+- All pages: BreadcrumbList schema for navigation path
+- Added `__JSON_LD__` placeholder to `client/index.html`
+- JSON-LD injected server-side in raw HTML (not by JavaScript)
+
 ## 2026-04-01 — Server-Side Meta Tags + react-helmet-async (#366)
 - Added placeholder tokens to `client/index.html` for server-side meta injection
 - Created `server/meta.ts` — route-specific meta tag resolution (static routes + dynamic `/artists/:id`, `/blog/:id`)
