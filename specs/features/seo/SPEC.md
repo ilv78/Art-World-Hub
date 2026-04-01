@@ -18,7 +18,7 @@ Prepare Vernis9 for search engine discovery and social sharing. The site is a cl
 | Structured data (JSON-LD) | Done | #367 — Organization, Person, BlogPosting, BreadcrumbList |
 | Twitter cards | Done | #366 — `twitter:card`, `twitter:title`, `twitter:description`, `twitter:image` |
 | Canonical URLs | Done | #366 — `<link rel="canonical">` on every page |
-| Image lazy loading | Missing | Page speed penalty |
+| Image lazy loading | Done | #368 — `loading="lazy"` on all below-the-fold images |
 | OG image | Done | #366 — default `og-default.png` + per-entity images |
 | Semantic HTML | Good | Proper heading hierarchy, `<section>`, `<article>`, `<main>` |
 | URL structure | Good | Clean paths: `/artists/:id`, `/blog/:id` |

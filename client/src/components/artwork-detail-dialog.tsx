@@ -51,6 +51,7 @@ export function ArtworkDetailDialog({
             <img
               src={artwork.imageUrl}
               alt={artwork.title}
+              loading="lazy"
               className="w-full h-auto object-contain max-h-[60vh]"
             />
             {!artwork.isForSale && (

@@ -71,6 +71,7 @@ export function CartSheet() {
                         <img
                           src={item.artwork.imageUrl}
                           alt={item.artwork.title}
+                          loading="lazy"
                           className="w-full h-full object-cover"
                         />
                       </div>

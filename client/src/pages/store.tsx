@@ -249,6 +249,7 @@ export default function Store() {
                 <img
                   src={artwork.imageUrl}
                   alt={artwork.title}
+                  loading="lazy"
                   className="w-full h-full object-cover"
                 />
               </div>

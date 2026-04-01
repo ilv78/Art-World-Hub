@@ -480,6 +480,7 @@ function ArtworkPicker({ galleryId, selectedArtworks }: { galleryId: string; sel
               <img
                 src={artwork.imageUrl}
                 alt={artwork.title}
+                loading="lazy"
                 className="w-full aspect-square object-cover rounded-lg"
               />
               <div className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-xs p-1.5 rounded-b-lg">
@@ -536,7 +537,7 @@ function ArtworkPicker({ galleryId, selectedArtworks }: { galleryId: string; sel
                   className={`relative cursor-pointer rounded-lg overflow-hidden border-2 transition-colors ${isSelected ? "border-primary" : "border-transparent hover:border-muted-foreground/30"}`}
                   onClick={() => toggleArtwork(artwork.id)}
                 >
-                  <img src={artwork.imageUrl} alt={artwork.title} className="w-full aspect-square object-cover" />
+                  <img src={artwork.imageUrl} alt={artwork.title} loading="lazy" className="w-full aspect-square object-cover" />
                   <div className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-xs p-1.5">
                     <div className="truncate font-medium">{artwork.title}</div>
                     <div className="truncate text-white/70">{artwork.artist.name}</div>
