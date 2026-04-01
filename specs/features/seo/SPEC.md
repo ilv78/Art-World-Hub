@@ -22,7 +22,7 @@ Prepare Vernis9 for search engine discovery and social sharing. The site is a cl
 | OG image | Done | #366 — default `og-default.png` + per-entity images |
 | Semantic HTML | Good | Proper heading hierarchy, `<section>`, `<article>`, `<main>` |
 | URL structure | Good | Clean paths: `/artists/:id`, `/blog/:id` |
-| Alt text | Partial | Most images have alt, some decorator images missing |
+| Alt text | Done | #369 — all img and AvatarImage have descriptive alt text |
 
 ## Work Items
 

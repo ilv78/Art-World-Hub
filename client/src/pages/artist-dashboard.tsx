@@ -505,7 +505,7 @@ export default function ArtistDashboard() {
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-4">
           <Avatar className="h-12 w-12">
-            <AvatarImage src={selectedArtist?.avatarUrl || undefined} />
+            <AvatarImage src={selectedArtist?.avatarUrl || undefined} alt={selectedArtist?.name || "Artist"} />
             <AvatarFallback className="font-serif">
               {selectedArtist?.name.split(" ").map((n) => n[0]).join("")}
             </AvatarFallback>
@@ -1166,7 +1166,7 @@ export default function ArtistDashboard() {
               <div className="flex items-start gap-6">
                 <div className="flex flex-col items-center gap-2">
                   <Avatar className="h-24 w-24">
-                    <AvatarImage src={profileForm.avatarUrl || undefined} />
+                    <AvatarImage src={profileForm.avatarUrl || undefined} alt={profileForm.name} />
                     <AvatarFallback className="font-serif text-2xl">
                       {profileForm.name.split(" ").map((n) => n[0]).join("")}
                     </AvatarFallback>

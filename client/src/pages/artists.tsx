@@ -102,7 +102,7 @@ export default function Artists() {
                 >
                   <CardContent className={`${isFeatured ? "p-6 flex gap-6 items-center" : "p-6 text-center space-y-4"}`}>
                     <Avatar className={`${isFeatured ? "w-32 h-32 shrink-0" : "w-28 h-28 mx-auto"} ring-4 ring-background shadow-lg group-hover:ring-primary/20 transition-all`}>
-                      <AvatarImage src={artist.avatarUrl || undefined} />
+                      <AvatarImage src={artist.avatarUrl || undefined} alt={artist.name} />
                       <AvatarFallback className={`${isFeatured ? "text-4xl" : "text-2xl"} font-serif`}>
                         {artist.name
                           .split(" ")
@@ -152,7 +152,7 @@ export default function Artists() {
               <DialogHeader>
                 <div className="flex items-center gap-4">
                   <Avatar className="w-16 h-16 ring-2 ring-primary/20">
-                    <AvatarImage src={selectedArtist.avatarUrl || undefined} />
+                    <AvatarImage src={selectedArtist.avatarUrl || undefined} alt={selectedArtist.name} />
                     <AvatarFallback className="text-xl font-serif">
                       {selectedArtist.name
                         .split(" ")

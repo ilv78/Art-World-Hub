@@ -153,7 +153,7 @@ export default function ArtistProfile() {
           <CardContent className="pt-6">
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
               <Avatar className="w-32 h-32 ring-4 ring-background shadow-xl">
-                <AvatarImage src={artist.avatarUrl || undefined} />
+                <AvatarImage src={artist.avatarUrl || undefined} alt={artist.name} />
                 <AvatarFallback className="text-4xl font-serif">
                   {artist.name.split(" ").map((n) => n[0]).join("")}
                 </AvatarFallback>

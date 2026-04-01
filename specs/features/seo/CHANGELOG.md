@@ -1,5 +1,10 @@
 # SEO Feature Changelog
 
+## 2026-04-01 — Alt Text Audit (#369)
+- Added `alt` to 11 AvatarImage components across 7 files (blog, artists, artist-profile, artist-dashboard, artwork-detail-dialog, maze-gallery-3d, top-nav)
+- All 30 `<img>` tags already had alt attributes — no changes needed
+- Avatar alt text uses person's name (e.g., `alt={artist.name}`)
+
 ## 2026-04-01 — Image Lazy Loading (#368)
 - Added `loading="lazy"` to 29 of 30 `<img>` tags across 16 files
 - Hero carousel images on homepage kept eager (no lazy) for LCP optimization
