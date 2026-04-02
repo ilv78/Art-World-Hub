@@ -10,7 +10,7 @@
 # Copies to /etc/nginx/sites-available/<name>, symlinks from sites-enabled,
 # tests config, and reloads nginx. Rolls back on failure.
 # =============================================================================
-set -euo pipefail
+set -uo pipefail
 
 SOURCE="${1:?Usage: deploy-nginx-config <source-file> <config-name>}"
 NAME="${2:?Usage: deploy-nginx-config <source-file> <config-name>}"
@@ -28,6 +28,23 @@ fi
 
 AVAILABLE="/etc/nginx/sites-available/$NAME"
 ENABLED="/etc/nginx/sites-enabled/$NAME"
+LOCK="/var/lock/deploy-nginx-config.lock"
+
+# Acquire exclusive lock (fail immediately if another deploy is running)
+exec 200>"$LOCK"
+flock -n 200 || { echo "ERROR: Another deploy is in progress"; exit 1; }
+
+rollback() {
+  echo "ERROR: Unexpected failure, rolling back"
+  if [[ -f "$AVAILABLE.bak" ]]; then
+    mv "$AVAILABLE.bak" "$AVAILABLE"
+    echo "Restored previous $AVAILABLE"
+  else
+    rm -f "$AVAILABLE" "$ENABLED"
+    echo "Removed $AVAILABLE and $ENABLED"
+  fi
+}
+trap rollback ERR
 
 # Back up existing config if present
 if [[ -f "$AVAILABLE" ]]; then
@@ -39,11 +56,7 @@ echo "=== Deploying $NAME ==="
 cp "$SOURCE" "$AVAILABLE"
 echo "Copied to $AVAILABLE"
 
-# Create symlink if not already present
-if [[ ! -L "$ENABLED" ]]; then
-  ln -sf "$AVAILABLE" "$ENABLED"
-  echo "Symlinked $ENABLED → $AVAILABLE"
-fi
+ln -sf "$AVAILABLE" "$ENABLED"
 
 echo "=== Testing nginx config ==="
 if nginx -t 2>&1; then
@@ -55,7 +68,6 @@ else
   if [[ -f "$AVAILABLE.bak" ]]; then
     mv "$AVAILABLE.bak" "$AVAILABLE"
     echo "Restored previous $AVAILABLE"
-    nginx -s reload
   else
     rm -f "$AVAILABLE" "$ENABLED"
     echo "Removed $AVAILABLE and $ENABLED"
@@ -64,4 +76,5 @@ else
 fi
 
 # Clean up backup on success
+trap - ERR
 rm -f "$AVAILABLE.bak"
