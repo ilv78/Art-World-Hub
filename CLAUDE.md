@@ -2,6 +2,16 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Work Workflow
+
+Every piece of work MUST follow this sequence — no exceptions, even for "small" fixes or doc updates:
+
+1. **Check for a GitHub issue.** If none exists, propose creating one (with suggested priority and labels) and wait for approval before proceeding.
+2. **Post a plan as a comment on the issue.** Describe what will change, which files, and why.
+3. **Wait for the developer to approve the plan.** Do not start modifying files until explicitly told to proceed.
+4. **Work the issue.** Update the issue with progress as needed.
+5. **Tag with `release: next`** when done.
+
 ## Project Overview
 
 ArtVerse — a full-stack art gallery platform with a 3D virtual museum, marketplace, auction system, and artist dashboards. Monolithic architecture with React frontend, Express backend, and PostgreSQL.
