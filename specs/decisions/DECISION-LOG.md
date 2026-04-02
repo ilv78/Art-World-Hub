@@ -1,7 +1,7 @@
 # ArtVerse — Decision Log
 
 **Status:** Active
-**Last Updated:** 2026-03-13
+**Last Updated:** 2026-04-02
 
 Lightweight log for minor decisions that don't warrant a full ADR. For significant architectural decisions, create an ADR in `specs/architecture/ADR/`.
 
@@ -10,7 +10,7 @@ Lightweight log for minor decisions that don't warrant a full ADR. For significa
 | Date | Decision | Context | Made By |
 |------|----------|---------|---------|
 | 2026-03-10 | Merge CI and deploy into single workflow (ci.yml) | Option A chosen over separate workflows — simpler to reason about | Architecture |
-| 2026-03-10 | Skip branch protection (Step 4) | Requires GitHub Pro or public repo — revisit when repo goes public | Architecture |
+| 2026-03-10 | Skip branch protection (Step 4) | Requires GitHub Pro or public repo — **superseded by #100 on 2026-03-13** | Architecture |
 | 2026-03-10 | Use single VPS for both staging and production | Separate Linux users on Webdock VPS, simpler than multi-server | Architecture |
 | 2026-03-10 | Staging uses push mode, production uses migrations | Push mode is fast for disposable staging data; migrations are safe for production | Architecture |
 | 2026-03-11 | Use Telegram for deploy notifications | Lightweight, personal — no Slack/Teams overhead for solo dev | Architecture |
@@ -27,3 +27,31 @@ Lightweight log for minor decisions that don't warrant a full ADR. For significa
 | 2026-03-13 | Validate file uploads via magic bytes, not just MIME header | Client-supplied MIME type is trivially spoofed — magic byte inspection verifies actual file content | Architecture |
 | 2026-03-13 | HTML-escape user values in email templates | Unescaped user input (buyer name, address) could inject malicious HTML/phishing into notification emails | Architecture |
 | 2026-03-13 | Use `DB_MIGRATION_MODE=migrate` in production | Push mode can destructively alter schema without review; migration mode requires explicit versioned SQL files committed to git | Architecture |
+| 2026-03-13 | Security CI/CD pipeline with 7 scanning jobs (#55) | No security scanning existed; added gitleaks, npm audit, Semgrep, hadolint, Trivy, custom checks, and a gate job to cover repo, app, container, and supply chain | Architecture |
+| 2026-03-13 | Release management: versioned image tags + smoke tests (#35) | Only `latest` Docker tag existed, making rollbacks impossible; added SHA + run-number tags, health checks, post-deploy smoke tests, and automated git release tagging | Architecture |
+| 2026-03-13 | Enable branch protection on main (#100) | Direct push to main incident (#97) — technical enforcement needed since process alone was insufficient; requires PR, CI pass, enforced for admins | Architecture |
+| 2026-03-13 | Pre-push hook via Husky to block pushes to main (#101) | Defense in depth after #97; decided NOT to run local tests on feature branches — CI + branch protection already cover that | Architecture |
+| 2026-03-13 | Adopt blameless postmortem process (#98) | Based on Google SRE Book; created template, workflow spec, README index, and GitHub issue template in `docs/postmortems/` | Architecture |
+| 2026-03-14 | RBAC with 3 roles: user, curator, admin (#8) | Platform had no access control beyond authentication; added `role` column, `isAdmin`/`isCurator` middleware, admin dashboard | Architecture |
+| 2026-03-14 | Automated release workflow with label-based versioning (#110) | Releases were manual; `release.yml` auto-detects PATCH vs MINOR from issue labels (`feature`/`enhancement` = MINOR), generates CHANGELOG, creates git tag + GitHub Release | Architecture |
+| 2026-03-15 | Structured JSON logging via pino, replacing console.log (#39) | No logging library existed; added child loggers per module, request correlation IDs, log rotation (14 days), persistent Docker volume, admin log-viewing API, and MCP `get_logs` tool | Architecture |
+| 2026-03-15 | Users-artists cascade: auto-create artist on signup (#122) | Orphaned users/artists existed; cascade deletion + auto-create simplified the data model | Architecture |
+| 2026-03-20 | Mobile: touch controls for 3D gallery, default to 2D view (#172) | 3D maze gallery was invisible on mobile; added drag-to-look, on-screen D-pad, swipe navigation; 2D as default on small screens | Architecture |
+| 2026-03-23 | Upgrade Node.js from 20 to 25 (#73) | Foundation upgrade across Dockerfile, CI, and security workflows; prerequisite for other major dependency upgrades | Architecture |
+| 2026-03-23 | Skip Docker build and staging deploy for docs-only changes (#206) | Every push to main triggered full pipeline even for markdown changes; added `dorny/paths-filter` to detect docs-only pushes | Architecture |
+| 2026-03-24 | Migrate Tailwind CSS v3 → v4 (#196) | 2-5x faster builds, CSS-first config, smaller output; switched from PostCSS plugin to `@tailwindcss/vite`, removed autoprefixer/postcss deps | Architecture |
+| 2026-03-24 | Migrate Zod v3 → v4 with drizzle-orm built-in integration (#198) | 6-14x faster parsing, 10x faster TS compilation, 57% smaller bundle; replaced deprecated `drizzle-zod` with `drizzle-orm/zod` | Architecture |
+| 2026-03-24 | v3 redesign: parallel long-lived branch with preview environment (#234, #235) | Sidebar layout did not match art platform conventions; `redesign/v3` branch with dedicated preview environment allowed parallel development while main stayed stable | Architecture |
+| 2026-03-25 | Auto-merge all passing PRs + auto-deploy on release tags (#249) | Manual merge of green PRs and manual production deploy after releases added unnecessary friction; auto-merge respects branch protection | Architecture |
+| 2026-03-27 | Remove markdown issue tracker; GitHub Issues as single source of truth (#277) | Tracker duplicated GitHub Issues, generated noise in git history (one PR per closed issue), required a PAT secret, and went stale | Architecture |
+| 2026-03-27 | Newsletter subscriber system with admin CSV export (#254) | v3 footer had signup placeholder; added `newsletter_subscribers` table, subscribe endpoint, admin management UI with selectable CSV export | Architecture |
+| 2026-03-28 | Rebrand ArtVerse → Vernis9; keep infrastructure names unchanged (#244) | New brand from "vernissage" (gallery opening night); deliberately kept Docker, nginx, CI, localStorage, and cookie names to avoid breaking sessions and carts | Architecture |
+| 2026-03-29 | Domain migration to vernis9.art (#288) | Rebrand required matching domain; configured DNS, nginx, SSL via certbot, redirect from old domain, updated health checks and notifications | Architecture |
+| 2026-03-29 | v3.0 merge via structured 7-step process (#281) | Parallel branch strategy required careful merge: sync main → v3, QA on preview, merge PR, version bump, production deploy, post-deploy verify, domain migrate | Architecture |
+| 2026-03-29 | CI validation: CHANGELOG must contain release version entry (#295) | v3.0.0 postmortem — CHANGELOG was updated after Docker image was built, serving stale content; CI now validates before release finalization | Architecture |
+| 2026-03-29 | Deploy smoke test: verify /api/version matches deployed tag (#296) | Health check alone did not detect version mismatches; extended smoke tests to verify version + changelog content | Architecture |
+| 2026-03-30 | Single orange accent (#F97316), remove 12-palette system (#345, #354) | 12-palette cookie-based system (~560 lines CSS) was over-engineered; one accent color provides consistent brand identity | Architecture |
+| 2026-03-31 | SEO infrastructure: server-side meta injection, JSON-LD, sitemap, robots.txt (#364-369) | SPA had zero SEO — every route returned identical HTML; built complete infrastructure for crawlers, social previews, and structured data | Architecture |
+| 2026-04-01 | Three-layer crawler blocking on non-production (#376) | Staging/preview publicly accessible; robots.txt + meta tag + X-Robots-Tag header prevent indexing of duplicate content | Architecture |
+| 2026-04-02 | www → non-www nginx 301 redirect (#385) | Google Search Console reported canonical conflict between www and non-www; split nginx server block to redirect www to non-www | Architecture |
+| 2026-04-02 | Sudoers-based nginx config management for SSH deploy users (#386) | staging/production users could manage Docker but not nginx; added `deploy-nginx-config` helper script with sudo, enabling SSH-based nginx deploys with automatic rollback on failure | Architecture |
