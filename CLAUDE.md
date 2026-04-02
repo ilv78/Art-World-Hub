@@ -24,6 +24,16 @@ Key constraints:
 - Security incidents use restricted distribution — do not commit until confirmed safe
 - Run the self-review checklist before presenting the draft
 
+## Decision Log
+
+When work involves an architectural or infrastructure decision (technology choice, security change, process change, major feature design, deployment/CI change), add a row to `specs/decisions/DECISION-LOG.md` as part of the same PR. One-line format:
+
+```
+| YYYY-MM-DD | Decision summary (#issue) | Context/reason | Architecture |
+```
+
+This applies during normal work — do not batch decisions for later.
+
 ## Commands
 
 ```bash
