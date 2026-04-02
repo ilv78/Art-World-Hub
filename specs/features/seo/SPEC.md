@@ -1,7 +1,7 @@
 # Feature: SEO (Search Engine Optimization)
 
 **Status:** In Progress
-**Last Updated:** 2026-04-01
+**Last Updated:** 2026-04-02
 **Owner:** Architecture
 
 ## Summary
@@ -18,6 +18,7 @@ Prepare Vernis9 for search engine discovery and social sharing. The site is a cl
 | Structured data (JSON-LD) | Done | #367 — Organization, Person, BlogPosting, BreadcrumbList |
 | Twitter cards | Done | #366 — `twitter:card`, `twitter:title`, `twitter:description`, `twitter:image` |
 | Canonical URLs | Done | #366 — `<link rel="canonical">` on every page |
+| www → non-www redirect | Done | #385 — nginx 301 redirect `www.vernis9.art` → `vernis9.art` |
 | Image lazy loading | Done | #368 — `loading="lazy"` on all below-the-fold images |
 | OG image | Done | #366 — default `og-default.png` + per-entity images |
 | Semantic HTML | Good | Proper heading hierarchy, `<section>`, `<article>`, `<main>` |
