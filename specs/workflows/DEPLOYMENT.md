@@ -126,8 +126,10 @@ ssh -i ~/.ssh/artverse-deploy root@artverse.idata.ro          # Root (for Nginx,
 | `/home/staging/app/` | Staging docker-compose + .env |
 | `/home/production/app/` | Production docker-compose + .env |
 | `/home/preview/app/` | Preview docker-compose + .env |
-| `/etc/nginx/sites-enabled/` | Nginx configs (staging + production + preview) |
+| `/etc/nginx/sites-available/` | Nginx config files (source of truth) |
+| `/etc/nginx/sites-enabled/` | Nginx symlinks to sites-available |
 | `/etc/letsencrypt/` | SSL certificates (auto-renewed by certbot) |
+| `/usr/local/bin/deploy-nginx-config` | Helper script for nginx config deployment |
 
 ### Docker project names
 
@@ -165,7 +167,51 @@ This ensures only production is indexed by search engines. Google Rich Results T
 
 ---
 
-## 5. Docker Image Layout
+## 5. Nginx Config Deployment
+
+The `staging` and `production` VPS users have passwordless sudo access to deploy nginx configs via a helper script. This allows CI or SSH-based tooling to update nginx without root access.
+
+### Deploy a config
+
+```bash
+# 1. SCP the config file to the VPS
+scp /path/to/config.conf production:/tmp/config.conf
+
+# 2. Deploy it (copies to sites-available, symlinks to sites-enabled, tests, reloads)
+ssh production "sudo deploy-nginx-config /tmp/config.conf vernis9.art.conf"
+```
+
+The script automatically:
+- Backs up the existing config before overwriting
+- Runs `nginx -t` to validate the new config
+- Reloads nginx on success
+- Rolls back to the previous config if `nginx -t` fails
+
+### Test nginx without deploying
+
+```bash
+ssh production "sudo nginx -t"
+```
+
+### Reload nginx manually
+
+```bash
+ssh production "sudo nginx -s reload"
+```
+
+### Script source
+
+The deploy script is version-controlled at `deploy/nginx/deploy-nginx-config.sh`. If it needs updating:
+
+```bash
+scp deploy/nginx/deploy-nginx-config.sh production:/tmp/deploy-nginx-config
+# Then on the VPS as root:
+# cp /tmp/deploy-nginx-config /usr/local/bin/deploy-nginx-config && chmod 755 /usr/local/bin/deploy-nginx-config
+```
+
+---
+
+## 6. Docker Image Layout
 
 The production Docker image is a multi-stage build (`Dockerfile`):
 
@@ -201,7 +247,7 @@ The image creates these directories at build time. Docker-compose mounts named v
 
 ---
 
-## 6. GitHub Secrets
+## 7. GitHub Secrets
 
 | Secret | Value | Purpose |
 |--------|-------|---------|
@@ -215,7 +261,7 @@ Database passwords and session secrets are stored in `.env` files on the VPS, no
 
 ---
 
-## 7. Notifications
+## 8. Notifications
 
 Deploy notifications are sent to Telegram automatically. You'll receive a message for:
 

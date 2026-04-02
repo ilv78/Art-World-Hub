@@ -1,7 +1,7 @@
 # ArtVerse — Container Architecture
 
 **Status:** Active
-**Last Updated:** 2026-03-30
+**Last Updated:** 2026-04-02
 **Owner:** Architecture
 
 ---
@@ -108,22 +108,49 @@ The entrypoint script (`docker-entrypoint.sh`) supports two modes controlled by 
 
 ## 4. Nginx Reverse Proxy
 
-Nginx runs directly on the host (not containerized). Each environment has a server block in `/etc/nginx/sites-enabled/`:
+Nginx runs directly on the host (not containerized). Config files live in `/etc/nginx/sites-available/` with symlinks in `/etc/nginx/sites-enabled/`:
 
 | Config File | Domain | Upstream |
 |---|---|---|
-| `artverse.idata.ro.conf` | `vernis9.art` | `http://127.0.0.1:5002` |
-| `staging.artverse.idata.ro.conf` | `staging.vernis9.art` | `http://127.0.0.1:5003` |
-| `preview.artverse.idata.ro.conf` | `preview.vernis9.art` | `http://127.0.0.1:5004` |
+| `vernis9.art.conf` | `vernis9.art` | `http://127.0.0.1:5002` |
+| `vernis9.art.conf` | `www.vernis9.art` | 301 redirect to `https://vernis9.art` |
+| `staging.vernis9.art` | `staging.vernis9.art` | `http://127.0.0.1:5003` |
+| `preview.vernis9.art` | `preview.vernis9.art` | `http://127.0.0.1:5004` |
 | `vernis9.nl.conf` | `vernis9.nl`, `www.vernis9.nl` | 301 redirect to `https://vernis9.art` |
-
-> **Note:** The Nginx config filenames for the main environments still reference `artverse.idata.ro` (the original domain). The live server configs have been updated to serve `vernis9.art`.
 
 All configs:
 - Proxy HTTP/1.1 with WebSocket upgrade support (`Upgrade` + `Connection` headers)
 - Forward real client IP via `X-Real-IP`, `X-Forwarded-For`, `X-Forwarded-Proto`
 - 86400s (24h) read timeout for long-lived connections
 - TLS handled by Certbot (Let's Encrypt), configured outside of the repo
+
+### Nginx Config Management
+
+The `staging` and `production` VPS users can deploy nginx configs via a sudoers-enabled helper script:
+
+```bash
+# From this dev machine, via SSH:
+scp /tmp/my-config.conf production:/tmp/my-config.conf
+ssh production "sudo deploy-nginx-config /tmp/my-config.conf vernis9.art.conf"
+```
+
+The `deploy-nginx-config` script (installed at `/usr/local/bin/deploy-nginx-config` on the VPS):
+1. Copies the config to `/etc/nginx/sites-available/<name>`
+2. Creates a symlink in `/etc/nginx/sites-enabled/` if not already present
+3. Runs `nginx -t` to validate
+4. Reloads nginx on success; rolls back to the previous config on failure
+
+**Sudoers setup** (`/etc/sudoers.d/nginx-deploy` on the VPS):
+```
+staging ALL=(root) NOPASSWD: /usr/local/bin/deploy-nginx-config
+staging ALL=(root) NOPASSWD: /usr/sbin/nginx -t
+staging ALL=(root) NOPASSWD: /usr/sbin/nginx -s reload
+production ALL=(root) NOPASSWD: /usr/local/bin/deploy-nginx-config
+production ALL=(root) NOPASSWD: /usr/sbin/nginx -t
+production ALL=(root) NOPASSWD: /usr/sbin/nginx -s reload
+```
+
+Script source is version-controlled at `deploy/nginx/deploy-nginx-config.sh`.
 
 ---
 
@@ -297,6 +324,7 @@ Typical workflow: use `docker-compose.dev.yml` for the database, run the app wit
 - `deploy/production/docker-compose.yml` — Production compose
 - `deploy/preview/docker-compose.yml` — Preview compose
 - `deploy/nginx/*.conf` — Nginx reverse proxy configs
+- `deploy/nginx/deploy-nginx-config.sh` — Nginx config deployment script (installed on VPS at `/usr/local/bin/deploy-nginx-config`)
 - `deploy/server-setup.sh` — VPS user and SSH setup
 - `deploy/deploy.sh` — Generic deploy script
 - `.github/workflows/ci.yml` — CI/CD pipeline (build, scan, deploy)
