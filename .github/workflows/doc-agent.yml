@@ -112,24 +112,59 @@ jobs:
           echo "infos=$INFOS" >> "$GITHUB_OUTPUT"
           echo "has_findings=$( [ $((ERRORS + WARNINGS + INFOS)) -gt 0 ] && echo true || echo false )" >> "$GITHUB_OUTPUT"
 
-      - name: Create audit issue
-        if: steps.audit.outputs.has_findings == 'true'
+      # Single rolling audit issue model — see #415.
+      # At most one open `docs-audit` issue exists at any time. Each audit
+      # run either updates that issue (with findings) or closes it (when clean).
+      - name: Find existing rolling audit issue
+        id: find-existing
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          AUDIT_ERRORS: ${{ steps.audit.outputs.errors }}
-          AUDIT_WARNINGS: ${{ steps.audit.outputs.warnings }}
-          AUDIT_INFOS: ${{ steps.audit.outputs.infos }}
+        run: |
+          EXISTING=$(gh issue list --label "docs-audit" --state open --limit 1 --json number --jq '.[0].number // empty')
+          echo "existing=$EXISTING" >> "$GITHUB_OUTPUT"
+          if [ -n "$EXISTING" ]; then
+            echo "Found existing rolling audit issue: #$EXISTING"
+          else
+            echo "No existing rolling audit issue."
+          fi
+
+      - name: Comment on existing audit issue (findings + existing)
+        if: steps.audit.outputs.has_findings == 'true' && steps.find-existing.outputs.existing != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXISTING: ${{ steps.find-existing.outputs.existing }}
+          AUDIT_REPORT: ${{ steps.audit.outputs.report }}
+        run: |
+          gh issue comment "$EXISTING" --body "$AUDIT_REPORT"
+          echo "Posted audit report comment on existing issue #$EXISTING"
+
+      - name: Create rolling audit issue (findings + no existing)
+        if: steps.audit.outputs.has_findings == 'true' && steps.find-existing.outputs.existing == ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           AUDIT_REPORT: ${{ steps.audit.outputs.report }}
           REPO_OWNER: ${{ github.repository_owner }}
         run: |
-          DATE=$(date -u +%Y-%m-%d)
-          TITLE="📋 Docs Audit: ${DATE} — ${AUDIT_ERRORS} errors, ${AUDIT_WARNINGS} warnings, ${AUDIT_INFOS} info"
           gh issue create \
-            --title "$TITLE" \
+            --title "📋 Docs Audit (rolling)" \
             --label "docs-audit" \
             --assignee "$REPO_OWNER" \
             --body "$AUDIT_REPORT"
+          echo "Created new rolling audit issue."
 
-      - name: Log clean audit
+      - name: Close audit issues when audit is clean
         if: steps.audit.outputs.has_findings == 'false'
-        run: echo "✅ Documentation audit passed with no findings."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Close ALL open docs-audit issues — defensive against races or
+          # leftover duplicates from before the dedup fix landed.
+          OPEN=$(gh issue list --label "docs-audit" --state open --limit 100 --json number --jq '.[].number')
+          if [ -z "$OPEN" ]; then
+            echo "✅ Documentation audit passed with no findings (nothing to close)."
+            exit 0
+          fi
+          for n in $OPEN; do
+            echo "Closing #$n (audit is now clean)"
+            gh issue close "$n" --comment "✅ Documentation audit is now clean. Auto-closed by doc-agent workflow."
+          done
