@@ -9,3 +9,4 @@ logs/
 *.secret
 .env
 *.key
+scripts/
