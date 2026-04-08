@@ -6,10 +6,8 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    # Full scan every day at 08:00 UTC — catches new CVEs against unchanged code.
-    # Daily (not weekly) because GHSA-gpj5-g38j-94v9 (drizzle SQL injection) sat
-    # undetected for ~28 hours during a quiet period on main. See issue #422.
-    - cron: "0 8 * * *"
+    # Full scan every Monday at 08:00 UTC — catches new CVEs against unchanged code
+    - cron: "0 8 * * 1"
 
 permissions:
   contents: read
