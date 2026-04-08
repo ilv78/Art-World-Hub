@@ -1,7 +1,7 @@
 # ArtVerse — Decision Log
 
 **Status:** Active
-**Last Updated:** 2026-04-02
+**Last Updated:** 2026-04-08
 
 Lightweight log for minor decisions that don't warrant a full ADR. For significant architectural decisions, create an ADR in `specs/architecture/ADR/`.
 
@@ -55,3 +55,4 @@ Lightweight log for minor decisions that don't warrant a full ADR. For significa
 | 2026-04-01 | Three-layer crawler blocking on non-production (#376) | Staging/preview publicly accessible; robots.txt + meta tag + X-Robots-Tag header prevent indexing of duplicate content | Architecture |
 | 2026-04-02 | www → non-www nginx 301 redirect (#385) | Google Search Console reported canonical conflict between www and non-www; split nginx server block to redirect www to non-www | Architecture |
 | 2026-04-02 | Sudoers-based nginx config management for SSH deploy users (#386) | staging/production users could manage Docker but not nginx; added `deploy-nginx-config` helper script with sudo, enabling SSH-based nginx deploys with automatic rollback on failure | Architecture |
+| 2026-04-08 | Bump drizzle-orm 0.39.3 → 0.45.2 to clear GHSA-gpj5-g38j-94v9 (#417) | Security CVE for SQL identifier injection. Not exploitable in our codebase (no use of `sql.identifier`/`.dynamic()`), but blocks the CI security gate at `--audit-level=high`. Bump-and-run upgrade — migration journal version 7 unchanged, drizzle-kit 0.31.10 + drizzle-zod 0.8.3 already compatible, no API breaking changes affecting our surfaces | Security |
