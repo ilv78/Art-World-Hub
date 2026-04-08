@@ -1,7 +1,7 @@
 # Vernis9 — CI/CD Pipeline Specification
 
 **Status:** Active
-**Last Updated:** 2026-03-23
+**Last Updated:** 2026-04-08
 
 ---
 
@@ -513,6 +513,7 @@ DB passwords and session secrets are stored in `.env` files on the VPS (not in G
                │  docker compose up -d    │
                │  Health check (2 min)    │
                │  Smoke test (external)   │
+               │  Smoke test (version)    │  ← /api/version + /api/changelog (warnings only)
                │  Smoke test (logging)    │  ← Verifies log file exists, valid JSON
                │  Git tag release-N       │
                │  📱 Telegram notify      │
@@ -540,6 +541,7 @@ Non-draft PRs by the repo owner are automatically approved and have auto-merge e
                │  DB migrate (not push)   │
                │  Health check (2 min)    │
                │  Smoke test (external)   │
+               │  Smoke test (version)    │  ← /api/version + /api/changelog (warnings only)
                │  Rollback (if: failure)  │
                │  📱 Telegram notify      │
                └──────────────────────────┘
@@ -679,11 +681,31 @@ All actions in `security.yml` are pinned to commit SHAs. The pipeline has explic
 Two-phase label-driven versioned releases (`vX.Y.Z`):
 
 1. **Prepare** (`.github/workflows/release.yml`, manual dispatch): Developer labels closed issues with `release: next`, triggers the workflow. Script auto-detects the version bump (MINOR for features/enhancements, PATCH for fixes), updates `CHANGELOG.md`, and creates a release PR with the `autorelease` label.
-2. **Finalize** (`.github/workflows/release-finalize.yml`, automatic on PR merge): When the release PR is merged, creates the git tag + GitHub Release, removes `release: next` labels from issues, and sends a Telegram notification.
+2. **Finalize** (`.github/workflows/release-finalize.yml`, automatic on PR merge): When the release PR is merged:
+   - **CHANGELOG validation gate** — checks that `CHANGELOG.md` contains a `## [X.Y.Z]` entry for the released version *and* that the entry has actual content (not just a header). Fails the workflow if missing or empty, preventing tagging/deploying with stale changelog content. (Added in #303 after a 2026-03-29 incident where a stale CHANGELOG silently shipped to production.)
+   - Creates the git tag and GitHub Release, with the changelog body as the release notes.
+   - **Triggers production deploy** — dispatches `deploy-production.yml` with `image_tag=latest`.
+   - **Removes `release: next` labels** from the released issues. Uses `if: always()` so labels are still cleaned up even when an earlier step (e.g. the production deploy trigger) fails — otherwise stale labels would re-roll into the next release. (Fixed in #362 after #361.)
+   - Sends a Telegram notification.
 
 **Script:** `.github/scripts/prepare-release.sh`
 
 Changes go through a PR, so CI validates the CHANGELOG update before it reaches main. After the release is finalized, production deploy is automatically triggered (dispatches `deploy-production.yml` with `image_tag=latest`).
+
+### 6.6 Post-Deploy Version Smoke Test
+
+After the health check passes, both staging (`ci.yml`) and production (`deploy-production.yml`) deploy jobs run a runtime smoke test that hits two endpoints on the deployed app:
+
+| Endpoint | Check | Behavior on failure |
+|----------|-------|--------------------|
+| `GET /api/version` | Response contains a `version` field that is not empty and not `"unknown"` | **Warning** — logs a message but does not fail the deploy |
+| `GET /api/changelog` | Response contains at least one `## [X.Y.Z]` markdown header | **Warning** — logs a message but does not fail the deploy |
+
+**Why warnings, not failures:** the goal is detection, not gating. Failing the deploy on a stale `CHANGELOG.md` after the image is already running would block recovery. The hard gate sits earlier, in the release workflow's CHANGELOG validation step (Section 6.5).
+
+**Why this exists:** added after the 2026-03-29 incident where a release shipped with `version: "unknown"` because `CHANGELOG.md` was missing from the production image. The runtime smoke test catches the same class of bug at the deploy stage even when the release-time gate is bypassed (e.g. a manual `deploy-production.yml` dispatch with an arbitrary `image_tag`). See `docs/postmortems/2026-03-29-changelog-version-mismatch.md`.
+
+**Workflows:** `ci.yml` (staging deploy job, after health check), `deploy-production.yml` (after health check, before rollback step).
 
 ---
 
@@ -712,3 +734,7 @@ Changes go through a PR, so CI validates the CHANGELOG update before it reaches 
 | 2026-03-23 | Skip Docker build and staging deploy for docs-only changes — added `changes` job with `dorny/paths-filter` to detect non-docs file changes. `build-image` and `deploy-staging` are skipped when only `specs/`, `docs/`, `**/*.md`, or `.github/ISSUE_TEMPLATE/` files changed. Updated pipeline diagram and job descriptions. (Issue [#206](https://github.com/ilv78/Art-World-Hub/issues/206)) |
 | 2026-03-24 | Added preview environment for `redesign/v3` branch — new `deploy-preview` job in ci.yml, `deploy/preview/docker-compose.yml` (port 5004/5436), nginx config for `preview.artverse.idata.ro`, updated server-setup.sh with preview user. CI pipeline now builds Docker images and deploys on both `main` (→ staging) and `redesign/v3` (→ preview). PRs can target either branch. (Issue [#235](https://github.com/ilv78/Art-World-Hub/issues/235)) |
 | 2026-03-25 | Auto-merge and auto-deploy — created `auto-merge.yml` to auto-approve and enable squash auto-merge for non-draft owner PRs. Added auto-deploy step to `release-finalize.yml` that dispatches `deploy-production.yml` with `image_tag=latest` after creating a release. (Issue [#249](https://github.com/ilv78/Art-World-Hub/issues/249)) |
+| 2026-03-29 | Added CHANGELOG validation gate to `release-finalize.yml` — fails the release workflow if `CHANGELOG.md` is missing a `## [X.Y.Z]` entry for the released version, or if the entry is empty. Prevents tagging/deploying with stale changelog content. Documented in Section 6.5. (Issue [#295](https://github.com/ilv78/Art-World-Hub/issues/295), PR [#303](https://github.com/ilv78/Art-World-Hub/pull/303)) |
+| 2026-03-29 | Added post-deploy version smoke test to staging (`ci.yml`) and production (`deploy-production.yml`) — hits `/api/version` and `/api/changelog` after the health check, emits warnings if version is `"unknown"` or changelog has no version entries. Warnings only, not failures. New Section 6.6 documents the runtime check. (Issue [#296](https://github.com/ilv78/Art-World-Hub/issues/296), PR [#304](https://github.com/ilv78/Art-World-Hub/pull/304)) |
+| 2026-03-31 | Fixed `release-finalize.yml` — added `if: always()` to the "remove `release: next` labels" step so labels are still cleaned up when the production deploy trigger step fails. Without this, stale labels would re-roll into the next release. Documented in Section 6.5. (Issue [#361](https://github.com/ilv78/Art-World-Hub/issues/361), PR [#362](https://github.com/ilv78/Art-World-Hub/pull/362)) |
+| 2026-04-08 | Spec catch-up — bumped Last Updated header (was 2026-03-23 despite content updates through 2026-03-25), added Section 6.6 (post-deploy version smoke test), expanded Section 6.5 (release workflow) with CHANGELOG validation gate and label cleanup behavior, added the version smoke test to Section 5.2 + 5.4 diagrams, added revision log entries for #303, #304, #362. Resolves recurring `ST-004` doc-agent warning. (Issue [#414](https://github.com/ilv78/Art-World-Hub/issues/414)) |
