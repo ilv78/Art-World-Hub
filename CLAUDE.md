@@ -44,6 +44,18 @@ When work involves an architectural or infrastructure decision (technology choic
 
 This applies during normal work — do not batch decisions for later.
 
+## Multi-Device Workflow
+
+Development happens on two machines: the laptop (`Dell`, repo at `/home/liviu/code/Art-World-Hub`) and the VPS (`liviu@ilc01node03.vps.webdock.cloud:/home/liviu/app`). State syncs through GitHub — there is no direct laptop ↔ VPS rsync.
+
+Three developer keywords drive handoffs (recognize the listed aliases too):
+
+- **`park`** ("park it", "handoff") — stage everything, make a `[WIP-PARK]` commit on the current feature branch with a structured body, push. Refuses on `main`.
+- **`resume`** ("pick up", "continue") — fetch, find the latest `[WIP-PARK]` commit, restore the dirty working tree (`git reset --mixed HEAD~1`), force-push-with-lease to clean GitHub, brief the developer.
+- **`sync`** ("catch up") — fast-forward `main`, list new and stale branches. Refuses if dirty.
+
+Full protocol, edge cases, and recovery procedures: `specs/workflows/MULTI-DEVICE.md`. KEEP UPDATED with workflow changes.
+
 ## Commands
 
 ```bash
