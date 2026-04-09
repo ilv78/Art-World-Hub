@@ -63,7 +63,7 @@ function organizationLd(): Record<string, unknown> {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: "Vernis9",
-    url: SITE_URL,
+    url: `${SITE_URL}/`,
     logo: `${SITE_URL}/favicon.svg`,
     description: "Virtual art gallery and marketplace",
   };
@@ -84,11 +84,11 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
     const jsonLd: Record<string, unknown>[] = [];
     if (path === "/") {
       jsonLd.push(organizationLd());
-      jsonLd.push(breadcrumb({ name: "Home", url: SITE_URL }));
+      jsonLd.push(breadcrumb({ name: "Home", url: `${SITE_URL}/` }));
     } else {
       const name = STATIC_ROUTE_NAMES[path] || staticRoute.title;
       jsonLd.push(breadcrumb(
-        { name: "Home", url: SITE_URL },
+        { name: "Home", url: `${SITE_URL}/` },
         { name },
       ));
     }
@@ -98,7 +98,7 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
       ogTitle: staticRoute.title,
       ogDescription: DEFAULT_DESCRIPTION,
       ogType: staticRoute.ogType,
-      ogUrl: `${SITE_URL}${path === "/" ? "" : path}`,
+      ogUrl: `${SITE_URL}${path === "/" ? "/" : path}`,
       ogImage: DEFAULT_OG_IMAGE,
       jsonLd,
     };
@@ -138,7 +138,7 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
           jsonLd: [
             personLd,
             breadcrumb(
-              { name: "Home", url: SITE_URL },
+              { name: "Home", url: `${SITE_URL}/` },
               { name: "Artists", url: `${SITE_URL}/artists` },
               { name: artist.name },
             ),
@@ -194,7 +194,7 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
           jsonLd: [
             blogPostingLd,
             breadcrumb(
-              { name: "Home", url: SITE_URL },
+              { name: "Home", url: `${SITE_URL}/` },
               { name: "Blog", url: `${SITE_URL}/blog` },
               { name: post.title },
             ),
@@ -215,7 +215,7 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
     ogType: "website",
     ogUrl: `${SITE_URL}${path}`,
     ogImage: DEFAULT_OG_IMAGE,
-    jsonLd: [breadcrumb({ name: "Home", url: SITE_URL })],
+    jsonLd: [breadcrumb({ name: "Home", url: `${SITE_URL}/` })],
   };
 }
 
