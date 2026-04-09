@@ -1,7 +1,7 @@
 # ArtVerse — Architecture Overview
 
 **Status:** Active
-**Last Updated:** 2026-03-13
+**Last Updated:** 2026-04-09
 **Owner:** Architecture
 
 ---
@@ -20,6 +20,7 @@ ArtVerse is a full-stack art gallery platform that combines e-commerce with an i
 - **Exhibition System** — Curated group exhibitions with wall placement metadata
 - **MCP Server** — 14 resources, 12 tools, 4 prompt templates for AI integration
 - **Authentication** — Google OIDC + email/password with magic link signup (Resend)
+- **SEO Infrastructure** — Server-side meta injection, structured data, sitemap, environment-aware crawler controls (see §8c)
 
 ---
 
@@ -354,6 +355,67 @@ All user-supplied values in email templates (order notifications) are HTML-escap
 
 ---
 
+## 8c. SEO Infrastructure
+
+The site is a client-side SPA, so search engines and social platforms see whatever HTML the server returns on first request. Section 8c covers the server-side machinery that gives crawlers correct titles, descriptions, structured data, and canonical URLs per route. Full spec: `specs/features/seo/SPEC.md`.
+
+### Server-side meta tag injection (`server/meta.ts`)
+
+`resolveMetaTags(url)` looks at the requested path and returns a `MetaTags` payload (`title`, `description`, `ogTitle`, `ogDescription`, `ogType`, `ogUrl`, `ogImage`, `jsonLd`). `injectMetaTags(html, meta)` then string-replaces placeholders in `client/index.html` (`__META_TITLE__`, `__META_OG_URL__`, `__JSON_LD__`, etc.) before serving. Both dev (`server/vite.ts`) and prod (`server/static.ts`) call into the same module, so the SPA shell is no longer identical for every route.
+
+| Route pattern | Meta source |
+|---|---|
+| `/`, `/gallery`, `/store`, `/auctions`, `/artists`, `/blog`, `/exhibitions`, `/changelog`, `/privacy`, `/terms` | Static map in `STATIC_ROUTES` |
+| `/artists/:id` | DB lookup → name, bio, avatar |
+| `/blog/:id` | DB lookup → title, excerpt, cover image, author |
+| anything else | Default fallback |
+
+Client-side navigation is handled by `react-helmet-async` so the browser tab title updates as the user moves between pages.
+
+### Structured data (JSON-LD)
+
+Per-route schema.org payloads injected as `<script type="application/ld+json">`:
+
+- **Homepage** — `Organization` + `BreadcrumbList`
+- **Artist profile** — `Person` + `BreadcrumbList`
+- **Blog post** — `BlogPosting` + `BreadcrumbList`
+- **All other routes** — `BreadcrumbList`
+
+### Sitemap (`server/routes/sitemap.ts`)
+
+`GET /sitemap.xml` returns a dynamically-generated sitemap. Static routes are hardcoded; artist and published-blog-post URLs are pulled from the database. Cached for 1 hour to avoid hitting the DB on every crawler request.
+
+### robots.txt (`server/routes/robots.ts`)
+
+`GET /robots.txt` returns one of two payloads depending on `SITE_URL`:
+
+- **Production** (`SITE_URL=https://vernis9.art`) — `Allow: /`, disallows `/admin`, `/auth`, `/dashboard`, `/curator`, declares the sitemap
+- **Non-production** — same disallows but no sitemap line, so crawlers can still fetch (e.g. for Google Rich Results Test) but aren't guided to discover content
+
+### Crawler blocking on non-production
+
+When `SITE_URL ≠ https://vernis9.art`, three layers prevent indexing:
+
+1. `<meta name="robots" content="noindex, nofollow">` injected into the HTML shell
+2. `X-Robots-Tag: noindex, nofollow` HTTP header on every response (`server/index.ts`)
+3. `robots.txt` omits the sitemap directive
+
+### Canonicalization
+
+- Every page declares `<link rel="canonical">` matching the request URL
+- Homepage canonical includes the trailing slash (`https://vernis9.art/`) to match what Google requests (#427)
+- Nginx strips trailing slashes from non-root paths via `rewrite ^/(.+)/$ /$1 permanent` (production: `deploy/nginx/vernis9.art.conf`, staging: `deploy/nginx/staging.vernis9.art.conf`)
+- `www.vernis9.art` 301-redirects to `vernis9.art` at the nginx layer (#385)
+- `vernis9.nl` and `www.vernis9.nl` 301-redirect to `vernis9.art` (`deploy/nginx/vernis9.nl.conf`)
+
+### Image and accessibility
+
+- Below-the-fold images use `loading="lazy"` (#368)
+- All `<img>` and `<AvatarImage>` elements have descriptive `alt` text (#369)
+- Default OG image at `/og-default.png` (1200×630) used as fallback for routes without entity-specific imagery
+
+---
+
 ## 9. UI Framework & Design System
 
 - **Component library:** Shadcn UI (47 components in `components/ui/`)
@@ -426,6 +488,8 @@ npx vitest run <file>       # Single file
 | `OIDC_ALLOWED_HOSTS` | No | — | Comma-separated allowed redirect hosts |
 | `RESEND_API_KEY` | No | — | Resend API key for email (magic links, order notifications) |
 | `RESEND_FROM_EMAIL` | No | `ArtVerse <onboarding@resend.dev>` | Sender address for emails |
+| `SITE_URL` | No | `https://vernis9.art` | Public site URL — used for canonical/OG/Twitter URLs, sitemap entries, and crawler blocking. When set to anything other than the production URL, the app emits `noindex` headers/meta and omits the sitemap from `robots.txt` (see §8c) |
+| `DB_MIGRATION_MODE` | No | `push` | `push` runs `drizzle-kit push --force` (used in staging/preview), `migrate` runs versioned SQL migrations from `migrations/` (used in production for change-controlled schema changes) |
 
 ---
 
