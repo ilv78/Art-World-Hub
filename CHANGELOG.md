@@ -8,7 +8,17 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
-_Nothing yet — all recent work included in v3.5.0 below._
+_Nothing yet — all recent work included in v3.5.1 below._
+
+## [3.5.1] - 2026-04-09
+
+### Fixed
+- Google Search console - not indexing ([#427](https://github.com/ilv78/Art-World-Hub/issues/427))
+- doc-agent: dedup audit issues instead of creating one per push ([#415](https://github.com/ilv78/Art-World-Hub/issues/415))
+
+### Security
+- security: revert security cron back to weekly Monday ([#425](https://github.com/ilv78/Art-World-Hub/issues/425))
+- security: 4 npm audit vulnerabilities (drizzle-orm SQLi, vite path traversal, hono x2) blocking CI ([#417](https://github.com/ilv78/Art-World-Hub/issues/417))
 
 ## [3.5.0] - 2026-04-01
 
