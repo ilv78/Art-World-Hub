@@ -37,7 +37,7 @@ import { formatPrice } from "@/lib/utils";
 
 const bidSchema = z.object({
   bidderName: z.string().min(2, "Name must be at least 2 characters"),
-  amount: z.coerce.number().positive("Bid amount must be positive"),
+  amount: z.number().positive("Bid amount must be positive"),
 });
 
 type BidFormValues = z.infer<typeof bidSchema>;
@@ -424,7 +424,11 @@ export default function Auctions() {
                             <Input
                               type="number"
                               step="1"
-                              {...field}
+                              name={field.name}
+                              ref={field.ref}
+                              onBlur={field.onBlur}
+                              value={field.value}
+                              onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
                               data-testid="input-bid-amount"
                             />
                           </FormControl>
