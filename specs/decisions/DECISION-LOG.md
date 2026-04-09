@@ -1,7 +1,7 @@
 # ArtVerse — Decision Log
 
 **Status:** Active
-**Last Updated:** 2026-04-08
+**Last Updated:** 2026-04-09
 
 Lightweight log for minor decisions that don't warrant a full ADR. For significant architectural decisions, create an ADR in `specs/architecture/ADR/`.
 
@@ -59,3 +59,4 @@ Lightweight log for minor decisions that don't warrant a full ADR. For significa
 | 2026-04-08 | Doc-agent uses single rolling audit issue with dedup (#415) | Workflow was unconditionally creating a new GitHub issue on every push when findings existed → 11 duplicate `docs-audit` issues accumulated for the same `ST-004` warning. Replaced with state machine: find existing → comment OR create, close-all-on-clean. Fixed title `📋 Docs Audit (rolling)` so the issue list stays stable | Architecture |
 | 2026-04-08 | Security workflow runs daily instead of weekly (#422) | GHSA-gpj5-g38j-94v9 sat undetected on `main` for ~28 hours during a quiet period — push-triggered scans only fire on PR activity, and the weekly Monday cron was 5 days away. Daily cron at 08:00 UTC closes the detection window. One-character cron change | Security |
 | 2026-04-08 | Reverted: security cron stays weekly Monday (#425) | The #422 issue framing implied no scheduled scan existed; the daily call was made on that premise before the correction. After re-reading, weekly Monday is acceptable: push-triggered scans still cover every PR, and a 7-day worst-case detection window for advisories against unchanged code is an acceptable tradeoff for less CI noise. Explicit risk acceptance | Security |
+| 2026-04-09 | Trailing-slash canonicalization for vernis9.art (#427) | Google Search Console reported "Alternative page with proper canonical tag" for sitemap URLs. Two bugs: (a) homepage canonical was `https://vernis9.art` but URL is `https://vernis9.art/`; (b) `/foo` and `/foo/` both returned 200 with the same canonical. Fixed canonical to include trailing slash for `/`, and added nginx `rewrite ^/(.+)/$ /$1 permanent` to strip trailing slash from non-root paths | Architecture |
