@@ -130,6 +130,8 @@ ssh -i ~/.ssh/artverse-deploy root@artverse.idata.ro          # Root (for Nginx,
 | `/etc/nginx/sites-enabled/` | Nginx symlinks to sites-available |
 | `/etc/letsencrypt/` | SSL certificates (auto-renewed by certbot) |
 | `/usr/local/bin/deploy-nginx-config` | Helper script for nginx config deployment |
+| `/usr/local/bin/remove-nginx-config` | Helper script for nginx config removal (companion to deploy-nginx-config) |
+| `/etc/nginx/.removed/` | Backup directory for configs removed via `remove-nginx-config` |
 
 ### Docker project names
 
@@ -199,14 +201,45 @@ ssh production "sudo nginx -t"
 ssh production "sudo nginx -s reload"
 ```
 
-### Script source
+### Remove a config
 
-The deploy script is version-controlled at `deploy/nginx/deploy-nginx-config.sh`. If it needs updating:
+```bash
+# Removes both sites-enabled/<name> and sites-available/<name>,
+# backs up to /etc/nginx/.removed/<name>.<timestamp>, tests, reloads,
+# and restores from backup if nginx -t fails.
+ssh production "sudo remove-nginx-config preview.artverse.idata.ro.conf"
+```
+
+The remove helper:
+- Validates the name pattern (no path traversal)
+- Refuses if sites-enabled/`<name>` is a symlink pointing outside `sites-available/` (manual cleanup required for unusual configs)
+- Shares the `/var/lock/deploy-nginx-config.lock` flock with `deploy-nginx-config` so the two helpers can't race
+- Backs up the config content to `/etc/nginx/.removed/` before deleting, and restores on `nginx -t` failure
+
+### Script sources
+
+Both helpers are version-controlled in `deploy/nginx/`:
+
+- `deploy/nginx/deploy-nginx-config.sh` → `/usr/local/bin/deploy-nginx-config`
+- `deploy/nginx/remove-nginx-config.sh` → `/usr/local/bin/remove-nginx-config`
+
+If they need updating:
 
 ```bash
 scp deploy/nginx/deploy-nginx-config.sh production:/tmp/deploy-nginx-config
+scp deploy/nginx/remove-nginx-config.sh production:/tmp/remove-nginx-config
 # Then on the VPS as root:
 # cp /tmp/deploy-nginx-config /usr/local/bin/deploy-nginx-config && chmod 755 /usr/local/bin/deploy-nginx-config
+# cp /tmp/remove-nginx-config /usr/local/bin/remove-nginx-config && chmod 755 /usr/local/bin/remove-nginx-config
+```
+
+The sudoers rules for both helpers (per `staging` and `production` user) live in `/etc/sudoers.d/`:
+
+```
+<user> ALL=(root) NOPASSWD: /usr/local/bin/deploy-nginx-config
+<user> ALL=(root) NOPASSWD: /usr/local/bin/remove-nginx-config
+<user> ALL=(root) NOPASSWD: /usr/sbin/nginx -t
+<user> ALL=(root) NOPASSWD: /usr/sbin/nginx -s reload
 ```
 
 ---
