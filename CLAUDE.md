@@ -46,7 +46,7 @@ This applies during normal work — do not batch decisions for later.
 
 ## Multi-Device Workflow
 
-Development happens on two machines: the laptop (`Dell`, repo at `/home/liviu/code/Art-World-Hub`) and the VPS (`liviu@ilc01node03.vps.webdock.cloud:/home/liviu/app`). State syncs through GitHub — there is no direct laptop ↔ VPS rsync.
+Development happens on two machines: the laptop (`Dell`, repo at `/home/liviu/code/Art-World-Hub`) and the personal dev VPS (`liviu@<dev-vps>:/home/liviu/app`, hostname kept out of the public spec — see local memory or `~/.ssh/config`). State syncs through GitHub — there is no direct laptop ↔ VPS rsync.
 
 Three developer keywords drive handoffs (recognize the listed aliases too):
 

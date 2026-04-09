@@ -233,7 +233,7 @@ scp deploy/nginx/remove-nginx-config.sh production:/tmp/remove-nginx-config
 # cp /tmp/remove-nginx-config /usr/local/bin/remove-nginx-config && chmod 755 /usr/local/bin/remove-nginx-config
 ```
 
-The sudoers rules for both helpers (per `staging` and `production` user) live in `/etc/sudoers.d/`:
+The sudoers rules for both helpers (per `staging` and `production` user) live in `/etc/sudoers.d/nginx-deploy`:
 
 ```
 <user> ALL=(root) NOPASSWD: /usr/local/bin/deploy-nginx-config

@@ -1,7 +1,7 @@
 # Multi-Device Development Workflow
 
 **Status:** Active
-**Last Updated:** 2026-04-09
+**Last Updated:** 2026-04-10
 **Issue:** [#444](https://github.com/ilv78/Art-World-Hub/issues/444)
 
 ## Overview
@@ -9,7 +9,7 @@
 ArtVerse development happens on two machines:
 
 - **Laptop** (`Dell`) — primary, behind NAT, intermittently online
-- **VPS** (`liviu@ilc01node03.vps.webdock.cloud:/home/liviu/app`) — always-on personal dev account, separate from the deploy users (`staging`, `preview`, `production`) on the same Webdock host
+- **VPS** (`liviu@<dev-vps>:/home/liviu/app`) — always-on personal dev account on a **separate Webdock VPS** from the production deploy host. The concrete hostname is kept out of the public spec; see local memory or `~/.ssh/config`.
 
 Because the laptop is not reliably reachable inbound, **all state synchronization flows through GitHub** (`origin = github.com/ilv78/Art-World-Hub`). There is no direct laptop ↔ VPS rsync.
 
@@ -188,23 +188,15 @@ Documented for posterity and for the next time a new dev machine is added.
 | Machine | Hostname | Repo path | User |
 |---|---|---|---|
 | Laptop | `Dell` | `/home/liviu/code/Art-World-Hub` | `liviu` |
-| VPS | `ilc01node03.vps.webdock.cloud` | `/home/liviu/app` | `liviu` |
+| VPS | `<dev-vps>` (kept out of public spec) | `/home/liviu/app` | `liviu` |
 
 ### Laptop SSH alias (convenience only)
 
-The laptop's `~/.ssh/config` has:
-
-```
-Host ilc01node03
-    HostName ilc01node03.vps.webdock.cloud
-    User liviu
-```
-
-This is convenience for non-Claude remote ops (`ssh ilc01node03 'tail -f ~/app/server.log'`). **The protocol itself never SSHes from one machine to the other** — all sync is via GitHub.
+Configure an SSH alias in `~/.ssh/config` for the dev VPS so non-Claude remote ops are short (e.g. `ssh <your-dev-vps-alias> 'tail -f ~/app/server.log'`). The literal config and the actual hostname are kept out of the public spec. **The protocol itself never SSHes from one machine to the other** — all sync is via GitHub.
 
 ### Detecting which machine you're on
 
-`hostname` returns `Dell` on the laptop and `ilc01node03` (or similar) on the VPS. Write this into the `Machine:` field of parked commits.
+`hostname` returns `Dell` on the laptop and the Webdock node name on the VPS. Write whichever it returns into the `Machine:` field of parked commits.
 
 ---
 
