@@ -1147,6 +1147,11 @@ export function HallwayGallery3D({ artistRooms, curatorRooms, museumTemplate, is
 
   const handleClick = useCallback((event: MouseEvent) => {
     if (!cameraRef.current || !sceneRef.current || !isPointerLockedRef.current) return;
+    // Mobile uses handleTouchTap with the actual touch position; the center-raycast
+    // here only makes sense under desktop pointer-lock. Without this guard, the
+    // synthetic click that follows a tap re-fires through document and re-opens
+    // whichever mesh is in front of the camera.
+    if (isMobile) return;
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(new THREE.Vector2(0, 0), cameraRef.current);
     const meshes = Array.from(artworkMeshesRef.current.values()).map(v => v.mesh);
@@ -1304,8 +1309,9 @@ export function HallwayGallery3D({ artistRooms, curatorRooms, museumTemplate, is
         const dy = touch.clientY - touchLookRef.current.lastY;
         touchLookRef.current = { lastX: touch.clientX, lastY: touch.clientY };
         euler.current.setFromQuaternion(cameraRef.current.quaternion);
-        euler.current.y -= dx * LOOK_SPEED * 1.5;
-        euler.current.x -= dy * LOOK_SPEED * 1.5;
+        // Drag-to-pan: drag right pans the world right (camera looks left)
+        euler.current.y += dx * LOOK_SPEED * 1.5;
+        euler.current.x += dy * LOOK_SPEED * 1.5;
         euler.current.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.current.x));
         cameraRef.current.quaternion.setFromEuler(euler.current);
       }
@@ -1313,6 +1319,7 @@ export function HallwayGallery3D({ artistRooms, curatorRooms, museumTemplate, is
     const handleTouchEnd = () => { touchLookRef.current = null; };
     const handleTouchTap = (e: TouchEvent) => {
       if (!isPointerLockedRef.current || !cameraRef.current || !rendererRef.current) return;
+      if (selectedArtworkRef.current) return;
       if (e.changedTouches.length !== 1) return;
       const touch = e.changedTouches[0];
       const rect = rendererRef.current.domElement.getBoundingClientRect();
@@ -1531,11 +1538,11 @@ export function HallwayGallery3D({ artistRooms, curatorRooms, museumTemplate, is
       )}
 
       {selectedArtwork && (
-        <div className="absolute inset-0 flex bg-black/80 backdrop-blur-sm" style={{ zIndex: 50 }} data-testid="artwork-detail-panel">
-          <div className="flex-1 relative min-w-0">
+        <div className="absolute inset-0 flex flex-col sm:flex-row bg-black/80 backdrop-blur-sm" style={{ zIndex: 50 }} data-testid="artwork-detail-panel">
+          <div className="flex-1 relative min-w-0 min-h-0">
             <img src={selectedArtwork.imageUrl} alt={selectedArtwork.title} loading="lazy" className="w-full h-full object-contain bg-black/40" />
           </div>
-          <div className="w-64 flex flex-col bg-card p-4 gap-3 relative">
+          <div className="w-full sm:w-64 max-h-[55%] sm:max-h-none overflow-y-auto flex flex-col bg-card p-4 gap-3 relative">
             <Button size="icon" variant="ghost" className="absolute top-2 right-2" onClick={() => { setSelectedArtwork(null); requestPointerLock(); }} data-testid="button-close-artwork">
               <X className="w-5 h-5" />
             </Button>
