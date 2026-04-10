@@ -8,7 +8,20 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
-_Nothing yet — all recent work included in v3.5.1 below._
+_Nothing yet — all recent work included in v3.6.0 below._
+
+## [3.6.0] - 2026-04-10
+
+### Added
+- Add multi-device dev workflow (park / resume / sync between laptop and ilc01node03) ([#444](https://github.com/ilv78/Art-World-Hub/issues/444))
+- Epic: SEO — prepare Vernis9 for search engine discovery ([#363](https://github.com/ilv78/Art-World-Hub/issues/363))
+
+### Fixed
+- Mobile - 3d maze for exhibition is not ok ([#451](https://github.com/ilv78/Art-World-Hub/issues/451))
+- deploy-nginx-config script on VPS is stale (predates #386 + #389) ([#430](https://github.com/ilv78/Art-World-Hub/issues/430))
+
+### Changed
+- Clean up pre-migration nginx symlinks on VPS (artverse.idata.ro, staging.artverse.idata.ro, preview.artverse.idata.ro.conf) ([#434](https://github.com/ilv78/Art-World-Hub/issues/434))
 
 ## [3.5.1] - 2026-04-09
 
