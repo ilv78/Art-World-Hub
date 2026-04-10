@@ -1,7 +1,7 @@
 # Vernis9 — CI/CD Pipeline Specification
 
 **Status:** Active
-**Last Updated:** 2026-04-08
+**Last Updated:** 2026-04-10
 
 ---
 
@@ -524,7 +524,7 @@ DB passwords and session secrets are stored in `.env` files on the VPS (not in G
 
 Non-draft PRs by the repo owner are automatically approved and have auto-merge enabled (squash). GitHub waits for all required branch protection checks to pass before merging. Dependabot PRs are handled separately by `dependabot-auto-merge.yml`.
 
-### 5.4 Production Deploy (deploy-production.yml — automatic after release, manual fallback)
+### 5.4 Production Deploy (deploy-production.yml — manual dispatch)
 
 ```
   gh workflow run deploy-production.yml -f image_tag=<sha>
@@ -682,15 +682,14 @@ Two-phase label-driven versioned releases (`vX.Y.Z`):
 
 1. **Prepare** (`.github/workflows/release.yml`, manual dispatch): Developer labels closed issues with `release: next`, triggers the workflow. Script auto-detects the version bump (MINOR for features/enhancements, PATCH for fixes), updates `CHANGELOG.md`, and creates a release PR with the `autorelease` label.
 2. **Finalize** (`.github/workflows/release-finalize.yml`, automatic on PR merge): When the release PR is merged:
-   - **CHANGELOG validation gate** — checks that `CHANGELOG.md` contains a `## [X.Y.Z]` entry for the released version *and* that the entry has actual content (not just a header). Fails the workflow if missing or empty, preventing tagging/deploying with stale changelog content. (Added in #303 after a 2026-03-29 incident where a stale CHANGELOG silently shipped to production.)
+   - **CHANGELOG validation gate** — checks that `CHANGELOG.md` contains a `## [X.Y.Z]` entry for the released version *and* that the entry has actual content (not just a header). Fails the workflow if missing or empty, preventing tagging with stale changelog content. (Added in #303 after a 2026-03-29 incident where a stale CHANGELOG silently shipped to production.)
    - Creates the git tag and GitHub Release, with the changelog body as the release notes.
-   - **Triggers production deploy** — dispatches `deploy-production.yml` with `image_tag=latest`.
-   - **Removes `release: next` labels** from the released issues. Uses `if: always()` so labels are still cleaned up even when an earlier step (e.g. the production deploy trigger) fails — otherwise stale labels would re-roll into the next release. (Fixed in #362 after #361.)
+   - **Removes `release: next` labels** from the released issues. Uses `if: always()` so labels are still cleaned up even when an earlier step fails — otherwise stale labels would re-roll into the next release. (Fixed in #362 after #361.)
    - Sends a Telegram notification.
 
 **Script:** `.github/scripts/prepare-release.sh`
 
-Changes go through a PR, so CI validates the CHANGELOG update before it reaches main. After the release is finalized, production deploy is automatically triggered (dispatches `deploy-production.yml` with `image_tag=latest`).
+Changes go through a PR, so CI validates the CHANGELOG update before it reaches main. **Production deploy is intentionally manual** — after the finalize job runs and you've verified the release on staging, dispatch `deploy-production.yml` manually. See `specs/workflows/DEPLOYMENT.md` §1. (Auto-trigger was removed in #443 — `RELEASE_PAT` lacked the `actions:write` scope so the dispatch step had been failing on every release; the developer preferred staging-verification-then-manual-promote over fixing the trigger.)
 
 ### 6.6 Post-Deploy Version Smoke Test
 
@@ -738,3 +737,4 @@ After the health check passes, both staging (`ci.yml`) and production (`deploy-p
 | 2026-03-29 | Added post-deploy version smoke test to staging (`ci.yml`) and production (`deploy-production.yml`) — hits `/api/version` and `/api/changelog` after the health check, emits warnings if version is `"unknown"` or changelog has no version entries. Warnings only, not failures. New Section 6.6 documents the runtime check. (Issue [#296](https://github.com/ilv78/Art-World-Hub/issues/296), PR [#304](https://github.com/ilv78/Art-World-Hub/pull/304)) |
 | 2026-03-31 | Fixed `release-finalize.yml` — added `if: always()` to the "remove `release: next` labels" step so labels are still cleaned up when the production deploy trigger step fails. Without this, stale labels would re-roll into the next release. Documented in Section 6.5. (Issue [#361](https://github.com/ilv78/Art-World-Hub/issues/361), PR [#362](https://github.com/ilv78/Art-World-Hub/pull/362)) |
 | 2026-04-08 | Spec catch-up — bumped Last Updated header (was 2026-03-23 despite content updates through 2026-03-25), added Section 6.6 (post-deploy version smoke test), expanded Section 6.5 (release workflow) with CHANGELOG validation gate and label cleanup behavior, added the version smoke test to Section 5.2 + 5.4 diagrams, added revision log entries for #303, #304, #362. Resolves recurring `ST-004` doc-agent warning. (Issue [#414](https://github.com/ilv78/Art-World-Hub/issues/414)) |
+| 2026-04-10 | Removed the auto-deploy step from `release-finalize.yml` — the `gh workflow run deploy-production.yml` call had been failing 403 on every release because `RELEASE_PAT` lacks the `actions:write` scope, and the developer preferred staging-verification-then-manual-promote over fixing the PAT scope. Section 5.4 header and Section 6.5 release-flow description updated accordingly. Production deploy is now exclusively `workflow_dispatch`. (Issue [#443](https://github.com/ilv78/Art-World-Hub/issues/443)) |
