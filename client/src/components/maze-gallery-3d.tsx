@@ -1258,6 +1258,11 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
 
   const handleClick = useCallback((event: MouseEvent) => {
     if (!cameraRef.current || !sceneRef.current || !isPointerLockedRef.current) return;
+    // Mobile uses handleTouchTap with the actual touch position; the center-raycast
+    // here only makes sense under desktop pointer-lock. Without this guard, the
+    // synthetic click that follows a tap re-fires through document and re-opens
+    // whichever mesh is in front of the camera.
+    if (isMobile) return;
 
     const raycaster = new THREE.Raycaster();
     const center = new THREE.Vector2(0, 0);
@@ -1484,8 +1489,9 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
         touchLookRef.current = { lastX: touch.clientX, lastY: touch.clientY };
 
         euler.current.setFromQuaternion(cameraRef.current.quaternion);
-        euler.current.y -= dx * LOOK_SPEED * 1.5;
-        euler.current.x -= dy * LOOK_SPEED * 1.5;
+        // Drag-to-pan: drag right pans the world right (camera looks left)
+        euler.current.y += dx * LOOK_SPEED * 1.5;
+        euler.current.x += dy * LOOK_SPEED * 1.5;
         euler.current.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.current.x));
         cameraRef.current.quaternion.setFromEuler(euler.current);
       }
@@ -1498,6 +1504,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
     // Tap on artwork — raycast from touch position
     const handleTouchTap = (e: TouchEvent) => {
       if (!isPointerLockedRef.current || !cameraRef.current || !rendererRef.current) return;
+      if (selectedArtworkRef.current || showArtistDialogRef.current) return;
       if (e.changedTouches.length !== 1) return;
       const touch = e.changedTouches[0];
       const rect = rendererRef.current.domElement.getBoundingClientRect();
@@ -1854,8 +1861,8 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
 
       {/* Artwork detail panel - fits exactly within gallery */}
       {selectedArtwork && (
-        <div className="absolute inset-0 flex bg-black/80 backdrop-blur-sm" style={{ zIndex: 50 }} data-testid="artwork-detail-panel">
-          <div className="flex-1 relative min-w-0">
+        <div className="absolute inset-0 flex flex-col sm:flex-row bg-black/80 backdrop-blur-sm" style={{ zIndex: 50 }} data-testid="artwork-detail-panel">
+          <div className="flex-1 relative min-w-0 min-h-0">
             <img
               src={selectedArtwork.imageUrl}
               alt={selectedArtwork.title}
@@ -1863,7 +1870,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
               className="w-full h-full object-contain bg-black/40"
             />
           </div>
-          <div className="w-64 flex flex-col bg-card p-4 gap-3 relative">
+          <div className="w-full sm:w-64 max-h-[55%] sm:max-h-none overflow-y-auto flex flex-col bg-card p-4 gap-3 relative">
             <Button
               size="icon"
               variant="ghost"
