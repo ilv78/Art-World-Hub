@@ -45,14 +45,14 @@ export function ArtworkDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[1200px] lg:max-w-[1400px] max-h-[90vh] overflow-y-auto">
         <div className="grid gap-6 md:grid-cols-2">
           <div className="relative flex items-center justify-center overflow-hidden rounded-lg bg-muted min-h-[200px]">
             <img
               src={artwork.imageUrl}
               alt={artwork.title}
               loading="lazy"
-              className="w-full h-auto object-contain max-h-[60vh]"
+              className="w-full h-auto object-contain max-h-[75vh]"
             />
             {!artwork.isForSale && (
               <Badge className="absolute top-3 right-3" variant="secondary">
