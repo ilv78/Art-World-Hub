@@ -1,8 +1,28 @@
 # ADR-0009: Branch protection on `main` via Repository Ruleset (not classic branch protection)
 
-**Status:** Accepted
+**Status:** Superseded — 2026-04-13
 **Date:** 2026-04-13
 **Decision:** Migrate `main` from GitHub classic branch protection to a Repository Ruleset, so that the GitHub merge queue can be enabled.
+
+> ## Superseded notice (2026-04-13)
+>
+> This decision was abandoned the same day it was made, after Stage 1 (creating the parallel ruleset) succeeded but Stage 2 (adding the `merge_queue` rule) failed at every path tried:
+>
+> - `gh api PUT /repos/.../rulesets/14998880` with the `merge_queue` rule rejected with `Validation Failed: Invalid rule 'merge_queue': ` (no further detail). Tried with all 7 documented parameters; tried in isolation in a fresh ruleset with `enforcement: disabled`; same error every time.
+> - The classic branch-protection UI on this repo does not show a "Require merge queue" checkbox.
+> - The Repository Rulesets UI on this repo does not show an "Add rule" button — rules can only be edited via the form fields visible at ruleset-creation time.
+>
+> Conclusion: GitHub does not expose merge queue for **user-owned (non-organization) repositories** through any path (REST API, classic branch-protection UI, or rulesets UI), regardless of repo visibility (this repo is public). Public docs imply availability on Free for public repos, but the API and UI do not back this up for personal accounts.
+>
+> **Pivot:** action item [#473](https://github.com/ilv78/Art-World-Hub/issues/473) — broaden Dependabot grouping in `.github/dependabot.yml` to combine npm minor + patch into a single weekly PR per ecosystem. Reduces typical batch from ~10 PRs to ~2–3, which the existing serial-rebase loop drains naturally without needing a queue. Doesn't structurally fix the cascade for very large bursts (e.g. major security fanout), but is the only practical option until merge queue becomes available for user-owned repos or the repo moves into an organization.
+>
+> **Cleanup applied alongside this supersede:**
+>
+> - Ruleset `main-protection` (id `14998880`) deleted — it duplicated classic protection without adding value. Classic branch protection on `main` is the sole protection again.
+> - `merge_group` trigger in `.github/workflows/ci.yml` (PR [#477](https://github.com/ilv78/Art-World-Hub/pull/477)) **kept**: harmless no-op without merge queue, and saves a step if merge queue ever becomes available.
+> - Tracking issue [#472](https://github.com/ilv78/Art-World-Hub/issues/472) closed; postmortem action item shifts to [#473](https://github.com/ilv78/Art-World-Hub/issues/473).
+>
+> The ADR is kept (rather than deleted) as the record of what was attempted and why, so a future contributor doesn't repeat the dead-end discovery.
 
 ## Context
 
