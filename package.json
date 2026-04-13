@@ -87,7 +87,7 @@
     "react-markdown": "^10.1.0",
     "react-resizable-panels": "^4.9.0",
     "recharts": "^3.8.1",
-    "resend": "^6.9.4",
+    "resend": "^6.10.0",
     "sharp": "^0.34.5",
     "tailwind-merge": "^3.5.0",
     "three": "^0.182.0",
