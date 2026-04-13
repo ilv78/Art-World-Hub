@@ -5,6 +5,8 @@ on:
     branches: ["**"]
   pull_request:
     branches: [main, redesign/v3]
+  merge_group:
+    branches: [main]
 
 permissions:
   contents: read
