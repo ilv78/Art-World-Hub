@@ -29,6 +29,7 @@ A postmortem is required for any of:
 
 | Date | Title | Severity | Trigger | Status |
 |------|-------|----------|---------|--------|
+| 2026-04-13 | [Dependabot auto-merge backlog from strict branch protection](./2026-04-13-dependabot-auto-merge-backlog.md) | P3 | Stakeholder request / monitoring gap | Action Items Open |
 | 2026-03-13 | [Admin section code pushed directly to main](./2026-03-13-issue-8-direct-push-to-main.md) | P2 | On-call intervention (rollback) | Draft |
 
 > Update this table when a new postmortem is added, or ask Claude Code to update it.
