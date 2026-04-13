@@ -2,7 +2,7 @@
 title: "Dependabot auto-merge backlog from strict branch protection"
 date: 2026-04-13
 severity: P3
-status: Draft
+status: Action Items Open
 trigger: "stakeholder request — automation appears to function but does not deliver the intended outcome (PRs merging without human attention)"
 distribution: public
 owner: "platform / devops lead"
@@ -13,7 +13,7 @@ incident_state_doc: "N/A — discovered during a routine session resume, no live
 
 # Postmortem: Dependabot auto-merge backlog from strict branch protection
 
-> **Status:** Draft — not yet reviewed
+> **Status:** Action Items Open — reviewed and approved 2026-04-13; tracking issues #472–#476
 > **Severity:** P3 (no user-visible impact; recurring developer toil + erodes trust in dependency automation)
 > **Distribution:** Public
 > **Incident date:** 2026-04-13 07:23 UTC (Dependabot weekly run)
@@ -206,11 +206,11 @@ N/A — not a security incident.
 
 | # | Action Item | Type | Priority | Owner | Issue |
 |---|-------------|------|----------|-------|-------|
-| 1 | Enable a GitHub merge queue on `main` (or, if rejected, set `required_status_checks.strict: false` for Dependabot-authored PRs only via a ruleset) so auto-merge can converge a batch without serial rebase. Success criterion: the next weekly Dependabot batch lands all eligible PRs without human intervention. | prevent | P1 | platform / devops lead | [GH-???] |
-| 2 | Broaden Dependabot grouping in `.github/dependabot.yml` to combine minor + patch into a single weekly PR (and a separate group per ecosystem section). Success criterion: weekly batch produces ≤3 PRs in the typical case. | mitigate | P2 | platform / devops lead | [GH-???] |
-| 3 | Add an alert/check for "auto-merge enabled on a PR but PR still open >24h". Could be a scheduled GitHub Actions workflow that posts to the repo or comments on the stalled PR. Success criterion: any future stall produces a notification within 24h instead of being discovered by chance. | detect | P2 | platform / devops lead | [GH-???] |
-| 4 | Either create the `dependencies` label in the repo or remove the `labels: [dependencies]` lines from `.github/dependabot.yml`. Success criterion: no future Dependabot PR carries the "label not found" comment. | repair | P2 | platform / devops lead | [GH-???] |
-| 5 | Document the "Dependabot Monday" runbook in `specs/workflows/` covering: how the auto-merge workflow decides, how to drain a stalled backlog, when to override and merge a major manually. Success criterion: new contributor can drain a stuck batch using the runbook alone. | document | P2 | platform / devops lead | [GH-???] |
+| 1 | Enable a GitHub merge queue on `main` (or, if rejected, set `required_status_checks.strict: false` for Dependabot-authored PRs only via a ruleset) so auto-merge can converge a batch without serial rebase. Success criterion: the next weekly Dependabot batch lands all eligible PRs without human intervention. | prevent | P1 | platform / devops lead | [#472](https://github.com/ilv78/Art-World-Hub/issues/472) |
+| 2 | Broaden Dependabot grouping in `.github/dependabot.yml` to combine minor + patch into a single weekly PR (and a separate group per ecosystem section). Success criterion: weekly batch produces ≤3 PRs in the typical case. | mitigate | P2 | platform / devops lead | [#473](https://github.com/ilv78/Art-World-Hub/issues/473) |
+| 3 | Add an alert/check for "auto-merge enabled on a PR but PR still open >24h". Could be a scheduled GitHub Actions workflow that posts to the repo or comments on the stalled PR. Success criterion: any future stall produces a notification within 24h instead of being discovered by chance. | detect | P2 | platform / devops lead | [#474](https://github.com/ilv78/Art-World-Hub/issues/474) |
+| 4 | Either create the `dependencies` label in the repo or remove the `labels: [dependencies]` lines from `.github/dependabot.yml`. Success criterion: no future Dependabot PR carries the "label not found" comment. | repair | P2 | platform / devops lead | [#475](https://github.com/ilv78/Art-World-Hub/issues/475) |
+| 5 | Document the "Dependabot Monday" runbook in `specs/workflows/` covering: how the auto-merge workflow decides, how to drain a stalled backlog, when to override and merge a major manually. Success criterion: new contributor can drain a stuck batch using the runbook alone. | document | P2 | platform / devops lead | [#476](https://github.com/ilv78/Art-World-Hub/issues/476) |
 
 ---
 
