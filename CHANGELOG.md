@@ -8,7 +8,13 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
-_Nothing yet — all recent work included in v3.6.0 below._
+_Nothing yet — all recent work included in v3.7.0 below._
+
+## [3.7.0] - 2026-04-14
+
+### Added
+- Upgrade React 18 → 19 (deferred from #466 + #482) ([#485](https://github.com/ilv78/Art-World-Hub/issues/485))
+- Enlarge artwork detail dialog on desktop ([#455](https://github.com/ilv78/Art-World-Hub/issues/455))
 
 ## [3.6.0] - 2026-04-10
 
