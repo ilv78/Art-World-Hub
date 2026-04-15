@@ -21,14 +21,27 @@ declare module "http" {
   }
 }
 
-// Security headers via helmet
-// In development, Vite uses inline scripts and eval for HMR — relax CSP accordingly
+// Security headers via helmet.
+// In production, CSP extends helmet defaults but tightens style-src and
+// font-src to the specific Google Fonts origins used by client/index.html,
+// instead of helmet's permissive `https:` source.
+// In development, Vite uses inline scripts and eval for HMR — CSP off.
 app.use(
   helmet({
     contentSecurityPolicy:
       process.env.NODE_ENV === "production"
-        ? undefined // use helmet defaults in production
-        : false, // disable CSP in development (Vite HMR needs inline scripts)
+        ? {
+            directives: {
+              ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+              "style-src": [
+                "'self'",
+                "https://fonts.googleapis.com",
+                "'unsafe-inline'",
+              ],
+              "font-src": ["'self'", "https://fonts.gstatic.com", "data:"],
+            },
+          }
+        : false,
   }),
 );
 
