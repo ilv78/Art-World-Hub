@@ -8,7 +8,16 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
-_Nothing yet — all recent work included in v3.7.0 below._
+_Nothing yet — all recent work included in v3.8.0 below._
+
+## [3.8.0] - 2026-04-15
+
+### Added
+- iOS home-screen label: set app title to just "Vernis9" ([#493](https://github.com/ilv78/Art-World-Hub/issues/493))
+- Add apple-touch-icon for iOS home-screen bookmarks ([#491](https://github.com/ilv78/Art-World-Hub/issues/491))
+
+### Security
+- Security headers missing in production response (helmet installed but not taking effect) ([#497](https://github.com/ilv78/Art-World-Hub/issues/497))
 
 ## [3.7.0] - 2026-04-14
 
