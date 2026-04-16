@@ -19,17 +19,62 @@ interface MetaTags {
   jsonLd: Record<string, unknown>[];
 }
 
-const STATIC_ROUTES: Record<string, Pick<MetaTags, "title" | "ogType">> = {
+const STATIC_ROUTES: Record<string, Pick<MetaTags, "title" | "ogType"> & { description?: string }> = {
   "/": { title: DEFAULT_TITLE, ogType: "website" },
-  "/gallery": { title: "3D Virtual Gallery \u2014 Vernis9", ogType: "website" },
-  "/exhibitions": { title: "Exhibitions \u2014 Vernis9", ogType: "website" },
-  "/store": { title: "Art Store \u2014 Vernis9", ogType: "website" },
-  "/auctions": { title: "Auctions \u2014 Vernis9", ogType: "website" },
-  "/artists": { title: "Artists \u2014 Vernis9", ogType: "website" },
-  "/blog": { title: "Blog \u2014 Vernis9", ogType: "website" },
-  "/changelog": { title: "Changelog \u2014 Vernis9", ogType: "website" },
-  "/privacy": { title: "Privacy Policy \u2014 Vernis9", ogType: "website" },
-  "/terms": { title: "Terms of Service \u2014 Vernis9", ogType: "website" },
+  "/gallery": {
+    title: "3D Virtual Gallery \u2014 Vernis9",
+    ogType: "website",
+    description:
+      "Walk through Vernis9's immersive 3D museum. Step into per-artist rooms and explore curated artworks in a virtual gallery space.",
+  },
+  "/exhibitions": {
+    title: "Exhibitions \u2014 Vernis9",
+    ogType: "website",
+    description:
+      "Curated exhibitions at Vernis9 \u2014 themed collections featuring international artists. Discover what's on now and what's coming next.",
+  },
+  "/store": {
+    title: "Art Store \u2014 Vernis9",
+    ogType: "website",
+    description:
+      "Buy original artworks directly from the artist on Vernis9. Paintings, prints, sculpture and more \u2014 fair prices, no gallery middleman.",
+  },
+  "/auctions": {
+    title: "Auctions \u2014 Vernis9",
+    ogType: "website",
+    description:
+      "Bid on exclusive artworks at Vernis9. Live auctions of paintings, sculpture and limited editions from emerging and established artists.",
+  },
+  "/artists": {
+    title: "Artists \u2014 Vernis9",
+    ogType: "website",
+    description:
+      "Discover artists on Vernis9. Browse profiles, view portfolios and step into each artist's own 3D exhibition room.",
+  },
+  "/blog": {
+    title: "Blog \u2014 Vernis9",
+    ogType: "website",
+    description:
+      "Stories, interviews and insights from the Vernis9 community. Read about the artists, the artworks and the world behind them.",
+  },
+  "/changelog": {
+    title: "Changelog \u2014 Vernis9",
+    ogType: "website",
+    description:
+      "What's new on Vernis9 \u2014 release notes covering features, improvements and fixes shipped to the platform.",
+  },
+  "/privacy": {
+    title: "Privacy Policy \u2014 Vernis9",
+    ogType: "website",
+    description:
+      "Vernis9 privacy policy \u2014 how we collect, use and protect your personal data, and your rights as a user.",
+  },
+  "/terms": {
+    title: "Terms of Service \u2014 Vernis9",
+    ogType: "website",
+    description:
+      "Vernis9 terms of service \u2014 the rules for using the platform as a visitor, buyer or artist.",
+  },
 };
 
 const STATIC_ROUTE_NAMES: Record<string, string> = {
@@ -92,11 +137,12 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
         { name },
       ));
     }
+    const description = staticRoute.description ?? DEFAULT_DESCRIPTION;
     return {
       title: staticRoute.title,
-      description: DEFAULT_DESCRIPTION,
+      description,
       ogTitle: staticRoute.title,
-      ogDescription: DEFAULT_DESCRIPTION,
+      ogDescription: description,
       ogType: staticRoute.ogType,
       ogUrl: `${SITE_URL}${path === "/" ? "/" : path}`,
       ogImage: DEFAULT_OG_IMAGE,
