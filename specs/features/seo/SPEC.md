@@ -352,3 +352,15 @@ After implementation, validate with:
 - [Twitter Card Validator](https://cards-dev.twitter.com/validator) — Twitter cards
 - [Google Search Console](https://search.google.com/search-console) — sitemap submission, indexing status
 - Lighthouse SEO audit (Chrome DevTools) — overall score
+
+## Search-Engine Property Ownership
+
+Recorded for handoff continuity — if access to a property is ever lost, this is who to contact / which account to recover.
+
+| Search engine | Property | Verification method | Owner account |
+|---|---|---|---|
+| Google Search Console | `https://vernis9.art` (URL prefix) | _to be recorded_ | `<owner: Liviu's primary Google account>` |
+| Google Search Console | `https://vernis9.nl` (URL prefix — 301 redirect to `.art`, registered to track redirect signals) | _to be recorded_ | `<owner: Liviu's primary Google account>` |
+| Bing Webmaster Tools | `https://vernis9.art` | XML file (`client/public/BingSiteAuth.xml`, served at `/BingSiteAuth.xml`) | `<owner: Liviu's primary Microsoft account>` |
+
+**When adding new properties:** record the verification method here (file / meta tag / DNS / analytics) and update if the method ever changes. The verification artifact itself (file or meta tag) lives in `client/public/` or `client/index.html` so it survives redeploys — never rely solely on a `docker cp` into a running container.
