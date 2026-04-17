@@ -1,7 +1,7 @@
 # Feature: Marketplace
 
 **Status:** Active
-**Last Updated:** 2026-03-12
+**Last Updated:** 2026-04-17
 **Owner:** Architecture
 
 ## Summary
@@ -16,7 +16,7 @@ As an artist, I want to manage my orders through a status workflow, so that I ca
 
 ## Acceptance Criteria
 
-- [x] Store page (`/store`) lists all artworks where `isForSale = true`
+- [x] Store page (`/store`) lists artworks where `isForSale = true` (drafts are excluded — `isForSale` is clamped to false while an artwork is unpublished, see artist-dashboards/SPEC.md § Draft vs Published)
 - [x] Filter by category, search by text, sort options
 - [x] Artwork detail dialog with full specs, artist info, add-to-cart button
 - [x] Cart sidebar (Zustand + localStorage persistence) with item count badge
@@ -41,7 +41,7 @@ Any non-canceled status can transition to `canceled`. Transitions validated serv
 
 ### Database Tables
 
-- `artworks` — `id`, `title`, `description`, `imageUrl`, `artistId`, `price`, `medium`, `dimensions`, `year`, `isForSale`, `isInGallery`, `isReadyForExhibition`, `exhibitionOrder`, `category`
+- `artworks` — `id`, `title`, `description`, `imageUrl`, `artistId`, `price`, `medium`, `dimensions`, `year`, `isPublished`, `isForSale`, `isInGallery`, `isReadyForExhibition`, `exhibitionOrder`, `category`
 - `orders` — `id`, `artworkId`, `buyerName`, `buyerEmail`, `shippingAddress`, `totalAmount`, `status`, `createdAt`
 
 ### Endpoints

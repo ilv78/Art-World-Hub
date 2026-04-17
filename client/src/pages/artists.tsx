@@ -211,9 +211,9 @@ export default function Artists() {
                           <Skeleton key={i} className="aspect-square rounded-md" />
                         ))}
                       </div>
-                    ) : artistArtworks && artistArtworks.length > 0 ? (
+                    ) : artistArtworks && artistArtworks.filter(a => a.isPublished).length > 0 ? (
                       <div className="grid grid-cols-3 gap-3">
-                        {artistArtworks.slice(0, 6).map((artwork) => (
+                        {artistArtworks.filter(a => a.isPublished).slice(0, 6).map((artwork) => (
                           <div
                             key={artwork.id}
                             className="aspect-square rounded-md overflow-hidden group/artwork"

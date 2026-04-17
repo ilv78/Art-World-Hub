@@ -33,9 +33,9 @@ export interface IStorage {
   ensureArtistProfile(userId: string, opts: { firstName?: string; lastName?: string; email?: string }): Promise<Artist>;
 
   // Artworks
-  getArtworks(): Promise<ArtworkWithArtist[]>;
+  getArtworks(opts?: { includeDrafts?: boolean }): Promise<ArtworkWithArtist[]>;
   getArtwork(id: string): Promise<ArtworkWithArtist | undefined>;
-  getArtworksByArtist(artistId: string): Promise<ArtworkWithArtist[]>;
+  getArtworksByArtist(artistId: string, opts?: { includeDrafts?: boolean }): Promise<ArtworkWithArtist[]>;
   createArtwork(artwork: InsertArtwork): Promise<Artwork>;
   updateArtwork(id: string, artwork: Partial<InsertArtwork>): Promise<Artwork | undefined>;
   
@@ -66,7 +66,7 @@ export interface IStorage {
   // Blog Posts
   getBlogPosts(): Promise<BlogPostWithArtist[]>;
   getBlogPost(id: string): Promise<BlogPostWithArtist | undefined>;
-  getBlogPostsByArtist(artistId: string): Promise<BlogPostWithArtist[]>;
+  getBlogPostsByArtist(artistId: string, opts?: { includeDrafts?: boolean }): Promise<BlogPostWithArtist[]>;
   createBlogPost(blogPost: InsertBlogPost): Promise<BlogPost>;
   updateBlogPost(id: string, blogPost: Partial<InsertBlogPost>): Promise<BlogPost | undefined>;
   deleteBlogPost(id: string): Promise<boolean>;
@@ -144,12 +144,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Artworks
-  async getArtworks(): Promise<ArtworkWithArtist[]> {
-    const result = await db
+  async getArtworks(opts: { includeDrafts?: boolean } = {}): Promise<ArtworkWithArtist[]> {
+    const query = db
       .select()
       .from(artworks)
       .innerJoin(artists, eq(artworks.artistId, artists.id));
-    
+
+    const result = opts.includeDrafts
+      ? await query
+      : await query.where(eq(artworks.isPublished, true));
+
     return result.map(({ artworks: artwork, artists: artist }) => ({
       ...artwork,
       artist,
@@ -162,20 +166,27 @@ export class DatabaseStorage implements IStorage {
       .from(artworks)
       .innerJoin(artists, eq(artworks.artistId, artists.id))
       .where(eq(artworks.id, id));
-    
+
     if (result.length === 0) return undefined;
-    
+
     const { artworks: artwork, artists: artist } = result[0];
     return { ...artwork, artist };
   }
 
-  async getArtworksByArtist(artistId: string): Promise<ArtworkWithArtist[]> {
+  async getArtworksByArtist(
+    artistId: string,
+    opts: { includeDrafts?: boolean } = {},
+  ): Promise<ArtworkWithArtist[]> {
+    const where = opts.includeDrafts
+      ? eq(artworks.artistId, artistId)
+      : and(eq(artworks.artistId, artistId), eq(artworks.isPublished, true));
+
     const result = await db
       .select()
       .from(artworks)
       .innerJoin(artists, eq(artworks.artistId, artists.id))
-      .where(eq(artworks.artistId, artistId));
-    
+      .where(where);
+
     return result.map(({ artworks: artwork, artists: artist }) => ({
       ...artwork,
       artist,
@@ -359,12 +370,19 @@ export class DatabaseStorage implements IStorage {
     return { ...post, artist };
   }
 
-  async getBlogPostsByArtist(artistId: string): Promise<BlogPostWithArtist[]> {
+  async getBlogPostsByArtist(
+    artistId: string,
+    opts: { includeDrafts?: boolean } = {},
+  ): Promise<BlogPostWithArtist[]> {
+    const where = opts.includeDrafts
+      ? eq(blogPosts.artistId, artistId)
+      : and(eq(blogPosts.artistId, artistId), eq(blogPosts.isPublished, true));
+
     const result = await db
       .select()
       .from(blogPosts)
       .innerJoin(artists, eq(blogPosts.artistId, artists.id))
-      .where(eq(blogPosts.artistId, artistId))
+      .where(where)
       .orderBy(desc(blogPosts.createdAt));
     
     return result.map(({ blog_posts: post, artists: artist }) => ({

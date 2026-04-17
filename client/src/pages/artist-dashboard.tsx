@@ -112,6 +112,8 @@ export default function ArtistDashboard() {
   const [blogDialogOpen, setBlogDialogOpen] = useState(false);
   const [editingArtwork, setEditingArtwork] = useState<ArtworkWithArtist | null>(null);
   const [editingBlogPost, setEditingBlogPost] = useState<BlogPost | null>(null);
+  const [portfolioTab, setPortfolioTab] = useState<"published" | "drafts">("published");
+  const [blogTab, setBlogTab] = useState<"published" | "drafts">("published");
 
   const [profileForm, setProfileForm] = useState({
     name: "",
@@ -134,6 +136,7 @@ export default function ArtistDashboard() {
     dimensions: "",
     year: new Date().getFullYear().toString(),
     category: "painting",
+    isPublished: false,
     isForSale: true,
     isReadyForExhibition: false,
     exhibitionOrder: "",
@@ -264,12 +267,13 @@ export default function ArtistDashboard() {
     mutationFn: async (data: InsertArtwork) => {
       return apiRequest("POST", "/api/artworks", data);
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/artists", selectedArtistId, "artworks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/artists", selectedArtistId, "gallery"] });
       queryClient.invalidateQueries({ queryKey: ["/api/artworks"] });
       setArtworkDialogOpen(false);
       resetArtworkForm();
+      setPortfolioTab(variables.isPublished ? "published" : "drafts");
       toast({ title: "Artwork created successfully" });
     },
     onError: () => {
@@ -314,10 +318,11 @@ export default function ArtistDashboard() {
     mutationFn: async (data: InsertBlogPost) => {
       return apiRequest("POST", "/api/blog", data);
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/artists", selectedArtistId, "blog"] });
       setBlogDialogOpen(false);
       resetBlogForm();
+      setBlogTab(variables.isPublished ? "published" : "drafts");
       toast({ title: "Blog post created successfully" });
     },
     onError: () => {
@@ -364,6 +369,7 @@ export default function ArtistDashboard() {
       dimensions: "",
       year: new Date().getFullYear().toString(),
       category: "painting",
+      isPublished: false,
       isForSale: true,
       isReadyForExhibition: false,
       exhibitionOrder: "",
@@ -393,6 +399,7 @@ export default function ArtistDashboard() {
       dimensions: artworkForm.dimensions || null,
       year: artworkForm.year ? parseInt(artworkForm.year) : null,
       category: artworkForm.category || "painting",
+      isPublished: artworkForm.isPublished,
       isForSale: artworkForm.isForSale,
       isReadyForExhibition: artworkForm.isReadyForExhibition,
       exhibitionOrder: artworkForm.exhibitionOrder ? parseInt(artworkForm.exhibitionOrder) : null,
@@ -435,6 +442,7 @@ export default function ArtistDashboard() {
       dimensions: artwork.dimensions || "",
       year: artwork.year?.toString() || "",
       category: artwork.category || "painting",
+      isPublished: artwork.isPublished ?? false,
       isForSale: artwork.isForSale ?? true,
       isReadyForExhibition: artwork.isReadyForExhibition ?? false,
       exhibitionOrder: artwork.exhibitionOrder?.toString() || "",
@@ -453,6 +461,176 @@ export default function ArtistDashboard() {
     });
     setBlogDialogOpen(true);
   };
+
+  const publishedArtworkList = (artworks ?? []).filter((a) => a.isPublished);
+  const draftArtworkList = (artworks ?? []).filter((a) => !a.isPublished);
+  const publishedBlogList = (blogPosts ?? []).filter((p) => p.isPublished);
+  const draftBlogList = (blogPosts ?? []).filter((p) => !p.isPublished);
+
+  const togglePublishArtwork = (artwork: ArtworkWithArtist) => {
+    updateArtworkMutation.mutate({
+      id: artwork.id,
+      data: { isPublished: !artwork.isPublished } as Partial<InsertArtwork>,
+    });
+  };
+
+  const togglePublishBlogPost = (post: BlogPost) => {
+    updateBlogPostMutation.mutate({
+      id: post.id,
+      data: { isPublished: !post.isPublished } as Partial<InsertBlogPost>,
+    });
+  };
+
+  const renderArtworkCard = (artwork: ArtworkWithArtist) => (
+    <Card key={artwork.id} className="overflow-hidden" data-testid={`card-artwork-${artwork.id}`}>
+      <div className="aspect-4/3 relative">
+        <img
+          src={artwork.imageUrl}
+          alt={artwork.title}
+          loading="lazy"
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+          {!artwork.isPublished && (
+            <Badge variant="secondary">
+              <EyeOff className="h-3 w-3 mr-1" />
+              Draft
+            </Badge>
+          )}
+          {artwork.isPublished && !artwork.isForSale && (
+            <Badge variant="secondary">Not for sale</Badge>
+          )}
+          {artwork.isPublished && artwork.isReadyForExhibition && (
+            <Badge variant="default">
+              In Gallery{artwork.exhibitionOrder ? ` #${artwork.exhibitionOrder}` : ""}
+            </Badge>
+          )}
+        </div>
+      </div>
+      <CardContent className="p-4">
+        <h3 className="font-semibold truncate">{artwork.title}</h3>
+        {artwork.isPublished && artwork.isForSale && (
+          <p className="text-sm text-muted-foreground">{formatPrice(artwork.price)}</p>
+        )}
+      </CardContent>
+      <CardFooter className="p-4 pt-0 gap-2 flex-wrap">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => togglePublishArtwork(artwork)}
+          disabled={updateArtworkMutation.isPending}
+          data-testid={`button-toggle-publish-artwork-${artwork.id}`}
+        >
+          {artwork.isPublished ? (
+            <>
+              <EyeOff className="h-4 w-4 mr-1" />
+              Unpublish
+            </>
+          ) : (
+            <>
+              <Eye className="h-4 w-4 mr-1" />
+              Publish
+            </>
+          )}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => openEditArtwork(artwork)}
+          data-testid={`button-edit-artwork-${artwork.id}`}
+        >
+          <Edit className="h-4 w-4 mr-1" />
+          Edit
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => deleteArtworkMutation.mutate(artwork.id)}
+          disabled={deleteArtworkMutation.isPending}
+          data-testid={`button-delete-artwork-${artwork.id}`}
+        >
+          <Trash2 className="h-4 w-4 mr-1" />
+          Delete
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+
+  const renderBlogCard = (post: BlogPost) => (
+    <Card key={post.id} data-testid={`card-blog-${post.id}`}>
+      <CardHeader className="flex-row items-start justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <CardTitle className="truncate">{post.title}</CardTitle>
+            <Badge variant={post.isPublished ? "default" : "secondary"}>
+              {post.isPublished ? (
+                <>
+                  <Eye className="h-3 w-3 mr-1" />
+                  Published
+                </>
+              ) : (
+                <>
+                  <EyeOff className="h-3 w-3 mr-1" />
+                  Draft
+                </>
+              )}
+            </Badge>
+          </div>
+          <CardDescription>
+            {post.excerpt || post.content.substring(0, 150) + "..."}
+          </CardDescription>
+        </div>
+        {post.coverImageUrl && (
+          <img
+            src={post.coverImageUrl}
+            alt={post.title}
+            loading="lazy"
+            className="w-24 h-16 object-cover rounded-md"
+          />
+        )}
+      </CardHeader>
+      <CardFooter className="gap-2 flex-wrap">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => togglePublishBlogPost(post)}
+          disabled={updateBlogPostMutation.isPending}
+          data-testid={`button-toggle-publish-blog-${post.id}`}
+        >
+          {post.isPublished ? (
+            <>
+              <EyeOff className="h-4 w-4 mr-1" />
+              Unpublish
+            </>
+          ) : (
+            <>
+              <Eye className="h-4 w-4 mr-1" />
+              Publish
+            </>
+          )}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => openEditBlogPost(post)}
+          data-testid={`button-edit-blog-${post.id}`}
+        >
+          <Edit className="h-4 w-4 mr-1" />
+          Edit
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => deleteBlogPostMutation.mutate(post.id)}
+          disabled={deleteBlogPostMutation.isPending}
+          data-testid={`button-delete-blog-${post.id}`}
+        >
+          <Trash2 className="h-4 w-4 mr-1" />
+          Delete
+        </Button>
+      </CardFooter>
+    </Card>
+  );
 
   // Loading state
   if (authLoading || myArtistLoading) {
@@ -644,21 +822,46 @@ export default function ArtistDashboard() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Switch
+                      id="artworkIsPublished"
+                      checked={artworkForm.isPublished}
+                      onCheckedChange={(checked) => setArtworkForm({
+                        ...artworkForm,
+                        isPublished: checked,
+                        isForSale: checked ? artworkForm.isForSale : false,
+                        isReadyForExhibition: checked ? artworkForm.isReadyForExhibition : false,
+                      })}
+                      data-testid="switch-artwork-published"
+                    />
+                    <Label htmlFor="artworkIsPublished">Publish to portfolio</Label>
+                  </div>
+                  {!artworkForm.isPublished && (
+                    <p className="text-xs text-muted-foreground -mt-2">
+                      Drafts stay private. Publish to toggle sale and gallery options.
+                    </p>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <Switch
                       id="isForSale"
                       checked={artworkForm.isForSale}
+                      disabled={!artworkForm.isPublished}
                       onCheckedChange={(checked) => setArtworkForm({ ...artworkForm, isForSale: checked })}
                       data-testid="switch-artwork-for-sale"
                     />
-                    <Label htmlFor="isForSale">Available for sale</Label>
+                    <Label htmlFor="isForSale" className={!artworkForm.isPublished ? "text-muted-foreground" : ""}>
+                      Available for sale
+                    </Label>
                   </div>
                   <div className="flex items-center gap-2">
                     <Switch
                       id="isReadyForExhibition"
                       checked={artworkForm.isReadyForExhibition}
+                      disabled={!artworkForm.isPublished}
                       onCheckedChange={(checked) => setArtworkForm({ ...artworkForm, isReadyForExhibition: checked })}
                       data-testid="switch-artwork-exhibition"
                     />
-                    <Label htmlFor="isReadyForExhibition">Ready for exhibition</Label>
+                    <Label htmlFor="isReadyForExhibition" className={!artworkForm.isPublished ? "text-muted-foreground" : ""}>
+                      Ready for exhibition
+                    </Label>
                   </div>
                   {artworkForm.isReadyForExhibition && (
                     <div className="space-y-1.5">
@@ -696,57 +899,38 @@ export default function ArtistDashboard() {
               ))}
             </div>
           ) : artworks && artworks.length > 0 ? (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {artworks.map((artwork) => (
-                <Card key={artwork.id} className="overflow-hidden" data-testid={`card-artwork-${artwork.id}`}>
-                  <div className="aspect-4/3 relative">
-                    <img
-                      src={artwork.imageUrl}
-                      alt={artwork.title}
-                      loading="lazy"
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
-                      {!artwork.isForSale && (
-                        <Badge variant="secondary">Not for sale</Badge>
-                      )}
-                      {artwork.isReadyForExhibition && (
-                        <Badge variant="default">
-                          In Gallery{artwork.exhibitionOrder ? ` #${artwork.exhibitionOrder}` : ''}
-                        </Badge>
-                      )}
-                    </div>
+            <Tabs value={portfolioTab} onValueChange={(v) => setPortfolioTab(v as "published" | "drafts")}>
+              <TabsList>
+                <TabsTrigger value="published" data-testid="tab-artworks-published">
+                  Published ({publishedArtworkList.length})
+                </TabsTrigger>
+                <TabsTrigger value="drafts" data-testid="tab-artworks-drafts">
+                  Drafts ({draftArtworkList.length})
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="published" className="mt-4">
+                {publishedArtworkList.length > 0 ? (
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {publishedArtworkList.map(renderArtworkCard)}
                   </div>
-                  <CardContent className="p-4">
-                    <h3 className="font-semibold truncate">{artwork.title}</h3>
-                    {artwork.isForSale && (
-                      <p className="text-sm text-muted-foreground">{formatPrice(artwork.price)}</p>
-                    )}
-                  </CardContent>
-                  <CardFooter className="p-4 pt-0 gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => openEditArtwork(artwork)}
-                      data-testid={`button-edit-artwork-${artwork.id}`}
-                    >
-                      <Edit className="h-4 w-4 mr-1" />
-                      Edit
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => deleteArtworkMutation.mutate(artwork.id)}
-                      disabled={deleteArtworkMutation.isPending}
-                      data-testid={`button-delete-artwork-${artwork.id}`}
-                    >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Delete
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
+                ) : (
+                  <Card className="p-8 text-center">
+                    <p className="text-muted-foreground text-sm">No published artworks. Open a draft and flip its Publish switch.</p>
+                  </Card>
+                )}
+              </TabsContent>
+              <TabsContent value="drafts" className="mt-4">
+                {draftArtworkList.length > 0 ? (
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {draftArtworkList.map(renderArtworkCard)}
+                  </div>
+                ) : (
+                  <Card className="p-8 text-center">
+                    <p className="text-muted-foreground text-sm">No drafts. New artworks default to drafts until you publish them.</p>
+                  </Card>
+                )}
+              </TabsContent>
+            </Tabs>
           ) : (
             <Card className="p-12 text-center">
               <Palette className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -862,64 +1046,34 @@ export default function ArtistDashboard() {
               ))}
             </div>
           ) : blogPosts && blogPosts.length > 0 ? (
-            <div className="space-y-4">
-              {blogPosts.map((post) => (
-                <Card key={post.id} data-testid={`card-blog-${post.id}`}>
-                  <CardHeader className="flex-row items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <CardTitle className="truncate">{post.title}</CardTitle>
-                        <Badge variant={post.isPublished ? "default" : "secondary"}>
-                          {post.isPublished ? (
-                            <>
-                              <Eye className="h-3 w-3 mr-1" />
-                              Published
-                            </>
-                          ) : (
-                            <>
-                              <EyeOff className="h-3 w-3 mr-1" />
-                              Draft
-                            </>
-                          )}
-                        </Badge>
-                      </div>
-                      <CardDescription>
-                        {post.excerpt || post.content.substring(0, 150) + "..."}
-                      </CardDescription>
-                    </div>
-                    {post.coverImageUrl && (
-                      <img
-                        src={post.coverImageUrl}
-                        alt={post.title}
-                        loading="lazy"
-                        className="w-24 h-16 object-cover rounded-md"
-                      />
-                    )}
-                  </CardHeader>
-                  <CardFooter className="gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => openEditBlogPost(post)}
-                      data-testid={`button-edit-blog-${post.id}`}
-                    >
-                      <Edit className="h-4 w-4 mr-1" />
-                      Edit
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => deleteBlogPostMutation.mutate(post.id)}
-                      disabled={deleteBlogPostMutation.isPending}
-                      data-testid={`button-delete-blog-${post.id}`}
-                    >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Delete
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
+            <Tabs value={blogTab} onValueChange={(v) => setBlogTab(v as "published" | "drafts")}>
+              <TabsList>
+                <TabsTrigger value="published" data-testid="tab-blog-published">
+                  Published ({publishedBlogList.length})
+                </TabsTrigger>
+                <TabsTrigger value="drafts" data-testid="tab-blog-drafts">
+                  Drafts ({draftBlogList.length})
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="published" className="mt-4">
+                {publishedBlogList.length > 0 ? (
+                  <div className="space-y-4">{publishedBlogList.map(renderBlogCard)}</div>
+                ) : (
+                  <Card className="p-8 text-center">
+                    <p className="text-muted-foreground text-sm">No published posts yet.</p>
+                  </Card>
+                )}
+              </TabsContent>
+              <TabsContent value="drafts" className="mt-4">
+                {draftBlogList.length > 0 ? (
+                  <div className="space-y-4">{draftBlogList.map(renderBlogCard)}</div>
+                ) : (
+                  <Card className="p-8 text-center">
+                    <p className="text-muted-foreground text-sm">No drafts.</p>
+                  </Card>
+                )}
+              </TabsContent>
+            </Tabs>
           ) : (
             <Card className="p-12 text-center">
               <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />

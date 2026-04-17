@@ -50,6 +50,13 @@
       "when": 1774618261647,
       "tag": "0006_real_landau",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1776410916610,
+      "tag": "0007_grey_mac_gargan",
+      "breakpoints": true
     }
   ]
 }

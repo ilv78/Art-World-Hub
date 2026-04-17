@@ -1,7 +1,7 @@
 # Feature: Blog System
 
 **Status:** Active
-**Last Updated:** 2026-03-12
+**Last Updated:** 2026-04-17
 **Owner:** Architecture
 
 ## Summary
@@ -16,7 +16,7 @@ As an artist, I want to write and publish blog posts, so that I can share my tho
 
 - [x] Blog list page (`/blog`) displays all published posts in a 3-column grid
 - [x] Post detail page (`/blog/:id`) shows full content with cover image and artist link
-- [x] Dashboard blog tab shows all posts (drafts + published) with status badges
+- [x] Dashboard blog tab splits posts into **Published** and **Drafts** sub-tabs with status badges and inline publish/unpublish
 - [x] Create post dialog: title, excerpt, cover image upload, content, publish toggle
 - [x] Edit post: same form pre-populated, partial updates via PATCH
 - [x] Delete post: permanent removal
@@ -36,8 +36,8 @@ As an artist, I want to write and publish blog posts, so that I can share my tho
 | Method | Endpoint | Auth | Purpose |
 |--------|----------|------|---------|
 | GET | `/api/blog` | No | List all published posts (with artist name) |
-| GET | `/api/blog/:id` | No | Single post detail (no publish check) |
-| GET | `/api/artists/:id/blog` | No | All posts by artist (includes drafts for owner) |
+| GET | `/api/blog/:id` | No | Single post detail; returns 404 for drafts unless the viewer is the owning artist |
+| GET | `/api/artists/:id/blog` | No | Posts by artist — includes drafts when the authenticated viewer is the owning artist, otherwise published-only |
 | POST | `/api/blog` | Yes | Create blog post |
 | PATCH | `/api/blog/:id` | Yes | Update post fields |
 | DELETE | `/api/blog/:id` | Yes | Delete post |

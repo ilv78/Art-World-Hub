@@ -129,10 +129,31 @@ describe("DatabaseStorage", () => {
   });
 
   describe("getArtworks", () => {
-    it("transforms join result into ArtworkWithArtist[]", async () => {
+    it("filters to published by default and transforms join result", async () => {
       const joinResult = [
         {
-          artworks: { id: "a1", title: "Painting", artistId: "art1", description: "desc", imageUrl: "url", price: "100", medium: "oil", dimensions: null, year: null, isForSale: true, isInGallery: true, isReadyForExhibition: false, exhibitionOrder: null, category: "painting" },
+          artworks: { id: "a1", title: "Painting", artistId: "art1", description: "desc", imageUrl: "url", price: "100", medium: "oil", dimensions: null, year: null, isPublished: true, isForSale: true, isInGallery: true, isReadyForExhibition: false, exhibitionOrder: null, category: "painting" },
+          artists: { id: "art1", name: "Alice", bio: "Bio", userId: null, avatarUrl: null, country: null, specialization: null, email: null, galleryLayout: null, socialLinks: null },
+        },
+      ];
+
+      const selectMock = vi.mocked(db.select);
+      const chain = selectMock();
+      vi.mocked(chain.from).mockReturnThis();
+      vi.mocked(chain.innerJoin).mockReturnThis();
+      vi.mocked(chain.where).mockResolvedValueOnce(joinResult as any);
+
+      const result = await storage.getArtworks();
+      expect(result).toHaveLength(1);
+      expect(result[0].title).toBe("Painting");
+      expect(result[0].artist.name).toBe("Alice");
+      expect(chain.where).toHaveBeenCalled();
+    });
+
+    it("skips the published filter when includeDrafts is set", async () => {
+      const joinResult = [
+        {
+          artworks: { id: "a1", title: "Draft", artistId: "art1", description: "", imageUrl: "url", price: "0", medium: "oil", dimensions: null, year: null, isPublished: false, isForSale: false, isInGallery: false, isReadyForExhibition: false, exhibitionOrder: null, category: "painting" },
           artists: { id: "art1", name: "Alice", bio: "Bio", userId: null, avatarUrl: null, country: null, specialization: null, email: null, galleryLayout: null, socialLinks: null },
         },
       ];
@@ -142,10 +163,9 @@ describe("DatabaseStorage", () => {
       vi.mocked(chain.from).mockReturnThis();
       vi.mocked(chain.innerJoin).mockResolvedValueOnce(joinResult as any);
 
-      const result = await storage.getArtworks();
+      const result = await storage.getArtworks({ includeDrafts: true });
       expect(result).toHaveLength(1);
-      expect(result[0].title).toBe("Painting");
-      expect(result[0].artist.name).toBe("Alice");
+      expect(result[0].isPublished).toBe(false);
     });
   });
 

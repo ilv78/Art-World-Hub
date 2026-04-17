@@ -77,6 +77,7 @@ export default function ArtistProfile() {
   });
 
   const publishedPosts = blogPosts?.filter(post => post.isPublished) || [];
+  const publishedArtworks = artworks?.filter(a => a.isPublished) || [];
   const galleryArtworks = galleryData?.artworks || [];
   const galleryLayout = galleryData?.layout;
 
@@ -218,7 +219,7 @@ export default function ArtistProfile() {
             </TabsTrigger>
             <TabsTrigger value="portfolio" data-testid="tab-profile-portfolio">
               <ImageIcon className="h-4 w-4 mr-2" />
-              Portfolio ({artworks?.length || 0})
+              Portfolio ({publishedArtworks.length})
             </TabsTrigger>
             <TabsTrigger value="blog" data-testid="tab-profile-blog">
               <FileText className="h-4 w-4 mr-2" />
@@ -259,10 +260,10 @@ export default function ArtistProfile() {
                   <Skeleton key={i} className="aspect-4/3 rounded-md" />
                 ))}
               </div>
-            ) : artworks && artworks.length > 0 ? (
+            ) : publishedArtworks.length > 0 ? (
               <>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {artworks.map((artwork) => (
+                  {publishedArtworks.map((artwork) => (
                     <Card 
                       key={artwork.id} 
                       className="group cursor-pointer hover-elevate"
