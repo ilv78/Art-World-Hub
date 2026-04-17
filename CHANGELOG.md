@@ -8,7 +8,13 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
-_Nothing yet — all recent work included in v3.9.0 below._
+_Nothing yet — all recent work included in v3.10.0 below._
+
+## [3.10.0] - 2026-04-17
+
+### Added
+- SEO: add public artwork detail pages (/artworks/:slug) with full meta + VisualArtwork JSON-LD + per-artwork OG image ([#503](https://github.com/ilv78/Art-World-Hub/issues/503))
+- SEO: add WebSite + SearchAction and FAQPage JSON-LD on homepage ([#501](https://github.com/ilv78/Art-World-Hub/issues/501))
 
 ## [3.9.0] - 2026-04-17
 
