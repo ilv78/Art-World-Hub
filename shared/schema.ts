@@ -30,6 +30,7 @@ export type Artist = typeof artists.$inferSelect;
 export const artworks = pgTable("artworks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: text("title").notNull(),
+  slug: text("slug").notNull().unique(),
   description: text("description").notNull(),
   imageUrl: text("image_url").notNull(),
   artistId: varchar("artist_id").references(() => artists.id).notNull(),
@@ -45,7 +46,7 @@ export const artworks = pgTable("artworks", {
   category: text("category").notNull(),
 });
 
-export const insertArtworkSchema = createInsertSchema(artworks).omit({ id: true });
+export const insertArtworkSchema = createInsertSchema(artworks).omit({ id: true, slug: true });
 export const updateArtworkSchema = insertArtworkSchema.partial().omit({ artistId: true });
 export type InsertArtwork = z.infer<typeof insertArtworkSchema>;
 export type Artwork = typeof artworks.$inferSelect;

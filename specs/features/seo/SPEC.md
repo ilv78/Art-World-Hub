@@ -15,7 +15,8 @@ Prepare Vernis9 for search engine discovery and social sharing. The site is a cl
 | `robots.txt` | Done | #364, #376 — dynamic route at `/robots.txt` (blocks indexing on non-production) |
 | `sitemap.xml` | Done | #365 — dynamic endpoint at `/sitemap.xml` |
 | Per-page meta tags | Done | #366 — server-side injection + react-helmet-async |
-| Structured data (JSON-LD) | Done | #367 — Organization, Person, BlogPosting, BreadcrumbList; #501 — WebSite+SearchAction, FAQPage (homepage) |
+| Structured data (JSON-LD) | Done | #367 — Organization, Person, BlogPosting, BreadcrumbList; #501 — WebSite+SearchAction, FAQPage (homepage); #503 — VisualArtwork + Offer on `/artworks/:slug` |
+| Public artwork detail pages | Done | #503 — `/artworks/:slug` server-rendered meta + JSON-LD, sitemap entries |
 | Twitter cards | Done | #366 — `twitter:card`, `twitter:title`, `twitter:description`, `twitter:image` |
 | Canonical URLs | Done | #366 — `<link rel="canonical">` on every page |
 | www → non-www redirect | Done | #385 — nginx 301 redirect `www.vernis9.art` → `vernis9.art` |
@@ -267,27 +268,35 @@ FAQ copy is hard-coded in `shared/faqs.ts` (5 entries covering what Vernis9 is, 
 }
 ```
 
-**Artwork (store/gallery) — VisualArtwork:**
+**Artwork detail (`/artworks/:slug`) — VisualArtwork** (implemented in #503, only when `isPublished = true`):
 ```json
 {
   "@context": "https://schema.org",
   "@type": "VisualArtwork",
   "name": "Artwork Title",
+  "url": "https://vernis9.art/artworks/red-harbor-sunset-4b2c19a7",
   "image": "image URL",
+  "description": "Artwork description (≤160 chars)",
   "creator": {
     "@type": "Person",
-    "name": "Artist Name"
+    "name": "Artist Name",
+    "url": "https://vernis9.art/artists/:artistId"
   },
-  "description": "Artwork description",
-  "artMedium": "medium",
+  "artMedium": "Oil on canvas",
+  "dateCreated": "2024",
+  "genre": "Painting",
   "offers": {
     "@type": "Offer",
-    "price": "price",
+    "price": "1250.00",
     "priceCurrency": "EUR",
-    "availability": "https://schema.org/InStock"
+    "availability": "https://schema.org/InStock",
+    "url": "https://vernis9.art/artworks/red-harbor-sunset-4b2c19a7"
   }
 }
 ```
+`offers` is only emitted when `artwork.isForSale && price > 0`. Structured width/height are intentionally omitted — `dimensions` is a free-text column, not structured; a follow-up issue can add `widthCm`/`heightCm` if we decide to enrich.
+
+The URL scheme is `/artworks/<slugified-title>-<first-8-chars-of-uuid>` (e.g. `/artworks/red-harbor-sunset-4b2c19a7`). Slug generation lives in `shared/artwork-slug.ts` and is used both by the SQL backfill in migration `0008_superb_silver_centurion.sql` and by the server-side `createArtwork` path, so all rows — existing and new — have a stable, unique slug. Privacy gate: `isPublished = true` is required; drafts 404.
 
 **Sitewide — BreadcrumbList:**
 ```json

@@ -287,7 +287,13 @@ export default function ArtistProfile() {
                         </div>
                       </div>
                       <CardContent className="p-4">
-                        <h3 className="font-semibold">{artwork.title}</h3>
+                        <Link
+                          href={`/artworks/${artwork.slug}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="hover:text-primary transition-colors"
+                        >
+                          <h3 className="font-semibold">{artwork.title}</h3>
+                        </Link>
                         <div className="flex items-center justify-between mt-2">
                           {artwork.isForSale && (
                             <span className="text-lg font-bold text-primary">{formatPrice(artwork.price)}</span>

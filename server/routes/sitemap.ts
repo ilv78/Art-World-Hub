@@ -14,9 +14,10 @@ router.get("/sitemap.xml", async (_req, res) => {
   }
 
   try {
-    const [artists, blogPosts] = await Promise.all([
+    const [artists, blogPosts, artworks] = await Promise.all([
       storage.getArtists(),
       storage.getAllBlogPosts(),
+      storage.getArtworks(),
     ]);
 
     const staticRoutes = [
@@ -40,6 +41,12 @@ router.get("/sitemap.xml", async (_req, res) => {
     for (const artist of artists) {
       urls.push(
         `  <url>\n    <loc>${SITE_URL}/artists/${artist.id}</loc>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>`
+      );
+    }
+
+    for (const artwork of artworks) {
+      urls.push(
+        `  <url>\n    <loc>${SITE_URL}/artworks/${artwork.slug}</loc>\n    <changefreq>monthly</changefreq>\n    <priority>0.6</priority>\n  </url>`
       );
     }
 

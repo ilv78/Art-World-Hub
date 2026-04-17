@@ -23,6 +23,8 @@ import { type User, type UserRole, users } from "@shared/models/auth";
 import { sessions } from "@shared/models/auth";
 import { db } from "./db";
 import { eq, desc, asc, and, sql } from "drizzle-orm";
+import { randomUUID } from "crypto";
+import { makeArtworkSlug } from "@shared/artwork-slug";
 
 export interface IStorage {
   // Artists
@@ -35,6 +37,8 @@ export interface IStorage {
   // Artworks
   getArtworks(opts?: { includeDrafts?: boolean }): Promise<ArtworkWithArtist[]>;
   getArtwork(id: string): Promise<ArtworkWithArtist | undefined>;
+  getPublishedArtworkBySlug(slug: string): Promise<ArtworkWithArtist | undefined>;
+  getRelatedArtworksByArtist(artistId: string, excludeId: string, limit: number): Promise<ArtworkWithArtist[]>;
   getArtworksByArtist(artistId: string, opts?: { includeDrafts?: boolean }): Promise<ArtworkWithArtist[]>;
   createArtwork(artwork: InsertArtwork): Promise<Artwork>;
   updateArtwork(id: string, artwork: Partial<InsertArtwork>): Promise<Artwork | undefined>;
@@ -173,6 +177,43 @@ export class DatabaseStorage implements IStorage {
     return { ...artwork, artist };
   }
 
+  async getPublishedArtworkBySlug(slug: string): Promise<ArtworkWithArtist | undefined> {
+    const result = await db
+      .select()
+      .from(artworks)
+      .innerJoin(artists, eq(artworks.artistId, artists.id))
+      .where(and(eq(artworks.slug, slug), eq(artworks.isPublished, true)));
+
+    if (result.length === 0) return undefined;
+
+    const { artworks: artwork, artists: artist } = result[0];
+    return { ...artwork, artist };
+  }
+
+  async getRelatedArtworksByArtist(
+    artistId: string,
+    excludeId: string,
+    limit: number,
+  ): Promise<ArtworkWithArtist[]> {
+    const result = await db
+      .select()
+      .from(artworks)
+      .innerJoin(artists, eq(artworks.artistId, artists.id))
+      .where(
+        and(
+          eq(artworks.artistId, artistId),
+          eq(artworks.isPublished, true),
+          sql`${artworks.id} <> ${excludeId}`,
+        ),
+      )
+      .limit(limit);
+
+    return result.map(({ artworks: artwork, artists: artist }) => ({
+      ...artwork,
+      artist,
+    }));
+  }
+
   async getArtworksByArtist(
     artistId: string,
     opts: { includeDrafts?: boolean } = {},
@@ -194,7 +235,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createArtwork(insertArtwork: InsertArtwork): Promise<Artwork> {
-    const [artwork] = await db.insert(artworks).values(insertArtwork).returning();
+    const id = randomUUID();
+    const slug = makeArtworkSlug(insertArtwork.title, id);
+    const [artwork] = await db
+      .insert(artworks)
+      .values({ ...insertArtwork, id, slug })
+      .returning();
     return artwork;
   }
 

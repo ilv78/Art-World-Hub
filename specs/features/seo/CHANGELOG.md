@@ -1,5 +1,14 @@
 # SEO Feature Changelog
 
+## 2026-04-17 — Public artwork detail pages with VisualArtwork JSON-LD (#503)
+- New public route `GET /artworks/:slug` with server-rendered meta tags + `VisualArtwork` JSON-LD (creator Person, artMedium, dateCreated, genre). `offers` with EUR currency + `InStock` emitted when `isForSale && price > 0`.
+- New `slug` column on `artworks` with unique index (migration `0008_superb_silver_centurion.sql`). Backfilled for existing rows; generated server-side on new artworks via `shared/artwork-slug.ts`.
+- Privacy gate: only `isPublished = true` artworks resolve; drafts return 404.
+- Sitemap now includes one `<url>` per published artwork (priority 0.6, monthly).
+- Reciprocal links: artwork cards and artist-profile artwork grids now have real `<a href>` anchors on titles so crawlers can follow. Existing quick-view dialog UX preserved.
+- New API endpoint `GET /api/public/artworks/:slug` returning `{ artwork, related }` (related = up to 6 other published works by the same artist).
+- Tests: new `server/__tests__/artwork-slug.test.ts` + extended `meta.test.ts` coverage.
+
 ## 2026-04-17 — WebSite + FAQPage JSON-LD on homepage (#501)
 - Added `WebSite` schema with `potentialAction: SearchAction` targeting `/store?search={search_term_string}` — enables Google sitelinks search box (param name matches the actual store page's query param)
 - Added `FAQPage` schema with 5 hard-coded Q&A entries (what Vernis9 is, who can sell, no commission, how to buy, shipping)

@@ -467,6 +467,23 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/public/artworks/:slug", async (req, res) => {
+    try {
+      const artwork = await storage.getPublishedArtworkBySlug(req.params.slug);
+      if (!artwork) {
+        return res.status(404).json({ error: "Artwork not found" });
+      }
+      const related = await storage.getRelatedArtworksByArtist(
+        artwork.artistId,
+        artwork.id,
+        6,
+      );
+      res.json({ artwork, related });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch artwork" });
+    }
+  });
+
   app.get("/api/artworks/:id", async (req: any, res) => {
     try {
       const artwork = await storage.getArtwork(req.params.id);

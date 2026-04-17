@@ -231,6 +231,71 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
     }
   }
 
+  // Dynamic: /artworks/:slug
+  const artworkMatch = path.match(/^\/artworks\/([^/]+)$/);
+  if (artworkMatch) {
+    try {
+      const artwork = await storage.getPublishedArtworkBySlug(artworkMatch[1]);
+      if (artwork) {
+        const rawDescription = artwork.description || `${artwork.title} by ${artwork.artist.name} on Vernis9.`;
+        const description = rawDescription.slice(0, 160);
+        const image = toAbsoluteUrl(artwork.imageUrl);
+        const artworkUrl = `${SITE_URL}/artworks/${artwork.slug}`;
+        const title = `${artwork.title} by ${artwork.artist.name} \u2014 Vernis9`;
+        const priceNumber = Number(artwork.price);
+        const hasValidPrice = Number.isFinite(priceNumber) && priceNumber > 0;
+        const visualArtworkLd: Record<string, unknown> = {
+          "@context": "https://schema.org",
+          "@type": "VisualArtwork",
+          name: artwork.title,
+          url: artworkUrl,
+          image,
+          description,
+          creator: {
+            "@type": "Person",
+            name: artwork.artist.name,
+            url: `${SITE_URL}/artists/${artwork.artist.id}`,
+            ...(artwork.artist.avatarUrl ? { image: toAbsoluteUrl(artwork.artist.avatarUrl) } : {}),
+          },
+          artMedium: artwork.medium,
+          ...(artwork.year ? { dateCreated: String(artwork.year) } : {}),
+          ...(artwork.category ? { genre: artwork.category } : {}),
+          ...(artwork.isForSale && hasValidPrice
+            ? {
+                offers: {
+                  "@type": "Offer",
+                  price: priceNumber.toFixed(2),
+                  priceCurrency: "EUR",
+                  availability: "https://schema.org/InStock",
+                  url: artworkUrl,
+                },
+              }
+            : {}),
+        };
+        return {
+          title,
+          description,
+          ogTitle: title,
+          ogDescription: description,
+          ogType: "article",
+          ogUrl: artworkUrl,
+          ogImage: image,
+          jsonLd: [
+            visualArtworkLd,
+            breadcrumb(
+              { name: "Home", url: `${SITE_URL}/` },
+              { name: "Artists", url: `${SITE_URL}/artists` },
+              { name: artwork.artist.name, url: `${SITE_URL}/artists/${artwork.artist.id}` },
+              { name: artwork.title },
+            ),
+          ],
+        };
+      }
+    } catch {
+      // fall through to defaults
+    }
+  }
+
   // Dynamic: /blog/:id
   const blogMatch = path.match(/^\/blog\/([^/]+)$/);
   if (blogMatch) {

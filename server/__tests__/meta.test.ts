@@ -1,13 +1,51 @@
 import { describe, it, expect, vi } from "vitest";
 
+const mockStorageState: {
+  artwork: Record<string, unknown> | undefined;
+} = { artwork: undefined };
+
 vi.mock("../storage", () => ({
   storage: {
     getArtist: vi.fn().mockResolvedValue(undefined),
     getBlogPost: vi.fn().mockResolvedValue(undefined),
+    getPublishedArtworkBySlug: vi.fn(async () => mockStorageState.artwork),
   },
 }));
 
 const { resolveMetaTags } = await import("../meta");
+
+function setMockArtwork(artwork: Record<string, unknown> | undefined) {
+  mockStorageState.artwork = artwork;
+}
+
+function baseArtwork(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+    title: "Red Harbor Sunset",
+    slug: "red-harbor-sunset-aaaaaaaa",
+    description: "A bold study of evening light over the harbor.",
+    imageUrl: "/uploads/artwork-1.jpg",
+    artistId: "artist-1",
+    price: "1250.00",
+    medium: "Oil on canvas",
+    dimensions: "50 x 70 cm",
+    year: 2024,
+    isPublished: true,
+    isForSale: true,
+    isInGallery: true,
+    isReadyForExhibition: true,
+    exhibitionOrder: null,
+    category: "Painting",
+    artist: {
+      id: "artist-1",
+      name: "Ana Popescu",
+      avatarUrl: "/uploads/avatar-ana.jpg",
+      bio: null,
+      specialization: null,
+    },
+    ...overrides,
+  };
+}
 
 function findLd(
   jsonLd: Record<string, unknown>[],
@@ -66,5 +104,54 @@ describe("resolveMetaTags — homepage JSON-LD (issue #501)", () => {
     const types = meta.jsonLd.map((ld) => ld["@type"]);
     expect(types).not.toContain("WebSite");
     expect(types).not.toContain("FAQPage");
+  });
+});
+
+describe("resolveMetaTags — /artworks/:slug (issue #503)", () => {
+  it("emits VisualArtwork JSON-LD with creator + Offer when for-sale", async () => {
+    setMockArtwork(baseArtwork());
+    const meta = await resolveMetaTags("/artworks/red-harbor-sunset-aaaaaaaa");
+    const types = meta.jsonLd.map((ld) => ld["@type"]);
+    expect(types).toContain("VisualArtwork");
+    expect(types).toContain("BreadcrumbList");
+
+    const visual = findLd(meta.jsonLd, "VisualArtwork")!;
+    expect(visual.name).toBe("Red Harbor Sunset");
+    expect(visual.artMedium).toBe("Oil on canvas");
+    expect(visual.dateCreated).toBe("2024");
+
+    const creator = visual.creator as Record<string, unknown>;
+    expect(creator["@type"]).toBe("Person");
+    expect(creator.name).toBe("Ana Popescu");
+
+    const offer = visual.offers as Record<string, unknown>;
+    expect(offer["@type"]).toBe("Offer");
+    expect(offer.price).toBe("1250.00");
+    expect(offer.priceCurrency).toBe("EUR");
+    expect(offer.availability).toBe("https://schema.org/InStock");
+
+    expect(meta.title).toBe("Red Harbor Sunset by Ana Popescu — Vernis9");
+    expect(meta.ogType).toBe("article");
+  });
+
+  it("omits Offer block when not for sale", async () => {
+    setMockArtwork(baseArtwork({ isForSale: false }));
+    const meta = await resolveMetaTags("/artworks/red-harbor-sunset-aaaaaaaa");
+    const visual = findLd(meta.jsonLd, "VisualArtwork")!;
+    expect(visual.offers).toBeUndefined();
+  });
+
+  it("omits Offer block when price is zero or missing", async () => {
+    setMockArtwork(baseArtwork({ price: "0" }));
+    const meta = await resolveMetaTags("/artworks/red-harbor-sunset-aaaaaaaa");
+    const visual = findLd(meta.jsonLd, "VisualArtwork")!;
+    expect(visual.offers).toBeUndefined();
+  });
+
+  it("falls back to default meta when slug not found", async () => {
+    setMockArtwork(undefined);
+    const meta = await resolveMetaTags("/artworks/does-not-exist-00000000");
+    const types = meta.jsonLd.map((ld) => ld["@type"]);
+    expect(types).not.toContain("VisualArtwork");
   });
 });
