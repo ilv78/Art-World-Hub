@@ -15,6 +15,13 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { FAQS } from "@shared/faqs";
 import type {
   ArtworkWithArtist,
   Artist,
@@ -331,6 +338,35 @@ function BlogHighlights({ posts }: { posts: BlogPostWithArtist[] }) {
 // CTA Section
 // ---------------------------------------------------------------------------
 
+function FAQSection() {
+  return (
+    <section className="py-12 sm:py-16 bg-muted/30">
+      <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+        <div className="mb-8 text-center">
+          <h2 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight">
+            Frequently Asked Questions
+          </h2>
+          <p className="text-muted-foreground text-sm mt-2">
+            Everything you need to know about buying and selling on Vernis9.
+          </p>
+        </div>
+        <Accordion type="single" collapsible className="w-full">
+          {FAQS.map((faq, i) => (
+            <AccordionItem key={i} value={`faq-${i}`}>
+              <AccordionTrigger className="text-left font-serif text-base sm:text-lg">
+                {faq.question}
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground text-sm sm:text-base leading-relaxed">
+                {faq.answer}
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </div>
+    </section>
+  );
+}
+
 function CTASection() {
   return (
     <section className="py-16 sm:py-20">
@@ -540,7 +576,10 @@ export default function Home() {
         <BlogHighlights posts={blogPosts} />
       )}
 
-      {/* 7. CTA */}
+      {/* 7. FAQ */}
+      <FAQSection />
+
+      {/* 8. CTA */}
       <CTASection />
 
       <ArtworkDetailDialog

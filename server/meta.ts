@@ -1,4 +1,5 @@
 import { storage } from "./storage";
+import { FAQS } from "../shared/faqs";
 
 const SITE_URL = process.env.SITE_URL || "https://vernis9.art";
 const PRODUCTION_URL = "https://vernis9.art";
@@ -114,6 +115,38 @@ function organizationLd(): Record<string, unknown> {
   };
 }
 
+function websiteLd(): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "Vernis9",
+    url: `${SITE_URL}/`,
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${SITE_URL}/store?search={search_term_string}`,
+      },
+      "query-input": "required name=search_term_string",
+    },
+  };
+}
+
+function faqPageLd(): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: FAQS.map((faq) => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: faq.answer,
+      },
+    })),
+  };
+}
+
 /** Strip query string and hash, normalize trailing slash */
 function normalizePath(url: string): string {
   const path = url.split("?")[0].split("#")[0];
@@ -129,6 +162,8 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
     const jsonLd: Record<string, unknown>[] = [];
     if (path === "/") {
       jsonLd.push(organizationLd());
+      jsonLd.push(websiteLd());
+      jsonLd.push(faqPageLd());
       jsonLd.push(breadcrumb({ name: "Home", url: `${SITE_URL}/` }));
     } else {
       const name = STATIC_ROUTE_NAMES[path] || staticRoute.title;

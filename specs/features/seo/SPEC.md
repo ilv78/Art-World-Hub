@@ -1,7 +1,7 @@
 # Feature: SEO (Search Engine Optimization)
 
 **Status:** In Progress
-**Last Updated:** 2026-04-09
+**Last Updated:** 2026-04-17
 **Owner:** Architecture
 
 ## Summary
@@ -15,7 +15,7 @@ Prepare Vernis9 for search engine discovery and social sharing. The site is a cl
 | `robots.txt` | Done | #364, #376 — dynamic route at `/robots.txt` (blocks indexing on non-production) |
 | `sitemap.xml` | Done | #365 — dynamic endpoint at `/sitemap.xml` |
 | Per-page meta tags | Done | #366 — server-side injection + react-helmet-async |
-| Structured data (JSON-LD) | Done | #367 — Organization, Person, BlogPosting, BreadcrumbList |
+| Structured data (JSON-LD) | Done | #367 — Organization, Person, BlogPosting, BreadcrumbList; #501 — WebSite+SearchAction, FAQPage (homepage) |
 | Twitter cards | Done | #366 — `twitter:card`, `twitter:title`, `twitter:description`, `twitter:image` |
 | Canonical URLs | Done | #366 — `<link rel="canonical">` on every page |
 | www → non-www redirect | Done | #385 — nginx 301 redirect `www.vernis9.art` → `vernis9.art` |
@@ -199,6 +199,40 @@ Inject JSON-LD `<script>` tags server-side alongside the meta tag injection (Wor
 }
 ```
 
+**Homepage — WebSite + SearchAction** (enables Google sitelinks search box, added in #501):
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "Vernis9",
+  "url": "https://vernis9.art/",
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": {
+      "@type": "EntryPoint",
+      "urlTemplate": "https://vernis9.art/store?search={search_term_string}"
+    },
+    "query-input": "required name=search_term_string"
+  }
+}
+```
+
+**Homepage — FAQPage** (enables FAQ rich result, added in #501):
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is Vernis9?",
+      "acceptedAnswer": { "@type": "Answer", "text": "..." }
+    }
+  ]
+}
+```
+FAQ copy is hard-coded in `shared/faqs.ts` (5 entries covering what Vernis9 is, who can sell, commission policy, how to buy, shipping). Both the server (JSON-LD in `server/meta.ts`) and the client (visible accordion section on the homepage) import from this single source of truth. Google's FAQPage rich-result guidelines require that the Q&A content be visible on the page, so the accordion is not optional — keep it in sync with the schema. Changes to FAQ copy require a PR — there is no admin UI.
+
 **Artist profile — Person:**
 ```json
 {
@@ -269,11 +303,13 @@ Inject JSON-LD `<script>` tags server-side alongside the meta tag injection (Wor
 ```
 
 **Acceptance criteria:**
-- [ ] Homepage has Organization JSON-LD
-- [ ] Artist pages have Person JSON-LD
-- [ ] Blog posts have BlogPosting JSON-LD
-- [ ] Google Rich Results Test validates the structured data
-- [ ] JSON-LD is present in the raw HTML (not injected by JavaScript)
+- [x] Homepage has Organization JSON-LD
+- [x] Homepage has WebSite + SearchAction JSON-LD (#501)
+- [x] Homepage has FAQPage JSON-LD (#501)
+- [x] Artist pages have Person JSON-LD
+- [x] Blog posts have BlogPosting JSON-LD
+- [x] Google Rich Results Test validates the structured data
+- [x] JSON-LD is present in the raw HTML (not injected by JavaScript)
 
 ---
 
