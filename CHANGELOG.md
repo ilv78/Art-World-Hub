@@ -8,7 +8,12 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
-_Nothing yet — all recent work included in v3.8.0 below._
+_Nothing yet — all recent work included in v3.9.0 below._
+
+## [3.9.0] - 2026-04-17
+
+### Added
+- feat: draft/published state for artworks + dashboard Drafts tab for portfolio & blog ([#513](https://github.com/ilv78/Art-World-Hub/issues/513))
 
 ## [3.8.0] - 2026-04-15
 
