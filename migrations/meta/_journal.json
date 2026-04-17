@@ -57,6 +57,13 @@
       "when": 1776410916610,
       "tag": "0007_grey_mac_gargan",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1776462545913,
+      "tag": "0008_superb_silver_centurion",
+      "breakpoints": true
     }
   ]
 }

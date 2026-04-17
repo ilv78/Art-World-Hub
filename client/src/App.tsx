@@ -16,6 +16,7 @@ import ArtistDashboard from "@/pages/artist-dashboard";
 import ArtistProfile from "@/pages/artist-profile";
 import Blog from "@/pages/blog";
 import BlogPost from "@/pages/blog-post";
+import ArtworkDetail from "@/pages/artwork-detail";
 import AuthPage from "@/pages/auth-page";
 import SetPassword from "@/pages/set-password";
 import AdminPage from "@/pages/admin";
@@ -45,6 +46,7 @@ function Router() {
       <Route path="/auctions" component={Auctions} />
       <Route path="/artists" component={Artists} />
       <Route path="/artists/:id" component={ArtistProfile} />
+      <Route path="/artworks/:slug" component={ArtworkDetail} />
       <Route path="/dashboard" component={ArtistDashboard} />
       <Route path="/blog" component={Blog} />
       <Route path="/blog/:id" component={BlogPost} />

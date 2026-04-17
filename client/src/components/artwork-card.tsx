@@ -1,3 +1,4 @@
+import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,8 +31,10 @@ export function ArtworkCard({ artwork, onViewDetails, showAddToCart = true }: Ar
     }
   };
 
+  const artworkUrl = `/artworks/${artwork.slug}`;
+
   return (
-    <Card 
+    <Card
       className="group overflow-visible hover-elevate cursor-pointer transition-transform duration-300"
       onClick={onViewDetails}
       data-testid={`card-artwork-${artwork.id}`}
@@ -80,9 +83,15 @@ export function ArtworkCard({ artwork, onViewDetails, showAddToCart = true }: Ar
       <CardContent className="p-4">
         <div className="space-y-2">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="font-serif font-semibold text-base leading-tight line-clamp-1">
-              {artwork.title}
-            </h3>
+            <Link
+              href={artworkUrl}
+              onClick={(e) => e.stopPropagation()}
+              className="min-w-0 hover:text-primary transition-colors"
+            >
+              <h3 className="font-serif font-semibold text-base leading-tight line-clamp-1">
+                {artwork.title}
+              </h3>
+            </Link>
             {artwork.year && (
               <span className="text-xs text-muted-foreground shrink-0">
                 {artwork.year}
