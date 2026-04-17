@@ -1,5 +1,12 @@
 # SEO Feature Changelog
 
+## 2026-04-17 — WebSite + FAQPage JSON-LD on homepage (#501)
+- Added `WebSite` schema with `potentialAction: SearchAction` targeting `/store?search={search_term_string}` — enables Google sitelinks search box (param name matches the actual store page's query param)
+- Added `FAQPage` schema with 5 hard-coded Q&A entries (what Vernis9 is, who can sell, no commission, how to buy, shipping)
+- Added a visible FAQ accordion section on the homepage (before the CTA) rendering the same Q&A content — required by Google's FAQPage rich-result guidelines ("content must be visible to the user")
+- FAQ copy lives in `shared/faqs.ts` so server JSON-LD and client FAQ section share a single source of truth
+- Injected only on the `/` route; unit coverage added in `server/__tests__/meta.test.ts`
+
 ## 2026-04-01 — Alt Text Audit (#369)
 - Added `alt` to 11 AvatarImage components across 7 files (blog, artists, artist-profile, artist-dashboard, artwork-detail-dialog, maze-gallery-3d, top-nav)
 - All 30 `<img>` tags already had alt attributes — no changes needed
