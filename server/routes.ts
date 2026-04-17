@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertArtworkSchema, updateArtworkSchema, insertBidSchema, insertOrderSchema, insertBlogPostSchema, updateBlogPostSchema, updateArtistSchema, ORDER_TRANSITIONS, ORDER_STATUSES } from "@shared/schema";
+import { normalizeArtworkForCreate, normalizeArtworkForUpdate } from "./publish";
 import type { Artist, ArtworkWithArtist, Order, InsertOrder } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes, isAuthenticated, isAdmin, isCurator, authStorage } from "./replit_integrations/auth";
@@ -400,9 +401,12 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/artists/:id/artworks", async (req, res) => {
+  app.get("/api/artists/:id/artworks", async (req: any, res) => {
     try {
-      const artworks = await storage.getArtworksByArtist(req.params.id);
+      const userId = req.user?.claims?.sub;
+      const viewerArtist = userId ? await storage.getArtistByUserId(userId) : undefined;
+      const includeDrafts = viewerArtist?.id === req.params.id;
+      const artworks = await storage.getArtworksByArtist(req.params.id, { includeDrafts });
       res.json(artworks);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch artist artworks" });
@@ -463,11 +467,18 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/artworks/:id", async (req, res) => {
+  app.get("/api/artworks/:id", async (req: any, res) => {
     try {
       const artwork = await storage.getArtwork(req.params.id);
       if (!artwork) {
         return res.status(404).json({ error: "Artwork not found" });
+      }
+      if (!artwork.isPublished) {
+        const userId = req.user?.claims?.sub;
+        const viewerArtist = userId ? await storage.getArtistByUserId(userId) : undefined;
+        if (viewerArtist?.id !== artwork.artistId) {
+          return res.status(404).json({ error: "Artwork not found" });
+        }
       }
       res.json(artwork);
     } catch (error) {
@@ -716,11 +727,18 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/blog/:id", async (req, res) => {
+  app.get("/api/blog/:id", async (req: any, res) => {
     try {
       const post = await storage.getBlogPost(req.params.id);
       if (!post) {
         return res.status(404).json({ error: "Blog post not found" });
+      }
+      if (!post.isPublished) {
+        const userId = req.user?.claims?.sub;
+        const viewerArtist = userId ? await storage.getArtistByUserId(userId) : undefined;
+        if (viewerArtist?.id !== post.artistId) {
+          return res.status(404).json({ error: "Blog post not found" });
+        }
       }
       res.json(post);
     } catch (error) {
@@ -728,9 +746,12 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/artists/:id/blog", async (req, res) => {
+  app.get("/api/artists/:id/blog", async (req: any, res) => {
     try {
-      const posts = await storage.getBlogPostsByArtist(req.params.id);
+      const userId = req.user?.claims?.sub;
+      const viewerArtist = userId ? await storage.getArtistByUserId(userId) : undefined;
+      const includeDrafts = viewerArtist?.id === req.params.id;
+      const posts = await storage.getBlogPostsByArtist(req.params.id, { includeDrafts });
       res.json(posts);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch artist blog posts" });
@@ -830,10 +851,11 @@ export async function registerRoutes(
       if (!artist) {
         return res.status(403).json({ error: "Not authorized — no artist profile" });
       }
-      const artworkData = insertArtworkSchema.parse(req.body);
-      if (artworkData.artistId !== artist.id) {
+      const parsed = insertArtworkSchema.parse(req.body);
+      if (parsed.artistId !== artist.id) {
         return res.status(403).json({ error: "Not authorized to create artworks for another artist" });
       }
+      const artworkData = normalizeArtworkForCreate(parsed);
       const artwork = await storage.createArtwork(artworkData);
       if (artwork.isReadyForExhibition) {
         await storage.regenerateArtistGallery(artwork.artistId);
@@ -861,7 +883,8 @@ export async function registerRoutes(
       if (existingArtwork.artist.id !== artist.id) {
         return res.status(403).json({ error: "Not authorized to edit another artist's artwork" });
       }
-      const data = updateArtworkSchema.parse(req.body);
+      const parsed = updateArtworkSchema.parse(req.body);
+      const data = normalizeArtworkForUpdate(existingArtwork, parsed);
       const artwork = await storage.updateArtwork(req.params.id, data);
       if (!artwork) {
         return res.status(404).json({ error: "Artwork not found" });

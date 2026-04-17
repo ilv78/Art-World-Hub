@@ -6,6 +6,7 @@ import type { Express, Request, Response } from "express";
 import { isAuthenticated } from "./replit_integrations/auth";
 import { DatabaseStorage } from "./storage";
 import { ORDER_TRANSITIONS, ORDER_STATUSES } from "@shared/schema";
+import { normalizeArtworkForCreate, normalizeArtworkForUpdate } from "./publish";
 import { mcpLogger as logger, logFilePath } from "./logger";
 import fs from "fs";
 import readline from "readline";
@@ -267,8 +268,10 @@ export function createMcpServer(): McpServer {
       category: z.string().describe("Category (e.g. Painting, Sculpture, Photography, Digital Art, Mixed Media, Drawing)"),
       dimensions: z.string().optional().describe("Physical dimensions"),
       year: z.number().optional().describe("Year created"),
-      isForSale: z.boolean().optional().default(true).describe("Whether the artwork is for sale"),
-      isReadyForExhibition: z.boolean().optional().default(false).describe("Whether ready for gallery exhibition"),
+      isPublished: z.boolean().optional().default(false).describe("Whether the artwork is published (visible in portfolio). Drafts (isPublished=false) cannot be for sale, in gallery, or exhibition-ready"),
+      isForSale: z.boolean().optional().default(true).describe("Whether the artwork is for sale (gated by isPublished)"),
+      isInGallery: z.boolean().optional().default(true).describe("Whether the artwork appears in the 2D gallery (gated by isPublished)"),
+      isReadyForExhibition: z.boolean().optional().default(false).describe("Whether ready for 3D gallery exhibition (gated by isPublished)"),
       exhibitionOrder: z.number().optional().describe("Order in gallery exhibition"),
     },
     async (args) => {
@@ -277,7 +280,7 @@ export function createMcpServer(): McpServer {
         if (!artist) {
           return { content: [{ type: "text", text: "Error: Artist not found" }], isError: true };
         }
-        const artwork = await storage.createArtwork({
+        const normalized = normalizeArtworkForCreate({
           artistId: args.artistId,
           title: args.title,
           description: args.description,
@@ -287,11 +290,14 @@ export function createMcpServer(): McpServer {
           category: args.category,
           dimensions: args.dimensions,
           year: args.year,
+          isPublished: args.isPublished,
           isForSale: args.isForSale,
+          isInGallery: args.isInGallery,
           isReadyForExhibition: args.isReadyForExhibition,
           exhibitionOrder: args.exhibitionOrder,
         });
-        if (args.isReadyForExhibition) {
+        const artwork = await storage.createArtwork(normalized);
+        if (artwork.isReadyForExhibition) {
           await storage.regenerateArtistGallery(args.artistId);
         }
         return {
@@ -316,8 +322,10 @@ export function createMcpServer(): McpServer {
       category: z.string().optional().describe("New category"),
       dimensions: z.string().optional().describe("New dimensions"),
       year: z.number().optional().describe("New year"),
-      isForSale: z.boolean().optional().describe("Update sale status"),
-      isReadyForExhibition: z.boolean().optional().describe("Update exhibition readiness"),
+      isPublished: z.boolean().optional().describe("Publish or revert to draft. Unpublishing auto-resets isForSale/isInGallery/isReadyForExhibition to false"),
+      isForSale: z.boolean().optional().describe("Update sale status (gated by isPublished)"),
+      isInGallery: z.boolean().optional().describe("Update 2D gallery visibility (gated by isPublished)"),
+      isReadyForExhibition: z.boolean().optional().describe("Update exhibition readiness (gated by isPublished)"),
       exhibitionOrder: z.number().optional().describe("Update exhibition order"),
     },
     async (args) => {
@@ -330,8 +338,10 @@ export function createMcpServer(): McpServer {
         const filteredUpdates = Object.fromEntries(
           Object.entries(updates).filter(([_, v]) => v !== undefined)
         );
-        const artwork = await storage.updateArtwork(artworkId, filteredUpdates);
-        if (args.isReadyForExhibition !== undefined) {
+        const normalized = normalizeArtworkForUpdate(existing, filteredUpdates);
+        const artwork = await storage.updateArtwork(artworkId, normalized);
+        const readinessChanged = existing.isReadyForExhibition !== artwork?.isReadyForExhibition;
+        if (readinessChanged) {
           await storage.regenerateArtistGallery(existing.artistId);
         }
         return {

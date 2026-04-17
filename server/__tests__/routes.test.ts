@@ -479,11 +479,11 @@ describe("PATCH /api/artworks/:id", () => {
     (mockStorage.getArtistByUserId as ReturnType<typeof vi.fn>).mockResolvedValue(testArtist);
 
     const existingArtwork = {
-      id: "a1", title: "Painting", artistId: "art1", isReadyForExhibition: false, exhibitionOrder: null,
+      id: "a1", title: "Painting", artistId: "art1", isPublished: true, isReadyForExhibition: false, exhibitionOrder: null,
       artist: { id: "art1", name: "Alice" },
     };
     const updatedArtwork = {
-      id: "a1", title: "Painting", artistId: "art1", isReadyForExhibition: true, exhibitionOrder: null,
+      id: "a1", title: "Painting", artistId: "art1", isPublished: true, isReadyForExhibition: true, exhibitionOrder: null,
     };
 
     (mockStorage.getArtwork as ReturnType<typeof vi.fn>).mockResolvedValue(existingArtwork);
@@ -501,11 +501,11 @@ describe("PATCH /api/artworks/:id", () => {
     (mockStorage.getArtistByUserId as ReturnType<typeof vi.fn>).mockResolvedValue(testArtist);
 
     const existingArtwork = {
-      id: "a1", title: "Painting", artistId: "art1", isReadyForExhibition: false, exhibitionOrder: null,
+      id: "a1", title: "Painting", artistId: "art1", isPublished: true, isReadyForExhibition: false, exhibitionOrder: null,
       artist: { id: "art1", name: "Alice" },
     };
     const updatedArtwork = {
-      id: "a1", title: "Updated Title", artistId: "art1", isReadyForExhibition: false, exhibitionOrder: null,
+      id: "a1", title: "Updated Title", artistId: "art1", isPublished: true, isReadyForExhibition: false, exhibitionOrder: null,
     };
 
     (mockStorage.getArtwork as ReturnType<typeof vi.fn>).mockResolvedValue(existingArtwork);
@@ -533,6 +533,118 @@ describe("PATCH /api/artworks/:id", () => {
       .send({ title: "Hacked" });
 
     expect(res.status).toBe(403);
+  });
+
+  it("clamps isForSale/isInGallery/isReadyForExhibition when creating a draft", async () => {
+    (mockStorage.getArtistByUserId as ReturnType<typeof vi.fn>).mockResolvedValue(testArtist);
+    (mockStorage.createArtwork as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "a1", artistId: "art1", isPublished: false, isForSale: false, isInGallery: false, isReadyForExhibition: false,
+    });
+
+    const res = await request(app).post("/api/artworks").send({
+      title: "Draft",
+      description: "In progress",
+      imageUrl: "https://example.com/x.jpg",
+      artistId: "art1",
+      price: "100.00",
+      medium: "oil",
+      category: "painting",
+      isPublished: false,
+      isForSale: true,
+      isInGallery: true,
+      isReadyForExhibition: true,
+    });
+
+    expect(res.status).toBe(201);
+    expect(mockStorage.createArtwork).toHaveBeenCalledWith(expect.objectContaining({
+      isPublished: false,
+      isForSale: false,
+      isInGallery: false,
+      isReadyForExhibition: false,
+    }));
+    expect(mockStorage.regenerateArtistGallery).not.toHaveBeenCalled();
+  });
+
+  it("auto-resets gated flags when unpublishing, preserves exhibitionOrder, and regenerates gallery", async () => {
+    (mockStorage.getArtistByUserId as ReturnType<typeof vi.fn>).mockResolvedValue(testArtist);
+
+    const existingArtwork = {
+      id: "a1", title: "Painting", artistId: "art1",
+      isPublished: true, isForSale: true, isInGallery: true, isReadyForExhibition: true, exhibitionOrder: 3,
+      artist: { id: "art1", name: "Alice" },
+    };
+    const updatedArtwork = {
+      id: "a1", title: "Painting", artistId: "art1",
+      isPublished: false, isForSale: false, isInGallery: false, isReadyForExhibition: false, exhibitionOrder: 3,
+    };
+
+    (mockStorage.getArtwork as ReturnType<typeof vi.fn>).mockResolvedValue(existingArtwork);
+    (mockStorage.updateArtwork as ReturnType<typeof vi.fn>).mockResolvedValue(updatedArtwork);
+
+    const res = await request(app)
+      .patch("/api/artworks/a1")
+      .send({ isPublished: false });
+
+    expect(res.status).toBe(200);
+    expect(mockStorage.updateArtwork).toHaveBeenCalledWith("a1", expect.objectContaining({
+      isPublished: false,
+      isForSale: false,
+      isInGallery: false,
+      isReadyForExhibition: false,
+    }));
+    const [, updatePayload] = (mockStorage.updateArtwork as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(updatePayload).not.toHaveProperty("exhibitionOrder");
+    expect(mockStorage.regenerateArtistGallery).toHaveBeenCalledWith("art1");
+  });
+
+  it("leaves gated flags alone when staying published", async () => {
+    (mockStorage.getArtistByUserId as ReturnType<typeof vi.fn>).mockResolvedValue(testArtist);
+
+    const existingArtwork = {
+      id: "a1", title: "Painting", artistId: "art1",
+      isPublished: true, isForSale: true, isInGallery: true, isReadyForExhibition: true, exhibitionOrder: 2,
+      artist: { id: "art1", name: "Alice" },
+    };
+    const updatedArtwork = { ...existingArtwork, title: "New title" };
+
+    (mockStorage.getArtwork as ReturnType<typeof vi.fn>).mockResolvedValue(existingArtwork);
+    (mockStorage.updateArtwork as ReturnType<typeof vi.fn>).mockResolvedValue(updatedArtwork);
+
+    const res = await request(app)
+      .patch("/api/artworks/a1")
+      .send({ title: "New title" });
+
+    expect(res.status).toBe(200);
+    expect(mockStorage.updateArtwork).toHaveBeenCalledWith("a1", { title: "New title" });
+  });
+});
+
+describe("GET /api/artworks/:id draft visibility", () => {
+  it("returns 404 for a draft when viewer is anonymous", async () => {
+    (mockStorage.getArtwork as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "a1", artistId: "art1", isPublished: false,
+      artist: { id: "art1", name: "Alice" },
+    });
+
+    const res = await request(app).get("/api/artworks/a1");
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 200 for a published artwork", async () => {
+    (mockStorage.getArtwork as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "a1", artistId: "art1", isPublished: true,
+      artist: { id: "art1", name: "Alice" },
+    });
+
+    const res = await request(app).get("/api/artworks/a1");
+    expect(res.status).toBe(200);
+  });
+});
+
+describe("GET /api/artists/:id/artworks draft visibility", () => {
+  it("omits drafts for anonymous viewers", async () => {
+    await request(app).get("/api/artists/art1/artworks");
+    expect(mockStorage.getArtworksByArtist).toHaveBeenCalledWith("art1", { includeDrafts: false });
   });
 });
 

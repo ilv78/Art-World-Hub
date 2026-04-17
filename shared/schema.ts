@@ -37,6 +37,7 @@ export const artworks = pgTable("artworks", {
   medium: text("medium").notNull(),
   dimensions: text("dimensions"),
   year: integer("year"),
+  isPublished: boolean("is_published").default(false),
   isForSale: boolean("is_for_sale").default(true),
   isInGallery: boolean("is_in_gallery").default(true),
   isReadyForExhibition: boolean("is_ready_for_exhibition").default(false),
