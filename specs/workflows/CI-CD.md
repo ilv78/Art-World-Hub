@@ -1,7 +1,7 @@
 # Vernis9 — CI/CD Pipeline Specification
 
 **Status:** Active
-**Last Updated:** 2026-04-10
+**Last Updated:** 2026-04-20
 
 ---
 
@@ -12,6 +12,8 @@
 #### CI/CD Workflow (`.github/workflows/ci.yml`)
 
 Single unified workflow with five jobs. Triggers on every push (all branches) and pull requests to `main`.
+
+The "Lint, Type Check, Test & Build" job also declares a `merge_group` trigger so it would run against the staged queue commit if GitHub merge queue were enabled. The merge-queue experiment from [#472](https://github.com/ilv78/Art-World-Hub/issues/472) was abandoned the same day (GitHub does not expose merge queue for user-owned repos — see `specs/decisions/DECISION-LOG.md`), so this trigger is currently a harmless no-op kept for future compatibility. Deploy/preview jobs are gated on `github.event_name == 'push'` so `merge_group` events could never fire a deploy.
 
 **Job 1: `ci`** — Lint, Type Check, Test & Build
 
@@ -738,3 +740,4 @@ After the health check passes, both staging (`ci.yml`) and production (`deploy-p
 | 2026-03-31 | Fixed `release-finalize.yml` — added `if: always()` to the "remove `release: next` labels" step so labels are still cleaned up when the production deploy trigger step fails. Without this, stale labels would re-roll into the next release. Documented in Section 6.5. (Issue [#361](https://github.com/ilv78/Art-World-Hub/issues/361), PR [#362](https://github.com/ilv78/Art-World-Hub/pull/362)) |
 | 2026-04-08 | Spec catch-up — bumped Last Updated header (was 2026-03-23 despite content updates through 2026-03-25), added Section 6.6 (post-deploy version smoke test), expanded Section 6.5 (release workflow) with CHANGELOG validation gate and label cleanup behavior, added the version smoke test to Section 5.2 + 5.4 diagrams, added revision log entries for #303, #304, #362. Resolves recurring `ST-004` doc-agent warning. (Issue [#414](https://github.com/ilv78/Art-World-Hub/issues/414)) |
 | 2026-04-10 | Removed the auto-deploy step from `release-finalize.yml` — the `gh workflow run deploy-production.yml` call had been failing 403 on every release because `RELEASE_PAT` lacks the `actions:write` scope, and the developer preferred staging-verification-then-manual-promote over fixing the PAT scope. Section 5.4 header and Section 6.5 release-flow description updated accordingly. Production deploy is now exclusively `workflow_dispatch`. (Issue [#443](https://github.com/ilv78/Art-World-Hub/issues/443)) |
+| 2026-04-20 | Noted the `merge_group` trigger on the `ci` job — harmless no-op left over from the abandoned merge-queue experiment in [#472](https://github.com/ilv78/Art-World-Hub/issues/472) / PR [#477](https://github.com/ilv78/Art-World-Hub/pull/477). Bundled with [#522](https://github.com/ilv78/Art-World-Hub/issues/522): the `ST-004` doc-audit rule was re-firing on every Dependabot SHA-pin bump because it used raw git-mtime; the rule now ignores commits authored solely by `dependabot[bot]` when measuring workflow-file recency. |

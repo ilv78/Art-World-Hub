@@ -24,6 +24,28 @@ days_since_last_commit() {
   echo $(( (now - last_commit) / 86400 ))
 }
 
+# Most recent commit on `file` whose author email is not dependabot[bot].
+# Falls back to the absolute latest commit if the file has only ever been
+# touched by the bot. Used by staleness rules that would otherwise re-fire
+# every time Dependabot bumps a pinned Action/package SHA without changing
+# the file's semantics.
+days_since_last_human_commit() {
+  local file="$1"
+  local ts
+  ts=$(git log --format='%ct|%ae' -- "$file" 2>/dev/null \
+    | awk -F'|' '$2 !~ /dependabot\[bot\]/ { print $1; exit }')
+  if [ -z "$ts" ]; then
+    ts=$(git log -1 --format="%ct" -- "$file" 2>/dev/null || echo "0")
+  fi
+  if [ -z "$ts" ] || [ "$ts" = "0" ]; then
+    echo "9999"
+    return
+  fi
+  local now
+  now=$(date +%s)
+  echo $(( (now - ts) / 86400 ))
+}
+
 file_has_changed_since() {
   local file="$1"
   local reference_file="$2"
@@ -37,6 +59,22 @@ file_has_changed_since() {
     return 0  # true: doc is stale
   fi
   return 1  # false: doc is fresh enough
+}
+
+# Like file_has_changed_since, but ignores Dependabot-only commits on the
+# reference file so SHA-pin bumps do not mark the doc as stale.
+file_has_changed_by_human_since() {
+  local file="$1"
+  local reference_file="$2"
+  local threshold_days="$3"
+  local ref_days
+  ref_days=$(days_since_last_human_commit "$reference_file")
+  local file_days
+  file_days=$(days_since_last_commit "$file")
+  if [ "$ref_days" -lt "$file_days" ] && [ $(( file_days - ref_days )) -gt "$threshold_days" ]; then
+    return 0
+  fi
+  return 1
 }
 
 # --- Structure Rules (S-*) ---
@@ -104,10 +142,12 @@ for f in specs/features/*/SPEC.md; do
 done
 
 # ST-004: CI-CD.md not updated after workflow changes (7 days)
+# Uses the human-commit variant so Dependabot-only SHA-pin bumps do not
+# mark the spec stale (see specs/decisions/DECISION-LOG.md, 2026-04-20).
 for f in .github/workflows/*.yml; do
   [ -e "$f" ] || continue
   if [ -f "specs/workflows/CI-CD.md" ]; then
-    if file_has_changed_since "specs/workflows/CI-CD.md" "$f" 7; then
+    if file_has_changed_by_human_since "specs/workflows/CI-CD.md" "$f" 7; then
       WARNINGS+=("[ST-004] \`specs/workflows/CI-CD.md\` may be stale — \`$f\` was updated more recently (threshold: 7 days).")
       break
     fi
