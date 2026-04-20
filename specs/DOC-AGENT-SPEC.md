@@ -86,7 +86,7 @@ The agent enforces rules at three severity levels: **ERROR** (blocks merge), **W
 | ST-001 | `specs/architecture/DATA-MODEL.md` not updated after Drizzle schema change | 7 days |
 | ST-002 | Any Active `SPEC.md` not touched in | 90 days |
 | ST-003 | `OVERVIEW.md` not updated after a new feature SPEC.md is added | 14 days |
-| ST-004 | `CI-CD.md` not updated after changes to `.github/workflows/` | 7 days |
+| ST-004 | `CI-CD.md` not updated after changes to `.github/workflows/` (commits authored by `dependabot[bot]` are ignored when measuring workflow-file recency — SHA-pin bumps do not trigger this rule) | 7 days |
 | ST-005 | `DEPLOYMENT.md` not updated after changes to `Dockerfile` or `docker-compose.yml` | 7 days |
 
 ### 3.3 Consistency Rules (ERROR on main, WARNING on feature branch)
@@ -340,5 +340,5 @@ This document is itself subject to the documentation culture it enforces.
 - Any addition of a new rule category requires an ADR.
 - This file must be reviewed and its `Last Updated` field refreshed at minimum quarterly.
 
-**Last Updated:** 2026-03-12  
+**Last Updated:** 2026-04-20  
 **Owner:** Architecture
