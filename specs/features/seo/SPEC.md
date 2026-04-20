@@ -13,7 +13,7 @@ Prepare Vernis9 for search engine discovery and social sharing. The site is a cl
 | Area | Status | Notes |
 |------|--------|-------|
 | `robots.txt` | Done | #364, #376 — dynamic route at `/robots.txt` (blocks indexing on non-production) |
-| `sitemap.xml` | Done | #365 — dynamic endpoint at `/sitemap.xml` |
+| `sitemap.xml` | Done | #365 — dynamic endpoint at `/sitemap.xml`; #504 — Google image-sitemap namespace + `<image:image>` for artist avatars, artwork images (title + caption), and blog cover images |
 | Per-page meta tags | Done | #366 — server-side injection + react-helmet-async |
 | Structured data (JSON-LD) | Done | #367 — Organization, Person, BlogPosting, BreadcrumbList; #501 — WebSite+SearchAction, FAQPage (homepage); #503 — VisualArtwork + Offer on `/artworks/:slug` |
 | Public artwork detail pages | Done | #503 — `/artworks/:slug` server-rendered meta + JSON-LD, sitemap entries |
@@ -87,7 +87,8 @@ Prepare Vernis9 for search engine discovery and social sharing. The site is a cl
 **XML format:**
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://vernis9.art/</loc>
     <changefreq>weekly</changefreq>
@@ -95,13 +96,34 @@ Prepare Vernis9 for search engine discovery and social sharing. The site is a cl
   </url>
   <url>
     <loc>https://vernis9.art/artists/abc-123</loc>
-    <lastmod>2026-03-31</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://cdn.example.com/avatars/a.jpg</image:loc>
+      <image:title>Alexandra</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://vernis9.art/artworks/my-piece-abc123</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+    <image:image>
+      <image:loc>https://cdn.example.com/images/piece.jpg</image:loc>
+      <image:title>My Piece</image:title>
+      <image:caption>A reverse glass painting, hand-finished.</image:caption>
+    </image:image>
   </url>
   <!-- ... -->
 </urlset>
 ```
+
+**Image sitemap rules (#504):**
+- Namespace `xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"` on the `<urlset>` root.
+- Every published artwork URL carries a single `<image:image>` (`imageUrl` is NOT NULL on the schema).
+- Artist URL carries `<image:image>` only when `avatarUrl` is set — a URL with no image is fine.
+- Blog post URL carries `<image:image>` only when `coverImageUrl` is set.
+- `<image:title>` is truncated to 100 chars; `<image:caption>` to 500. Both are XML-escaped — every user-supplied string on the sitemap must go through `xmlEscape()`.
+- Relative image paths are absolutized against `SITE_URL`.
 
 **Acceptance criteria:**
 - [ ] `GET /sitemap.xml` returns valid XML
@@ -110,6 +132,8 @@ Prepare Vernis9 for search engine discovery and social sharing. The site is a cl
 - [ ] All published blog posts are listed
 - [ ] Response is cached (not a DB query per request)
 - [ ] `lastmod` is set where data is available
+- [ ] `xmlns:image` namespace is declared on the root element
+- [ ] Every artwork URL has `<image:image>` with `<image:title>` + `<image:caption>`
 
 ---
 
