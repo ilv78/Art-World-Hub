@@ -26,7 +26,7 @@ Follows the handoff bundle in issue #526 (`welcome.page.-.koningsdag.vernis9.zip
 - Editorial EN copy (only variant shipped).
 - Playfair Display for headline + input text, Inter for body/button, Tenor Sans for uppercase labels — all already imported in `client/index.html`.
 - Reuses `<Vernis9Logo>` — no chrome from the main app (no `TopNav`, `Footer`, or `BottomTabs`).
-- Hero image served statically from `/koningsdag/alexandra-painting.jpg`.
+- Hero image served statically from `/campaigns/koningsdag/alexandra-painting.jpg`. **Do not** place campaign assets under `client/public/<route-name>/` — it triggers a 301 loop in production (#528): serve-static redirects `/route` → `/route/`, nginx strips the trailing slash and redirects back.
 
 ## Architecture
 
