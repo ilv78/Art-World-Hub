@@ -214,15 +214,22 @@ export const siteSettings = pgTable("site_settings", {
 export type SiteSettings = typeof siteSettings.$inferSelect;
 
 // Newsletter subscribers
+export const NEWSLETTER_SOURCES = ["general", "koningsdag-2026"] as const;
+export type NewsletterSource = (typeof NEWSLETTER_SOURCES)[number];
+
 export const newsletterSubscribers = pgTable("newsletter_subscribers", {
   id: serial("id").primaryKey(),
   email: varchar("email", { length: 255 }).notNull().unique(),
+  source: varchar("source", { length: 50 }).default("general").notNull(),
   subscribedAt: timestamp("subscribed_at").defaultNow().notNull(),
   unsubscribedAt: timestamp("unsubscribed_at"),
 });
 
 export type NewsletterSubscriber = typeof newsletterSubscribers.$inferSelect;
-export const insertNewsletterSchema = z.object({ email: z.string().email() });
+export const insertNewsletterSchema = z.object({
+  email: z.string().email(),
+  source: z.enum(NEWSLETTER_SOURCES).optional(),
+});
 
 // Layout types for the 3D maze
 export interface MazeCell {

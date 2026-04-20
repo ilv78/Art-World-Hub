@@ -109,8 +109,8 @@ export interface IStorage {
   updateSiteSettings(data: Partial<Pick<SiteSettings, "galleryTemplate">>): Promise<SiteSettings>;
 
   // Newsletter
-  subscribeNewsletter(email: string): Promise<{ alreadySubscribed: boolean }>;
-  getNewsletterSubscribers(): Promise<{ id: number; email: string; subscribedAt: Date; unsubscribedAt: Date | null }[]>;
+  subscribeNewsletter(email: string, source?: string): Promise<{ alreadySubscribed: boolean }>;
+  getNewsletterSubscribers(): Promise<{ id: number; email: string; source: string; subscribedAt: Date; unsubscribedAt: Date | null }[]>;
   deleteNewsletterSubscriber(id: number): Promise<boolean>;
 }
 
@@ -698,18 +698,20 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
-  async subscribeNewsletter(email: string): Promise<{ alreadySubscribed: boolean }> {
-    const [existing] = await db.select().from(newsletterSubscribers).where(eq(newsletterSubscribers.email, email.toLowerCase()));
+  async subscribeNewsletter(email: string, source?: string): Promise<{ alreadySubscribed: boolean }> {
+    const normalized = email.toLowerCase();
+    const sourceValue = source ?? "general";
+    const [existing] = await db.select().from(newsletterSubscribers).where(eq(newsletterSubscribers.email, normalized));
     if (existing) {
       if (existing.unsubscribedAt) {
         await db.update(newsletterSubscribers)
-          .set({ unsubscribedAt: null, subscribedAt: new Date() })
+          .set({ unsubscribedAt: null, subscribedAt: new Date(), source: sourceValue })
           .where(eq(newsletterSubscribers.id, existing.id));
         return { alreadySubscribed: false };
       }
       return { alreadySubscribed: true };
     }
-    await db.insert(newsletterSubscribers).values({ email: email.toLowerCase() });
+    await db.insert(newsletterSubscribers).values({ email: normalized, source: sourceValue });
     return { alreadySubscribed: false };
   }
 

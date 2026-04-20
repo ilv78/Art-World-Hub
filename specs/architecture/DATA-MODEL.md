@@ -34,7 +34,7 @@ All tables defined using Drizzle ORM. Main schema in `shared/schema.ts`, auth ta
 | **exhibition_artworks** | `shared/schema.ts` | id, exhibitionId (FK), artworkId (FK), wallId, position | Wall placement in exhibitions |
 | **blog_posts** | `shared/schema.ts` | id, artistId (FK→artists), title, content, excerpt, coverImageUrl, isPublished, createdAt, updatedAt | Artist blog entries |
 | **site_settings** | `shared/schema.ts` | id (default "default"), galleryTemplate (varchar), updatedAt | Global site configuration (singleton row) |
-| **newsletter_subscribers** | `shared/schema.ts` | id (serial), email (unique, varchar 255), subscribedAt (timestamp), unsubscribedAt (timestamp, nullable) | Newsletter signup list — managed via admin panel |
+| **newsletter_subscribers** | `shared/schema.ts` | id (serial), email (unique, varchar 255), source (varchar 50, default `general`), subscribedAt (timestamp), unsubscribedAt (timestamp, nullable) | Newsletter signup list — managed via admin panel. `source` tags the capture origin (`general`, `koningsdag-2026`). |
 
 ---
 

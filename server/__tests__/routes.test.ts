@@ -733,3 +733,69 @@ describe("GET /api/admin/logs", () => {
     }
   });
 });
+
+// ----- Newsletter subscribe (#526) -----
+
+describe("POST /api/newsletter/subscribe", () => {
+  it("rejects missing email with 400", async () => {
+    const res = await request(app).post("/api/newsletter/subscribe").send({});
+    expect(res.status).toBe(400);
+    expect(mockStorage.subscribeNewsletter).not.toHaveBeenCalled();
+  });
+
+  it("rejects malformed email with 400", async () => {
+    const res = await request(app)
+      .post("/api/newsletter/subscribe")
+      .send({ email: "not-an-email" });
+    expect(res.status).toBe(400);
+    expect(mockStorage.subscribeNewsletter).not.toHaveBeenCalled();
+  });
+
+  it("subscribes without source (defaults to general)", async () => {
+    (mockStorage.subscribeNewsletter as ReturnType<typeof vi.fn>).mockResolvedValue({
+      alreadySubscribed: false,
+    });
+    const res = await request(app)
+      .post("/api/newsletter/subscribe")
+      .send({ email: "visitor@example.com" });
+    expect(res.status).toBe(200);
+    expect(res.body.alreadySubscribed).toBe(false);
+    expect(mockStorage.subscribeNewsletter).toHaveBeenCalledWith(
+      "visitor@example.com",
+      undefined,
+    );
+  });
+
+  it("accepts known source koningsdag-2026 and forwards it", async () => {
+    (mockStorage.subscribeNewsletter as ReturnType<typeof vi.fn>).mockResolvedValue({
+      alreadySubscribed: false,
+    });
+    const res = await request(app)
+      .post("/api/newsletter/subscribe")
+      .send({ email: "flea@example.com", source: "koningsdag-2026" });
+    expect(res.status).toBe(200);
+    expect(mockStorage.subscribeNewsletter).toHaveBeenCalledWith(
+      "flea@example.com",
+      "koningsdag-2026",
+    );
+  });
+
+  it("rejects unknown source with 400", async () => {
+    const res = await request(app)
+      .post("/api/newsletter/subscribe")
+      .send({ email: "x@example.com", source: "pwned" });
+    expect(res.status).toBe(400);
+    expect(mockStorage.subscribeNewsletter).not.toHaveBeenCalled();
+  });
+
+  it("reports already-subscribed", async () => {
+    (mockStorage.subscribeNewsletter as ReturnType<typeof vi.fn>).mockResolvedValue({
+      alreadySubscribed: true,
+    });
+    const res = await request(app)
+      .post("/api/newsletter/subscribe")
+      .send({ email: "repeat@example.com" });
+    expect(res.status).toBe(200);
+    expect(res.body.alreadySubscribed).toBe(true);
+  });
+});
