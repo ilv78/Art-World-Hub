@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertArtworkSchema, updateArtworkSchema, insertBidSchema, insertOrderSchema, insertBlogPostSchema, updateBlogPostSchema, updateArtistSchema, ORDER_TRANSITIONS, ORDER_STATUSES } from "@shared/schema";
+import { insertArtworkSchema, updateArtworkSchema, insertBidSchema, insertOrderSchema, insertBlogPostSchema, updateBlogPostSchema, updateArtistSchema, ORDER_TRANSITIONS, ORDER_STATUSES, NEWSLETTER_SOURCES } from "@shared/schema";
 import { normalizeArtworkForCreate, normalizeArtworkForUpdate } from "./publish";
 import type { Artist, ArtworkWithArtist, Order, InsertOrder } from "@shared/schema";
 import { z } from "zod";
@@ -1335,11 +1335,14 @@ export async function registerRoutes(
 
   // Newsletter subscribe
   app.post("/api/newsletter/subscribe", async (req, res) => {
-    const { email } = req.body ?? {};
+    const { email, source } = req.body ?? {};
     if (!email || typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({ error: "Please provide a valid email address." });
     }
-    const result = await storage.subscribeNewsletter(email);
+    if (source !== undefined && !NEWSLETTER_SOURCES.includes(source)) {
+      return res.status(400).json({ error: "Invalid source." });
+    }
+    const result = await storage.subscribeNewsletter(email, source);
     if (result.alreadySubscribed) {
       return res.json({ message: "You're already subscribed!", alreadySubscribed: true });
     }

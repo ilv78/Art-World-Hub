@@ -1,0 +1,1 @@
+ALTER TABLE "newsletter_subscribers" ADD COLUMN "source" varchar(50) DEFAULT 'general' NOT NULL;

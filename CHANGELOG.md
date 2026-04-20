@@ -8,7 +8,8 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
-_Nothing yet — all recent work included in v3.10.0 below._
+### Added
+- feat: `/koningsdag` welcome landing for the Koningsdag flea-market QR — captures email via existing newsletter signup tagged with a new `source` column; reuses `newsletter_subscribers` ([#526](https://github.com/ilv78/Art-World-Hub/issues/526))
 
 ## [3.10.0] - 2026-04-17
 
