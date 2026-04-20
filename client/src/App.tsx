@@ -26,6 +26,7 @@ import Exhibitions from "@/pages/exhibitions";
 import Changelog from "@/pages/changelog";
 import Privacy from "@/pages/privacy";
 import Terms from "@/pages/terms";
+import Koningsdag from "@/pages/koningsdag";
 import NotFound from "@/pages/not-found";
 
 function ScrollToTop() {
@@ -35,6 +36,9 @@ function ScrollToTop() {
   }, [location]);
   return null;
 }
+
+// Routes rendered without the standard public chrome (TopNav/Footer/BottomTabs).
+const BARE_ROUTES = new Set(["/koningsdag"]);
 
 function Router() {
   return (
@@ -58,8 +62,21 @@ function Router() {
       <Route path="/changelog" component={Changelog} />
       <Route path="/privacy" component={Privacy} />
       <Route path="/terms" component={Terms} />
+      <Route path="/koningsdag" component={Koningsdag} />
       <Route component={NotFound} />
     </Switch>
+  );
+}
+
+function Shell() {
+  const [location] = useLocation();
+  if (BARE_ROUTES.has(location)) {
+    return <Router />;
+  }
+  return (
+    <PublicLayout>
+      <Router />
+    </PublicLayout>
   );
 }
 
@@ -70,9 +87,7 @@ function App() {
         <ThemeProvider defaultTheme="light">
           <TooltipProvider>
             <ScrollToTop />
-            <PublicLayout>
-              <Router />
-            </PublicLayout>
+            <Shell />
             <Toaster />
           </TooltipProvider>
         </ThemeProvider>

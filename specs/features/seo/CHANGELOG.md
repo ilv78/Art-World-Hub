@@ -1,5 +1,12 @@
 # SEO Feature Changelog
 
+## 2026-04-20 — Image sitemap namespace on `/sitemap.xml` (#504)
+- `<urlset>` now declares `xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"`.
+- Each published artwork URL carries `<image:image>` with `<image:loc>`, `<image:title>` (≤100 chars), and `<image:caption>` (≤500 chars, truncated with an ellipsis).
+- Artist URL carries `<image:image>` when `avatarUrl` is set; blog URL carries `<image:image>` when `coverImageUrl` is set. A URL without its optional image is omitted cleanly (no empty `<image:image>` block).
+- New `xmlEscape()` + `absolutize()` helpers for user-supplied strings and site-relative image paths — required now that titles/descriptions are injected into the sitemap.
+- Cache (1h) preserved. New `server/__tests__/sitemap.test.ts` covers namespace, per-URL image blocks, XML escaping, caption truncation, cache reuse, and the published-only gate.
+
 ## 2026-04-17 — Public artwork detail pages with VisualArtwork JSON-LD (#503)
 - New public route `GET /artworks/:slug` with server-rendered meta tags + `VisualArtwork` JSON-LD (creator Person, artMedium, dateCreated, genre). `offers` with EUR currency + `InStock` emitted when `isForSale && price > 0`.
 - New `slug` column on `artworks` with unique index (migration `0008_superb_silver_centurion.sql`). Backfilled for existing rows; generated server-side on new artworks via `shared/artwork-slug.ts`.

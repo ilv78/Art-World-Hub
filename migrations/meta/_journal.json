@@ -64,6 +64,13 @@
       "when": 1776462545913,
       "tag": "0008_superb_silver_centurion",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1776694685690,
+      "tag": "0009_faithful_sally_floyd",
+      "breakpoints": true
     }
   ]
 }
