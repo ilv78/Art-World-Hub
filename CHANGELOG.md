@@ -8,10 +8,19 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
+_Nothing yet — all recent work included in v3.11.0 below._
+
+## [3.11.0] - 2026-04-20
+
+### Added
+- Generate webpage for Koningsdag 26 ([#526](https://github.com/ilv78/Art-World-Hub/issues/526))
+
+### Fixed
+- bug: /koningsdag 301-loops on staging (directory collides with SPA route) ([#528](https://github.com/ilv78/Art-World-Hub/issues/528))
+
 ### Added
 - feat: `/koningsdag` welcome landing for the Koningsdag flea-market QR — captures email via existing newsletter signup tagged with a new `source` column; reuses `newsletter_subscribers` ([#526](https://github.com/ilv78/Art-World-Hub/issues/526))
 - SEO: image sitemap — `/sitemap.xml` now declares the Google image namespace and emits `<image:image>` entries for artist avatars, published artwork images (title + caption), and blog cover images ([#504](https://github.com/ilv78/Art-World-Hub/issues/504))
-
 ### Fixed
 - fix: `/koningsdag` 301-loops on staging because the campaign asset sat under a directory that shadowed the SPA route — moved to `/campaigns/koningsdag/alexandra-painting.jpg` ([#528](https://github.com/ilv78/Art-World-Hub/issues/528))
 
