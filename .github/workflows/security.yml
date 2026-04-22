@@ -5,9 +5,9 @@ on:
     branches: ["**"]
   pull_request:
     branches: [main]
-  schedule:
-    # Full scan every Monday at 08:00 UTC — catches new CVEs against unchanged code
-    - cron: "0 8 * * 1"
+  # schedule: paused pending new cadence — see issue #533
+  # schedule:
+  #   - cron: "0 8 * * 1"
 
 permissions:
   contents: read
