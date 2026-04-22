@@ -15,7 +15,7 @@ Prepare Vernis9 for search engine discovery and social sharing. The site is a cl
 | `robots.txt` | Done | #364, #376 — dynamic route at `/robots.txt` (blocks indexing on non-production) |
 | `sitemap.xml` | Done | #365 — dynamic endpoint at `/sitemap.xml`; #504 — Google image-sitemap namespace + `<image:image>` for artist avatars, artwork images (title + caption), and blog cover images |
 | Per-page meta tags | Done | #366 — server-side injection + react-helmet-async |
-| Structured data (JSON-LD) | Done | #367 — Organization, Person, BlogPosting, BreadcrumbList; #501 — WebSite+SearchAction, FAQPage (homepage); #503 — VisualArtwork + Offer on `/artworks/:slug` |
+| Structured data (JSON-LD) | Done | #367 — Organization, Person, BlogPosting, BreadcrumbList; #501 — WebSite+SearchAction, FAQPage (homepage); #503 — VisualArtwork + Offer on `/artworks/:slug`; #535 — `sameAs` on Person JSON-LD (derived from `artists.socialLinks`) |
 | Public artwork detail pages | Done | #503 — `/artworks/:slug` server-rendered meta + JSON-LD, sitemap entries |
 | Twitter cards | Done | #366 — `twitter:card`, `twitter:title`, `twitter:description`, `twitter:image` |
 | Canonical URLs | Done | #366 — `<link rel="canonical">` on every page |

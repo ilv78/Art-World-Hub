@@ -1,5 +1,12 @@
 # SEO Feature Changelog
 
+## 2026-04-22 — `sameAs` on artist Person JSON-LD (#535)
+- Person JSON-LD on `/artists/:id` now emits a `sameAs` array built from `artists.socialLinks` (JSONB). Primary driver for Google's Knowledge Graph / "same identity across the web" matching — the main off-platform ranking signal for personal-name queries.
+- Filter: only values that match `^https?://` are included. Empty strings, bare handles, and relative paths are dropped so we never publish broken cross-links into structured data.
+- Absent when `socialLinks` is null / empty / has no absolute-URL entries — no empty `sameAs: []` emitted.
+- New helper `extractSameAs()` in `server/meta.ts`; tests in `server/__tests__/meta.test.ts` cover the three shapes (populated, empty, mixed-garbage filtered).
+- Shipped alongside a one-off data fix for Alexandra Constantin's artist row (trailing-space `"Alexandra C. "` → `"Alexandra Constantin"`) so the literal name appears on the page — without the DB value, no code change ranks the page for the search query. See Phase 1 PR description for the SQL to run on staging + production.
+
 ## 2026-04-20 — Image sitemap namespace on `/sitemap.xml` (#504)
 - `<urlset>` now declares `xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"`.
 - Each published artwork URL carries `<image:image>` with `<image:loc>`, `<image:title>` (≤100 chars), and `<image:caption>` (≤500 chars, truncated with an ellipsis).

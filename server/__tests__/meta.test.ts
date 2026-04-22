@@ -2,11 +2,12 @@ import { describe, it, expect, vi } from "vitest";
 
 const mockStorageState: {
   artwork: Record<string, unknown> | undefined;
-} = { artwork: undefined };
+  artist: Record<string, unknown> | undefined;
+} = { artwork: undefined, artist: undefined };
 
 vi.mock("../storage", () => ({
   storage: {
-    getArtist: vi.fn().mockResolvedValue(undefined),
+    getArtist: vi.fn(async () => mockStorageState.artist),
     getBlogPost: vi.fn().mockResolvedValue(undefined),
     getPublishedArtworkBySlug: vi.fn(async () => mockStorageState.artwork),
   },
@@ -153,5 +154,91 @@ describe("resolveMetaTags — /artworks/:slug (issue #503)", () => {
     const meta = await resolveMetaTags("/artworks/does-not-exist-00000000");
     const types = meta.jsonLd.map((ld) => ld["@type"]);
     expect(types).not.toContain("VisualArtwork");
+  });
+});
+
+function setMockArtist(artist: Record<string, unknown> | undefined) {
+  mockStorageState.artist = artist;
+}
+
+function baseArtist(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    id: "artist-alex",
+    name: "Alexandra Constantin",
+    bio: "Reverse glass painter based in the Netherlands.",
+    avatarUrl: "/uploads/avatar-alex.jpg",
+    country: "Netherlands",
+    specialization: "Reverse glass painting",
+    email: "a@example.com",
+    socialLinks: null,
+    ...overrides,
+  };
+}
+
+describe("resolveMetaTags — /artists/:id Person.sameAs (issue #535)", () => {
+  it("emits sameAs from absolute URLs in socialLinks", async () => {
+    setMockArtist(
+      baseArtist({
+        socialLinks: {
+          instagram: "https://www.instagram.com/alexandraconstantin1983/",
+          website: "https://www.je-suis-une-femme.art/femme/",
+        },
+      }),
+    );
+    const meta = await resolveMetaTags("/artists/artist-alex");
+    const person = findLd(meta.jsonLd, "Person")!;
+    expect(person.name).toBe("Alexandra Constantin");
+    const sameAs = person.sameAs as string[];
+    expect(sameAs).toContain("https://www.instagram.com/alexandraconstantin1983/");
+    expect(sameAs).toContain("https://www.je-suis-une-femme.art/femme/");
+    expect(sameAs.length).toBe(2);
+  });
+
+  it("omits sameAs entirely when socialLinks is empty or null", async () => {
+    setMockArtist(baseArtist({ socialLinks: null }));
+    let person = findLd(
+      (await resolveMetaTags("/artists/artist-alex")).jsonLd,
+      "Person",
+    )!;
+    expect(person.sameAs).toBeUndefined();
+
+    setMockArtist(baseArtist({ socialLinks: {} }));
+    person = findLd(
+      (await resolveMetaTags("/artists/artist-alex")).jsonLd,
+      "Person",
+    )!;
+    expect(person.sameAs).toBeUndefined();
+  });
+
+  it("drops non-URL entries (empty strings, relative paths, bare handles)", async () => {
+    setMockArtist(
+      baseArtist({
+        socialLinks: {
+          instagram: "https://instagram.com/alex",
+          website: "", // empty
+          twitter: "@alex", // bare handle
+          portfolio: "/portfolio", // relative path
+          blog: "http://blog.example.com",
+        },
+      }),
+    );
+    const person = findLd(
+      (await resolveMetaTags("/artists/artist-alex")).jsonLd,
+      "Person",
+    )!;
+    const sameAs = person.sameAs as string[];
+    expect(sameAs).toEqual([
+      "https://instagram.com/alex",
+      "http://blog.example.com",
+    ]);
+  });
+
+  it("puts the artist's full name in the title and Person.name", async () => {
+    setMockArtist(baseArtist());
+    const meta = await resolveMetaTags("/artists/artist-alex");
+    expect(meta.title).toBe("Alexandra Constantin \u2014 Vernis9");
+    expect(meta.ogTitle).toBe("Alexandra Constantin \u2014 Vernis9");
+    const person = findLd(meta.jsonLd, "Person")!;
+    expect(person.name).toBe("Alexandra Constantin");
   });
 });
