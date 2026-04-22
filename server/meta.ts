@@ -198,6 +198,7 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
           ? toAbsoluteUrl(artist.avatarUrl)
           : DEFAULT_OG_IMAGE;
         const artistUrl = `${SITE_URL}/artists/${artist.id}`;
+        const sameAs = extractSameAs(artist.socialLinks);
         const personLd: Record<string, unknown> = {
           "@context": "https://schema.org",
           "@type": "Person",
@@ -207,6 +208,7 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
           jobTitle: "Artist",
           ...(artist.avatarUrl ? { image: toAbsoluteUrl(artist.avatarUrl) } : {}),
           ...(artist.specialization ? { knowsAbout: artist.specialization } : {}),
+          ...(sameAs.length ? { sameAs } : {}),
         };
         return {
           title: `${artist.name} \u2014 Vernis9`,
@@ -386,6 +388,20 @@ export function injectMetaTags(html: string, meta: MetaTags): string {
 function toAbsoluteUrl(url: string): string {
   if (url.startsWith("http://") || url.startsWith("https://")) return url;
   return `${SITE_URL}${url.startsWith("/") ? "" : "/"}${url}`;
+}
+
+// Turn an artist's socialLinks JSONB into a schema.org sameAs array.
+// Only absolute http(s) URLs are kept — empty strings and relative paths are
+// dropped so we never emit a broken cross-link into structured data.
+function extractSameAs(socialLinks: unknown): string[] {
+  if (!socialLinks || typeof socialLinks !== "object") return [];
+  const out: string[] = [];
+  for (const value of Object.values(socialLinks as Record<string, unknown>)) {
+    if (typeof value !== "string") continue;
+    const trimmed = value.trim();
+    if (/^https?:\/\//i.test(trimmed)) out.push(trimmed);
+  }
+  return out;
 }
 
 function escapeHtml(str: string): string {

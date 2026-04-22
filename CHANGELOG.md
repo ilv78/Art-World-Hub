@@ -8,7 +8,8 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
-_Nothing yet — all recent work included in v3.11.0 below._
+### Added
+- SEO: `sameAs` on artist Person JSON-LD, derived from `artists.socialLinks`. Primary off-platform ranking signal for personal-name queries. ([#535](https://github.com/ilv78/Art-World-Hub/issues/535))
 
 ## [3.11.0] - 2026-04-20
 
