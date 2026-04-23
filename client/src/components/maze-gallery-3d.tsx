@@ -1985,7 +1985,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
                 <div>
                   <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
                     <h4 className="font-semibold">Artworks</h4>
-                    <Link href={`/artists/${artist.id}`}>
+                    <Link href={`/artists/${artist.slug}`}>
                       <Button variant="ghost" size="sm">
                         View Profile
                         <ExternalLink className="h-3 w-3 ml-2" />

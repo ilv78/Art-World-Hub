@@ -73,7 +73,7 @@ router.get("/sitemap.xml", async (_req, res) => {
     for (const artist of artists) {
       const lines = [
         `  <url>`,
-        `    <loc>${SITE_URL}/artists/${artist.id}</loc>`,
+        `    <loc>${SITE_URL}/artists/${artist.slug}</loc>`,
         `    <changefreq>monthly</changefreq>`,
         `    <priority>0.7</priority>`,
       ];

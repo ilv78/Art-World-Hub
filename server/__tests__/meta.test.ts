@@ -8,6 +8,7 @@ const mockStorageState: {
 vi.mock("../storage", () => ({
   storage: {
     getArtist: vi.fn(async () => mockStorageState.artist),
+    getArtistBySlug: vi.fn(async () => mockStorageState.artist),
     getBlogPost: vi.fn().mockResolvedValue(undefined),
     getPublishedArtworkBySlug: vi.fn(async () => mockStorageState.artwork),
   },
@@ -39,6 +40,7 @@ function baseArtwork(overrides: Record<string, unknown> = {}): Record<string, un
     category: "Painting",
     artist: {
       id: "artist-1",
+      slug: "ana-popescu-artist01",
       name: "Ana Popescu",
       avatarUrl: "/uploads/avatar-ana.jpg",
       bio: null,
@@ -164,6 +166,7 @@ function setMockArtist(artist: Record<string, unknown> | undefined) {
 function baseArtist(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     id: "artist-alex",
+    slug: "alexandra-constantin-alex0001",
     name: "Alexandra Constantin",
     bio: "Reverse glass painter based in the Netherlands.",
     avatarUrl: "/uploads/avatar-alex.jpg",
@@ -175,7 +178,7 @@ function baseArtist(overrides: Record<string, unknown> = {}): Record<string, unk
   };
 }
 
-describe("resolveMetaTags — /artists/:id Person.sameAs (issue #535)", () => {
+describe("resolveMetaTags — /artists/:slug Person.sameAs (issue #535)", () => {
   it("emits sameAs from absolute URLs in socialLinks", async () => {
     setMockArtist(
       baseArtist({
@@ -185,7 +188,7 @@ describe("resolveMetaTags — /artists/:id Person.sameAs (issue #535)", () => {
         },
       }),
     );
-    const meta = await resolveMetaTags("/artists/artist-alex");
+    const meta = await resolveMetaTags("/artists/alexandra-constantin-alex0001");
     const person = findLd(meta.jsonLd, "Person")!;
     expect(person.name).toBe("Alexandra Constantin");
     const sameAs = person.sameAs as string[];
@@ -197,14 +200,14 @@ describe("resolveMetaTags — /artists/:id Person.sameAs (issue #535)", () => {
   it("omits sameAs entirely when socialLinks is empty or null", async () => {
     setMockArtist(baseArtist({ socialLinks: null }));
     let person = findLd(
-      (await resolveMetaTags("/artists/artist-alex")).jsonLd,
+      (await resolveMetaTags("/artists/alexandra-constantin-alex0001")).jsonLd,
       "Person",
     )!;
     expect(person.sameAs).toBeUndefined();
 
     setMockArtist(baseArtist({ socialLinks: {} }));
     person = findLd(
-      (await resolveMetaTags("/artists/artist-alex")).jsonLd,
+      (await resolveMetaTags("/artists/alexandra-constantin-alex0001")).jsonLd,
       "Person",
     )!;
     expect(person.sameAs).toBeUndefined();
@@ -223,7 +226,7 @@ describe("resolveMetaTags — /artists/:id Person.sameAs (issue #535)", () => {
       }),
     );
     const person = findLd(
-      (await resolveMetaTags("/artists/artist-alex")).jsonLd,
+      (await resolveMetaTags("/artists/alexandra-constantin-alex0001")).jsonLd,
       "Person",
     )!;
     const sameAs = person.sameAs as string[];
@@ -235,10 +238,31 @@ describe("resolveMetaTags — /artists/:id Person.sameAs (issue #535)", () => {
 
   it("puts the artist's full name in the title and Person.name", async () => {
     setMockArtist(baseArtist());
-    const meta = await resolveMetaTags("/artists/artist-alex");
+    const meta = await resolveMetaTags("/artists/alexandra-constantin-alex0001");
     expect(meta.title).toBe("Alexandra Constantin \u2014 Vernis9");
     expect(meta.ogTitle).toBe("Alexandra Constantin \u2014 Vernis9");
     const person = findLd(meta.jsonLd, "Person")!;
     expect(person.name).toBe("Alexandra Constantin");
+  });
+});
+
+describe("resolveMetaTags — /artists/:slug canonical URL (issue #537)", () => {
+  it("Person.url and ogUrl use the slug, not the id", async () => {
+    setMockArtist(baseArtist());
+    const meta = await resolveMetaTags("/artists/alexandra-constantin-alex0001");
+    const person = findLd(meta.jsonLd, "Person")!;
+    expect(person.url).toBe(
+      "https://vernis9.art/artists/alexandra-constantin-alex0001",
+    );
+    expect(meta.ogUrl).toBe(
+      "https://vernis9.art/artists/alexandra-constantin-alex0001",
+    );
+  });
+
+  it("falls back to default meta when slug not found", async () => {
+    setMockArtist(undefined);
+    const meta = await resolveMetaTags("/artists/does-not-exist-00000000");
+    const types = meta.jsonLd.map((ld) => ld["@type"]);
+    expect(types).not.toContain("Person");
   });
 });

@@ -68,7 +68,7 @@ export default function ArtworkDetail({
   }
 
   const { artwork, related } = data;
-  const artistUrl = `/artists/${artwork.artist.id}`;
+  const artistUrl = `/artists/${artwork.artist.slug}`;
   const dimensions = artwork.dimensions
     ? /cm|mm|in|"/i.test(artwork.dimensions)
       ? artwork.dimensions

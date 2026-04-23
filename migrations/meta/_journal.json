@@ -71,6 +71,20 @@
       "when": 1776694685690,
       "tag": "0009_faithful_sally_floyd",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1776936010529,
+      "tag": "0010_nappy_psynapse",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1776939481592,
+      "tag": "0011_real_loki",
+      "breakpoints": true
     }
   ]
 }

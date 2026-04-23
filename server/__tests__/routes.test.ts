@@ -25,6 +25,8 @@ beforeEach(() => {
   // Re-apply default resolved values
   (mockStorage.getArtists as ReturnType<typeof vi.fn>).mockResolvedValue([]);
   (mockStorage.getArtist as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+  (mockStorage.getArtistBySlug as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+  (mockStorage.getArtistByRetiredSlug as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
   (mockStorage.getArtistByUserId as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
   (mockStorage.getArtworks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
   (mockStorage.getArtwork as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
@@ -82,6 +84,102 @@ describe("GET /api/artists/:id", () => {
     const res = await request(app).get("/api/artists/nonexistent");
     expect(res.status).toBe(404);
     expect(res.body.error).toBe("Artist not found");
+  });
+});
+
+describe("GET /api/public/artists/:slug (issue #537)", () => {
+  it("returns 200 with { artist } when slug resolves", async () => {
+    const artist = {
+      id: "4493f600-2619-47f9-979c-abc5b45ba92d",
+      slug: "alexandra-constantin-4493f600",
+      name: "Alexandra Constantin",
+      bio: "Bio",
+    };
+    (mockStorage.getArtistBySlug as ReturnType<typeof vi.fn>).mockResolvedValue(artist);
+
+    const res = await request(app).get("/api/public/artists/alexandra-constantin-4493f600");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ artist });
+  });
+
+  it("returns 404 for unknown slug", async () => {
+    (mockStorage.getArtistBySlug as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+
+    const res = await request(app).get("/api/public/artists/does-not-exist");
+    expect(res.status).toBe(404);
+  });
+});
+
+describe("GET /artists/:uuid 301 redirect (issue #537)", () => {
+  const uuid = "4493f600-2619-47f9-979c-abc5b45ba92d";
+
+  it("301-redirects a UUID path to the slug path when the artist exists", async () => {
+    (mockStorage.getArtist as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: uuid,
+      slug: "alexandra-constantin-4493f600",
+      name: "Alexandra Constantin",
+      bio: "Bio",
+    });
+
+    const res = await request(app).get(`/artists/${uuid}`).redirects(0);
+    expect(res.status).toBe(301);
+    expect(res.headers.location).toBe("/artists/alexandra-constantin-4493f600");
+  });
+
+  it("does not redirect when the UUID does not match an artist", async () => {
+    (mockStorage.getArtist as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+
+    const res = await request(app).get(`/artists/${uuid}`).redirects(0);
+    expect(res.status).not.toBe(301);
+  });
+
+  it("does not intercept slug-shaped paths", async () => {
+    (mockStorage.getArtistBySlug as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: uuid,
+      slug: "alexandra-constantin-4493f600",
+      name: "Alexandra Constantin",
+      bio: "Bio",
+    });
+    const res = await request(app).get("/artists/alexandra-constantin-4493f600").redirects(0);
+    expect(res.status).not.toBe(301);
+  });
+});
+
+describe("GET /artists/:retiredSlug 301 redirect (issue #537 scope extension)", () => {
+  it("redirects a retired slug to the artist's current slug", async () => {
+    (mockStorage.getArtistBySlug as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (mockStorage.getArtistByRetiredSlug as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "artist-1",
+      slug: "new-display-name-artist01",
+      name: "New Display Name",
+      bio: "Bio",
+    });
+
+    const res = await request(app).get("/artists/old-display-name-artist01").redirects(0);
+    expect(res.status).toBe(301);
+    expect(res.headers.location).toBe("/artists/new-display-name-artist01");
+  });
+
+  it("does not redirect when current slug matches (SPA path)", async () => {
+    (mockStorage.getArtistBySlug as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "artist-1",
+      slug: "current-name-artist01",
+      name: "Current Name",
+      bio: "Bio",
+    });
+    const spy = mockStorage.getArtistByRetiredSlug as ReturnType<typeof vi.fn>;
+
+    const res = await request(app).get("/artists/current-name-artist01").redirects(0);
+    expect(res.status).not.toBe(301);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("falls through to SPA when neither current nor retired slug matches", async () => {
+    (mockStorage.getArtistBySlug as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (mockStorage.getArtistByRetiredSlug as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+
+    const res = await request(app).get("/artists/totally-unknown-slug").redirects(0);
+    expect(res.status).not.toBe(301);
   });
 });
 

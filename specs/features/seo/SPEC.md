@@ -1,7 +1,7 @@
 # Feature: SEO (Search Engine Optimization)
 
 **Status:** In Progress
-**Last Updated:** 2026-04-17
+**Last Updated:** 2026-04-23
 **Owner:** Architecture
 
 ## Summary
@@ -24,7 +24,7 @@ Prepare Vernis9 for search engine discovery and social sharing. The site is a cl
 | Image lazy loading | Done | #368 — `loading="lazy"` on all below-the-fold images |
 | OG image | Done | #366 — default `og-default.png` + per-entity images |
 | Semantic HTML | Good | Proper heading hierarchy, `<section>`, `<article>`, `<main>` |
-| URL structure | Good | Clean paths: `/artists/:id`, `/blog/:id` |
+| URL structure | Done | `/artists/:slug` (#537) and `/artworks/:slug` (#503) — slug format `slugify(name|title)-<first-8-chars-of-uuid>`. Old UUID artist URLs 301-redirect to the slug form |
 | Alt text | Done | #369 — all img and AvatarImage have descriptive alt text |
 
 ## Work Items
