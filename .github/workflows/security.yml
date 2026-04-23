@@ -128,7 +128,7 @@ jobs:
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           exit-code: "1"
-          trivyignores: .trivyignore
+          trivyignores: .trivyignore.yaml
 
   # ─────────────────────────────────────────────
   # JOB 6 — CUSTOM SECURITY CHECKS

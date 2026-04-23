@@ -212,6 +212,48 @@ Verify and document the status of each item on the production VPS:
 
 ---
 
+### 5. Trivy Ignore File Convention
+
+Trivy container scans in `.github/workflows/ci.yml` and `.github/workflows/security.yml`
+load ignore rules from `.trivyignore.yaml` (v2 policy format). The classic
+`.trivyignore` (CVE-ID-only) is **not** used — Trivy's `--ignorefile` accepts a
+single file and cannot mix formats, so all entries live in the yaml file.
+
+**When adding a new entry:**
+
+- **Path-scope by default.** Include a `paths:` field pointing at the specific
+  binary / file that triggers the finding. A CVE that later appears in a
+  different location (e.g. a new transitive dependency) must still fail CI.
+  Only omit `paths:` when the CVE genuinely affects every copy of the library
+  across the image (e.g. a bundled npm dep of the Node base image that we don't
+  control).
+- **Required fields:** every entry must have `statement` (one-sentence reason)
+  and `expired_at` (ISO date, default six months out). Expiry forces re-review
+  when upstream fixes become available.
+- **Justify non-exploitability.** The `statement` should explain *why* the
+  vulnerability is not reachable in our deployment (e.g. "build-tool binary,
+  not runtime-reachable", "bundled inside npm base image, lockfile pins fixed
+  version").
+- **Link the decision.** Add a one-line row to `specs/decisions/DECISION-LOG.md`
+  when introducing the first entry for a new library or when changing scope.
+
+**When removing an entry:**
+
+- An expired entry will surface as a warning from Trivy on the next scan.
+  Re-verify whether the upstream fix has shipped (check the Fixed Version
+  column in the Trivy output). If yes, remove the entry and let CI re-run.
+  If no, update `expired_at` with a fresh justification and re-review date.
+
+**What NOT to do:**
+
+- Don't blanket-ignore a CVE ID globally when it only affects one binary —
+  use `paths:` to scope it.
+- Don't suppress CRITICAL findings without review — only HIGH/MEDIUM where
+  non-exploitability is documented.
+- Don't leave entries without `expired_at` — the file is not a dumping ground.
+
+---
+
 ## Deliverables
 
 ### Step 1 — Produce the Audit Report

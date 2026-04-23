@@ -1,0 +1,119 @@
+# Trivy v2 policy-format ignore file.
+# Supersedes the legacy classic `.trivyignore`, which has been removed.
+# Trivy's --ignorefile accepts a single file, so we unify here. Entries
+# without a `paths` field suppress the CVE globally (same as the classic
+# file did); entries with `paths` are scoped to that binary / file.
+#
+# Convention: new entries SHOULD include `paths` unless the CVE genuinely
+# affects every copy of the vulnerable library in the image. Every entry
+# MUST have a `statement` and `expired_at` so review is forced.
+#
+# Last reviewed: 2026-04-23 (issue #540)
+
+vulnerabilities:
+  # ─── npm bundled dependencies (node:25-bookworm-slim) ───────────
+  # These live inside the Node.js base image's built-in npm, not in
+  # our project lockfile. Our lockfile already pins fixed versions;
+  # these scans hit the *bundled* copies under
+  # /usr/local/lib/node_modules/npm/... Nothing we can do until the
+  # upstream Node base image rebuilds its npm bundle.
+  # Global suppression mirrors the pre-migration classic file.
+
+  - id: CVE-2024-21538
+    statement: "cross-spawn 7.0.3 bundled inside npm base image (our lockfile: 7.0.6)."
+    expired_at: 2026-10-23
+
+  - id: CVE-2025-64756
+    statement: "glob 10.4.2 bundled inside npm base image (our lockfile: 10.5.0)."
+    expired_at: 2026-10-23
+
+  - id: CVE-2026-26996
+    statement: "minimatch 9.0.5 bundled inside npm base image (our lockfile: 9.0.9)."
+    expired_at: 2026-10-23
+  - id: CVE-2026-27903
+    statement: "minimatch 9.0.5 bundled inside npm base image (our lockfile: 9.0.9)."
+    expired_at: 2026-10-23
+  - id: CVE-2026-27904
+    statement: "minimatch 9.0.5 bundled inside npm base image (our lockfile: 9.0.9)."
+    expired_at: 2026-10-23
+
+  - id: CVE-2026-33671
+    statement: "picomatch 4.0.3 via tinyglobby bundled inside npm base image (our lockfile: 4.0.4)."
+    expired_at: 2026-10-23
+
+  - id: CVE-2026-23745
+    statement: "tar 6.2.1 bundled inside npm base image; not used by our project directly."
+    expired_at: 2026-10-23
+  - id: CVE-2026-23950
+    statement: "tar 6.2.1 bundled inside npm base image; not used by our project directly."
+    expired_at: 2026-10-23
+  - id: CVE-2026-24842
+    statement: "tar 6.2.1 bundled inside npm base image; not used by our project directly."
+    expired_at: 2026-10-23
+  - id: CVE-2026-26960
+    statement: "tar 6.2.1 bundled inside npm base image; not used by our project directly."
+    expired_at: 2026-10-23
+  - id: CVE-2026-29786
+    statement: "tar 6.2.1 bundled inside npm base image; not used by our project directly."
+    expired_at: 2026-10-23
+  - id: CVE-2026-31802
+    statement: "tar 6.2.1 bundled inside npm base image; not used by our project directly."
+    expired_at: 2026-10-23
+
+  # ─── esbuild Go binary stdlib CVEs (pre-existing globals) ────────
+  # These were already globally suppressed in the classic file because
+  # the vulnerabilities sit in esbuild's Go stdlib and only esbuild
+  # maintainers can fix them by recompiling on a newer Go. Kept global
+  # here pending a wider audit — see follow-up task to path-scope them.
+
+  - id: CVE-2025-68121
+    statement: "esbuild Go stdlib — upstream fix blocked on esbuild rebuild."
+    expired_at: 2026-10-23
+  - id: CVE-2025-58183
+    statement: "esbuild Go stdlib — upstream fix blocked on esbuild rebuild."
+    expired_at: 2026-10-23
+  - id: CVE-2025-61726
+    statement: "esbuild Go stdlib — upstream fix blocked on esbuild rebuild."
+    expired_at: 2026-10-23
+  - id: CVE-2025-61728
+    statement: "esbuild Go stdlib — upstream fix blocked on esbuild rebuild."
+    expired_at: 2026-10-23
+  - id: CVE-2025-61729
+    statement: "esbuild Go stdlib — upstream fix blocked on esbuild rebuild."
+    expired_at: 2026-10-23
+  - id: CVE-2026-25679
+    statement: "esbuild Go stdlib — upstream fix blocked on esbuild rebuild."
+    expired_at: 2026-10-23
+  - id: CVE-2026-32280
+    statement: "esbuild Go stdlib — upstream fix blocked on esbuild rebuild."
+    expired_at: 2026-10-23
+  - id: CVE-2026-32282
+    statement: "esbuild Go stdlib — upstream fix blocked on esbuild rebuild."
+    expired_at: 2026-10-23
+
+  # ─── NEW: drizzle-kit bundled esbuild Go stdlib (issue #540) ─────
+  # Path-scoped because these specific CVEs only surface in the
+  # drizzle-kit-nested esbuild (Go 1.23.12). Our top-level esbuild
+  # 0.28.0 runs on Go 1.26.1 and is not flagged. drizzle-kit pins
+  # esbuild ^0.25.x, so we cannot remediate until drizzle-kit bumps
+  # its esbuild range to >= 0.26.
+  #
+  # The binary is drizzle-kit's internal JS bundler, invoked only at
+  # build / migration time. It does not listen on any port, does not
+  # handle user input, and is not reachable from request-path code.
+  # Both CVEs are DoS vectors requiring an attacker-controlled TLS
+  # peer — no such surface exists for this binary in our image.
+  #
+  # Revisit when drizzle-kit bumps esbuild >= 0.26.
+
+  - id: CVE-2026-32281
+    paths:
+      - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
+    statement: "Not runtime-reachable: drizzle-kit internal build tool, no TLS surface. Fix requires drizzle-kit to bump esbuild >= 0.26."
+    expired_at: 2026-10-23
+
+  - id: CVE-2026-32283
+    paths:
+      - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
+    statement: "Not runtime-reachable: drizzle-kit internal build tool, no TLS surface. Fix requires drizzle-kit to bump esbuild >= 0.26."
+    expired_at: 2026-10-23
