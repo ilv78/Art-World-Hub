@@ -95,7 +95,7 @@ export default function Artists() {
           {filteredArtists.map((artist, index) => {
             const isFeatured = index < 2;
             return (
-              <Link key={artist.id} href={`/artists/${artist.id}`}>
+              <Link key={artist.id} href={`/artists/${artist.slug}`}>
                 <Card
                   className={`overflow-hidden hover-elevate cursor-pointer group h-full ${isFeatured ? "sm:col-span-2" : ""}`}
                   data-testid={`card-artist-${artist.id}`}
@@ -197,7 +197,7 @@ export default function Artists() {
                   <div>
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="font-semibold">Artworks</h4>
-                      <Link href={`/artists/${selectedArtist.id}?tab=portfolio`}>
+                      <Link href={`/artists/${selectedArtist.slug}?tab=portfolio`}>
                         <Button variant="ghost" size="sm">
                           View All
                           <ExternalLink className="h-3 w-3 ml-2" />

@@ -1,5 +1,14 @@
 # SEO Feature Changelog
 
+## 2026-04-23 — Artist slug URLs `/artists/:slug` with UUID→slug + retired-slug 301 (#537)
+- Added `slug` column to `artists` with unique index (migration `0010_nappy_psynapse.sql`, three-step pattern mirroring `0008` for artworks). Backfilled for existing rows; generated server-side on insert + regenerated on rename via `shared/artist-slug.ts`.
+- New `artist_slug_history` table (migration `0011_real_loki.sql`) keyed on the retired slug with `ON DELETE CASCADE` back to `artists`. On `updateArtist` rename, the old slug is inserted into history in the same transaction — old URLs 301-redirect to the current slug forever (no-op when the rename yields the same slug).
+- Client route `/artists/:id` → `/artists/:slug`. All in-app `<Link>` hrefs (artists list, home, blog post, artwork detail, maze gallery) updated to emit slug URLs.
+- New public API `GET /api/public/artists/:slug` returning `{ artist }`. The artist profile page resolves the slug once and then re-uses the existing id-keyed sub-queries for artworks / gallery / blog — keeps React Query cache granularity and minimises changes.
+- **Canonical 301 handler** in `registerRoutes()` before the SPA catch-all: UUID-shaped paths resolve to current slug; slug-shaped misses check the history table for a retired-slug 301; current-slug hits fall through so the SPA renders normally. Unknown params fall through to the SPA's 404 handling.
+- `Person.url`, `Person.sameAs`-adjacent `ogUrl`, VisualArtwork `creator.url`, and VisualArtwork breadcrumb all now reference `/artists/:slug`. Sitemap artist entries emit slug URLs.
+- Tests: `server/__tests__/artist-slug.test.ts` (helper), storage tests for slug derivation + rename retirement into history + no-op when slug unchanged, routes tests for the public endpoint + UUID-301 + retired-slug-301, meta tests for the canonical slug URL, sitemap test asserting slug emission.
+
 ## 2026-04-22 — `sameAs` on artist Person JSON-LD (#535)
 - Person JSON-LD on `/artists/:id` now emits a `sameAs` array built from `artists.socialLinks` (JSONB). Primary driver for Google's Knowledge Graph / "same identity across the web" matching — the main off-platform ranking signal for personal-name queries.
 - Filter: only values that match `^https?://` are included. Empty strings, bare handles, and relative paths are dropped so we never publish broken cross-links into structured data.

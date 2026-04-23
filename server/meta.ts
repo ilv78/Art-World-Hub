@@ -185,11 +185,11 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
     };
   }
 
-  // Dynamic: /artists/:id
+  // Dynamic: /artists/:slug
   const artistMatch = path.match(/^\/artists\/([^/]+)$/);
   if (artistMatch) {
     try {
-      const artist = await storage.getArtist(artistMatch[1]);
+      const artist = await storage.getArtistBySlug(artistMatch[1]);
       if (artist) {
         const description = artist.bio
           ? artist.bio.slice(0, 160)
@@ -197,7 +197,7 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
         const image = artist.avatarUrl
           ? toAbsoluteUrl(artist.avatarUrl)
           : DEFAULT_OG_IMAGE;
-        const artistUrl = `${SITE_URL}/artists/${artist.id}`;
+        const artistUrl = `${SITE_URL}/artists/${artist.slug}`;
         const sameAs = extractSameAs(artist.socialLinks);
         const personLd: Record<string, unknown> = {
           "@context": "https://schema.org",
@@ -256,7 +256,7 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
           creator: {
             "@type": "Person",
             name: artwork.artist.name,
-            url: `${SITE_URL}/artists/${artwork.artist.id}`,
+            url: `${SITE_URL}/artists/${artwork.artist.slug}`,
             ...(artwork.artist.avatarUrl ? { image: toAbsoluteUrl(artwork.artist.avatarUrl) } : {}),
           },
           artMedium: artwork.medium,
@@ -287,7 +287,7 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
             breadcrumb(
               { name: "Home", url: `${SITE_URL}/` },
               { name: "Artists", url: `${SITE_URL}/artists` },
-              { name: artwork.artist.name, url: `${SITE_URL}/artists/${artwork.artist.id}` },
+              { name: artwork.artist.name, url: `${SITE_URL}/artists/${artwork.artist.slug}` },
               { name: artwork.title },
             ),
           ],

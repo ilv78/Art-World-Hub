@@ -11,6 +11,7 @@ export const artists = pgTable("artists", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id"),
   name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
   bio: text("bio").notNull(),
   avatarUrl: text("avatar_url"),
   country: text("country"),
@@ -21,8 +22,16 @@ export const artists = pgTable("artists", {
   socialLinks: jsonb("social_links").$type<Record<string, string>>(),
 });
 
-export const insertArtistSchema = createInsertSchema(artists).omit({ id: true });
+export const insertArtistSchema = createInsertSchema(artists).omit({ id: true, slug: true });
 export const updateArtistSchema = insertArtistSchema.partial().omit({ userId: true });
+
+// Retired artist slugs. On rename, the old `artists.slug` moves here so the
+// old URL can still 301-redirect to the current one. See #537.
+export const artistSlugHistory = pgTable("artist_slug_history", {
+  slug: text("slug").primaryKey(),
+  artistId: varchar("artist_id").references(() => artists.id, { onDelete: "cascade" }).notNull(),
+  retiredAt: timestamp("retired_at").defaultNow().notNull(),
+});
 export type InsertArtist = z.infer<typeof insertArtistSchema>;
 export type Artist = typeof artists.$inferSelect;
 

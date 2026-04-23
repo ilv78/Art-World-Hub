@@ -16,14 +16,15 @@ vi.mock("../db", () => {
     return chain;
   };
 
-  return {
-    db: {
-      select: vi.fn().mockReturnValue(mockChain()),
-      insert: vi.fn().mockReturnValue(mockChain()),
-      update: vi.fn().mockReturnValue(mockChain()),
-      delete: vi.fn().mockReturnValue(mockChain()),
-    },
+  const dbObj: any = {
+    select: vi.fn().mockReturnValue(mockChain()),
+    insert: vi.fn().mockReturnValue(mockChain()),
+    update: vi.fn().mockReturnValue(mockChain()),
+    delete: vi.fn().mockReturnValue(mockChain()),
+    transaction: vi.fn(async (cb: (tx: any) => Promise<any>) => cb(dbObj)),
   };
+
+  return { db: dbObj };
 });
 
 import { generateWhiteRoomLayout, DatabaseStorage } from "../storage";
@@ -194,6 +195,147 @@ describe("DatabaseStorage", () => {
 
       const result = await storage.createArtist(insertData);
       expect(result).toEqual(createdArtist);
+    });
+
+    it("derives a slug from name + id (issue #537)", async () => {
+      const insertMock = vi.mocked(db.insert);
+      let capturedValues: any;
+      insertMock.mockImplementation(() => {
+        const chain: any = {
+          values: vi.fn().mockImplementation((v: any) => {
+            capturedValues = v;
+            return chain;
+          }),
+          returning: vi.fn().mockResolvedValue([{ id: "x", slug: capturedValues?.slug }]),
+        };
+        return chain;
+      });
+
+      await storage.createArtist({ name: "Alexandra Constantin", bio: "b" });
+
+      expect(capturedValues).toBeDefined();
+      expect(capturedValues.id).toMatch(/^[0-9a-f-]{36}$/i);
+      const idPrefix = capturedValues.id.replace(/-/g, "").slice(0, 8);
+      expect(capturedValues.slug).toBe(`alexandra-constantin-${idPrefix}`);
+    });
+  });
+
+  describe("updateArtist (issue #537)", () => {
+    it("regenerates slug and retires the old slug into history on rename", async () => {
+      // Current row returned by the pre-update SELECT inside the transaction.
+      const selectMock = vi.mocked(db.select);
+      selectMock.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi
+                .fn()
+                .mockResolvedValue([{ slug: "old-name-4493f600" }]),
+            }),
+          }) as any,
+      );
+
+      // Capture the insert into artist_slug_history.
+      const insertMock = vi.mocked(db.insert);
+      let historyValues: any;
+      insertMock.mockImplementation(() => {
+        const chain: any = {
+          values: vi.fn().mockImplementation((v: any) => {
+            historyValues = v;
+            return chain;
+          }),
+          onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
+          returning: vi.fn().mockResolvedValue([]),
+        };
+        return chain;
+      });
+
+      // Capture the update to artists.
+      const updateMock = vi.mocked(db.update);
+      let capturedSet: any;
+      updateMock.mockImplementation(() => {
+        const chain: any = {
+          set: vi.fn().mockImplementation((data: any) => {
+            capturedSet = data;
+            return chain;
+          }),
+          where: vi.fn().mockReturnValue({
+            returning: vi
+              .fn()
+              .mockResolvedValue([{ id: "4493f600-2619-47f9-979c-abc5b45ba92d" }]),
+          }),
+        };
+        return chain;
+      });
+
+      await storage.updateArtist(
+        "4493f600-2619-47f9-979c-abc5b45ba92d",
+        { name: "New Name" },
+      );
+
+      expect(capturedSet.slug).toBe("new-name-4493f600");
+      expect(historyValues).toEqual({
+        slug: "old-name-4493f600",
+        artistId: "4493f600-2619-47f9-979c-abc5b45ba92d",
+      });
+    });
+
+    it("leaves slug untouched when name is not in the update payload", async () => {
+      const updateMock = vi.mocked(db.update);
+      let capturedSet: any;
+      updateMock.mockImplementation(() => {
+        const chain: any = {
+          set: vi.fn().mockImplementation((data: any) => {
+            capturedSet = data;
+            return chain;
+          }),
+          where: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([{ id: "a1" }]),
+          }),
+        };
+        return chain;
+      });
+
+      await storage.updateArtist("a1", { bio: "Updated bio" });
+
+      expect(capturedSet).toBeDefined();
+      expect(capturedSet.slug).toBeUndefined();
+      expect(capturedSet.bio).toBe("Updated bio");
+    });
+
+    it("does not retire the slug when the new slug is identical to the current one", async () => {
+      // The current row already has the slug we'd generate for "Alice" /
+      // this id, so the old-vs-new compare short-circuits.
+      const selectMock = vi.mocked(db.select);
+      selectMock.mockImplementationOnce(
+        () =>
+          ({
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockResolvedValue([{ slug: "alice-4493f600" }]),
+            }),
+          }) as any,
+      );
+
+      const insertMock = vi.mocked(db.insert);
+      insertMock.mockClear();
+
+      const updateMock = vi.mocked(db.update);
+      updateMock.mockImplementation(() => {
+        const chain: any = {};
+        chain.set = vi.fn().mockReturnValue(chain);
+        chain.where = vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([{ id: "x" }]),
+        });
+        return chain;
+      });
+
+      await storage.updateArtist(
+        "4493f600-2619-47f9-979c-abc5b45ba92d",
+        { name: "Alice" },
+      );
+
+      // No history insert should have happened.
+      expect(insertMock).not.toHaveBeenCalled();
     });
   });
 

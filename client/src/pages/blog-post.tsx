@@ -64,7 +64,7 @@ export default function BlogPost({ params }: { params: { id: string } }) {
         <h1 className="font-serif text-3xl font-bold">{post.title}</h1>
         <div className="flex items-center gap-3 text-sm text-muted-foreground">
           <Link
-            href={`/artists/${post.artist.id}`}
+            href={`/artists/${post.artist.slug}`}
             className="hover:text-primary transition-colors"
           >
             {post.artist.name}

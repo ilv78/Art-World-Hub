@@ -35,6 +35,7 @@ function makeApp() {
 function artistRow(overrides: Record<string, unknown> = {}) {
   return {
     id: "artist-1",
+    slug: "alexandra-artist01",
     name: "Alexandra",
     bio: "bio",
     avatarUrl: null,
@@ -111,6 +112,15 @@ describe("GET /sitemap.xml — image sitemap (#504)", () => {
     );
   });
 
+  it("emits /artists/:slug (not :id) in artist <loc> entries (#537)", async () => {
+    mockStorage.getArtists.mockResolvedValue([
+      artistRow({ id: "artist-1", slug: "alexandra-artist01" }),
+    ]);
+    const res = await request(makeApp()).get("/sitemap.xml");
+    expect(res.text).toContain("<loc>https://vernis9.art/artists/alexandra-artist01</loc>");
+    expect(res.text).not.toContain("<loc>https://vernis9.art/artists/artist-1</loc>");
+  });
+
   it("adds <image:image> for an artist with an avatar", async () => {
     mockStorage.getArtists.mockResolvedValue([
       artistRow({ avatarUrl: "https://cdn.example.com/avatars/a.jpg" }),
@@ -124,7 +134,7 @@ describe("GET /sitemap.xml — image sitemap (#504)", () => {
     mockStorage.getArtists.mockResolvedValue([artistRow({ avatarUrl: null })]);
     const res = await request(makeApp()).get("/sitemap.xml");
     const artistBlock = res.text.match(
-      /<url>\s*<loc>https:\/\/vernis9\.art\/artists\/artist-1<\/loc>[\s\S]*?<\/url>/,
+      /<url>\s*<loc>https:\/\/vernis9\.art\/artists\/alexandra-artist01<\/loc>[\s\S]*?<\/url>/,
     );
     expect(artistBlock).not.toBeNull();
     expect(artistBlock![0]).not.toContain("<image:image>");

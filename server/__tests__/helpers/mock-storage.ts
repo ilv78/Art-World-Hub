@@ -6,6 +6,8 @@ export function createMockStorage(): IStorage {
     // Artists
     getArtists: vi.fn().mockResolvedValue([]),
     getArtist: vi.fn().mockResolvedValue(undefined),
+    getArtistBySlug: vi.fn().mockResolvedValue(undefined),
+    getArtistByRetiredSlug: vi.fn().mockResolvedValue(undefined),
     getArtistByUserId: vi.fn().mockResolvedValue(undefined),
     ensureArtistProfile: vi.fn().mockResolvedValue({ id: "artist-1", name: "Test Artist" }),
     createArtist: vi.fn().mockResolvedValue({}),
