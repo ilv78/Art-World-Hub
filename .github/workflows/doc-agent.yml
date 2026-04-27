@@ -32,7 +32,7 @@ jobs:
 
       - name: Run Documentation Agent (Enforce)
         if: steps.check-key.outputs.has_key == 'true'
-        uses: anthropics/claude-code-action@38ec876110f9fbf8b950c79f534430740c3ac009 # v1
+        uses: anthropics/claude-code-action@567fe954a4527e81f132d87d1bdbcc94f7737434 # v1
         with:
           prompt: |
             You are the ArtVerse Documentation Agent in ENFORCE mode.
