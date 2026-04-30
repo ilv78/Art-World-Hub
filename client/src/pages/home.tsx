@@ -73,6 +73,7 @@ function HeroCarousel({ artworks }: { artworks: ArtworkWithArtist[] }) {
           <img
             src={s.imageUrl}
             alt={s.title}
+            fetchPriority={i === 0 ? "high" : undefined}
             className="w-full h-full object-cover animate-ken-burns"
             style={{
               animationDelay: `${i * -3}s`,
