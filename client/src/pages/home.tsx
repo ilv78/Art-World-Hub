@@ -228,7 +228,7 @@ function ArtistSpotlight({ artists }: { artists: Artist[] }) {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
           {featured.map((artist) => (
-            <Link key={artist.id} href={`/artists/${artist.id}`}>
+            <Link key={artist.id} href={`/artists/${artist.slug}`}>
               <Card className="group overflow-hidden hover-elevate cursor-pointer h-full">
                 <div className="relative aspect-square overflow-hidden bg-muted">
                   {artist.avatarUrl ? (

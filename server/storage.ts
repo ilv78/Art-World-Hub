@@ -14,7 +14,7 @@ import {
   type BlogPostWithArtist,
   type MazeLayout,
   type MazeCell,
-  artists, artworks, auctions, bids, orders, exhibitions, exhibitionArtworks, blogPosts,
+  artists, artistSlugHistory, artworks, auctions, bids, orders, exhibitions, exhibitionArtworks, blogPosts,
   curatorGalleries, curatorGalleryArtworks,
   type SiteSettings, siteSettings,
   newsletterSubscribers,
@@ -25,11 +25,14 @@ import { db } from "./db";
 import { eq, desc, asc, and, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { makeArtworkSlug } from "@shared/artwork-slug";
+import { makeArtistSlug } from "@shared/artist-slug";
 
 export interface IStorage {
   // Artists
   getArtists(): Promise<Artist[]>;
   getArtist(id: string): Promise<Artist | undefined>;
+  getArtistBySlug(slug: string): Promise<Artist | undefined>;
+  getArtistByRetiredSlug(slug: string): Promise<Artist | undefined>;
   getArtistByUserId(userId: string): Promise<Artist | undefined>;
   createArtist(artist: InsertArtist): Promise<Artist>;
   ensureArtistProfile(userId: string, opts: { firstName?: string; lastName?: string; email?: string }): Promise<Artist>;
@@ -125,13 +128,32 @@ export class DatabaseStorage implements IStorage {
     return artist;
   }
 
+  async getArtistBySlug(slug: string): Promise<Artist | undefined> {
+    const [artist] = await db.select().from(artists).where(eq(artists.slug, slug));
+    return artist;
+  }
+
+  async getArtistByRetiredSlug(slug: string): Promise<Artist | undefined> {
+    const [row] = await db
+      .select({ artist: artists })
+      .from(artistSlugHistory)
+      .innerJoin(artists, eq(artistSlugHistory.artistId, artists.id))
+      .where(eq(artistSlugHistory.slug, slug));
+    return row?.artist;
+  }
+
   async getArtistByUserId(userId: string): Promise<Artist | undefined> {
     const [artist] = await db.select().from(artists).where(eq(artists.userId, userId));
     return artist;
   }
 
   async createArtist(insertArtist: InsertArtist): Promise<Artist> {
-    const [artist] = await db.insert(artists).values(insertArtist).returning();
+    const id = randomUUID();
+    const slug = makeArtistSlug(insertArtist.name, id);
+    const [artist] = await db
+      .insert(artists)
+      .values({ ...insertArtist, id, slug })
+      .returning();
     return artist;
   }
 
@@ -458,12 +480,41 @@ export class DatabaseStorage implements IStorage {
 
   // Artist management
   async updateArtist(id: string, updateData: Partial<InsertArtist>): Promise<Artist | undefined> {
-    const [artist] = await db
-      .update(artists)
-      .set(updateData)
-      .where(eq(artists.id, id))
-      .returning();
-    return artist;
+    // Regenerate slug when the display name changes so public URLs stay
+    // readable after a rename. The UUID-derived suffix keeps the slug stable
+    // across other edits and makes collisions astronomically unlikely.
+    if (!updateData.name) {
+      const [artist] = await db
+        .update(artists)
+        .set(updateData)
+        .where(eq(artists.id, id))
+        .returning();
+      return artist;
+    }
+
+    const newSlug = makeArtistSlug(updateData.name, id);
+
+    return db.transaction(async (tx) => {
+      // Retire the current slug before overwriting it so the old URL can
+      // still 301-redirect to the new one. No-op if the name didn't actually
+      // change (newSlug === current slug) or if the slug was already retired.
+      const [current] = await tx
+        .select({ slug: artists.slug })
+        .from(artists)
+        .where(eq(artists.id, id));
+      if (current && current.slug !== newSlug) {
+        await tx
+          .insert(artistSlugHistory)
+          .values({ slug: current.slug, artistId: id })
+          .onConflictDoNothing();
+      }
+      const [artist] = await tx
+        .update(artists)
+        .set({ ...updateData, slug: newSlug })
+        .where(eq(artists.id, id))
+        .returning();
+      return artist;
+    });
   }
 
   async deleteArtwork(id: string): Promise<boolean> {

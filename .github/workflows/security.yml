@@ -5,9 +5,9 @@ on:
     branches: ["**"]
   pull_request:
     branches: [main]
-  schedule:
-    # Full scan every Monday at 08:00 UTC — catches new CVEs against unchanged code
-    - cron: "0 8 * * 1"
+  # schedule: paused pending new cadence — see issue #533
+  # schedule:
+  #   - cron: "0 8 * * 1"
 
 permissions:
   contents: read
@@ -121,14 +121,14 @@ jobs:
         run: docker build -t artverse:${{ github.sha }} .
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.30.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.30.0
         with:
           image-ref: artverse:${{ github.sha }}
           format: table
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           exit-code: "1"
-          trivyignores: .trivyignore
+          trivyignores: .trivyignore.yaml
 
   # ─────────────────────────────────────────────
   # JOB 6 — CUSTOM SECURITY CHECKS

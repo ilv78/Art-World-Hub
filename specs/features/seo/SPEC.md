@@ -1,7 +1,7 @@
 # Feature: SEO (Search Engine Optimization)
 
 **Status:** In Progress
-**Last Updated:** 2026-04-17
+**Last Updated:** 2026-04-23
 **Owner:** Architecture
 
 ## Summary
@@ -15,7 +15,7 @@ Prepare Vernis9 for search engine discovery and social sharing. The site is a cl
 | `robots.txt` | Done | #364, #376 — dynamic route at `/robots.txt` (blocks indexing on non-production) |
 | `sitemap.xml` | Done | #365 — dynamic endpoint at `/sitemap.xml`; #504 — Google image-sitemap namespace + `<image:image>` for artist avatars, artwork images (title + caption), and blog cover images |
 | Per-page meta tags | Done | #366 — server-side injection + react-helmet-async |
-| Structured data (JSON-LD) | Done | #367 — Organization, Person, BlogPosting, BreadcrumbList; #501 — WebSite+SearchAction, FAQPage (homepage); #503 — VisualArtwork + Offer on `/artworks/:slug` |
+| Structured data (JSON-LD) | Done | #367 — Organization, Person, BlogPosting, BreadcrumbList; #501 — WebSite+SearchAction, FAQPage (homepage); #503 — VisualArtwork + Offer on `/artworks/:slug`; #535 — `sameAs` on Person JSON-LD (derived from `artists.socialLinks`) |
 | Public artwork detail pages | Done | #503 — `/artworks/:slug` server-rendered meta + JSON-LD, sitemap entries |
 | Twitter cards | Done | #366 — `twitter:card`, `twitter:title`, `twitter:description`, `twitter:image` |
 | Canonical URLs | Done | #366 — `<link rel="canonical">` on every page |
@@ -24,7 +24,7 @@ Prepare Vernis9 for search engine discovery and social sharing. The site is a cl
 | Image lazy loading | Done | #368 — `loading="lazy"` on all below-the-fold images |
 | OG image | Done | #366 — default `og-default.png` + per-entity images |
 | Semantic HTML | Good | Proper heading hierarchy, `<section>`, `<article>`, `<main>` |
-| URL structure | Good | Clean paths: `/artists/:id`, `/blog/:id` |
+| URL structure | Done | `/artists/:slug` (#537) and `/artworks/:slug` (#503) — slug format `slugify(name|title)-<first-8-chars-of-uuid>`. Old UUID artist URLs 301-redirect to the slug form |
 | Alt text | Done | #369 — all img and AvatarImage have descriptive alt text |
 
 ## Work Items

@@ -50,30 +50,33 @@ const socialPlatforms: Record<string, { label: string; icon: React.ComponentType
 };
 
 export default function ArtistProfile() {
-  const params = useParams<{ id: string }>();
+  const params = useParams<{ slug: string }>();
   const addItem = useCartStore((state) => state.addItem);
   const [selectedArtwork, setSelectedArtwork] = useState<ArtworkWithArtist | null>(null);
   const urlTab = new URLSearchParams(window.location.search).get("tab");
   const [activeTab, setActiveTab] = useState(urlTab === "portfolio" || urlTab === "blog" ? urlTab : "gallery");
   const { isImmersive, toggleImmersive } = useImmersiveMode();
 
-  const { data: artist, isLoading: artistLoading } = useQuery<Artist>({
-    queryKey: ["/api/artists", params.id],
+  const { data: artistPayload, isLoading: artistLoading } = useQuery<{ artist: Artist }>({
+    queryKey: ["/api/public/artists", params.slug],
+    enabled: !!params.slug,
   });
+  const artist = artistPayload?.artist;
+  const artistId = artist?.id;
 
   const { data: artworks, isLoading: artworksLoading } = useQuery<ArtworkWithArtist[]>({
-    queryKey: ["/api/artists", params.id, "artworks"],
-    enabled: !!params.id,
+    queryKey: ["/api/artists", artistId, "artworks"],
+    enabled: !!artistId,
   });
 
   const { data: galleryData, isLoading: galleryLoading } = useQuery<GalleryData>({
-    queryKey: ["/api/artists", params.id, "gallery"],
-    enabled: !!params.id,
+    queryKey: ["/api/artists", artistId, "gallery"],
+    enabled: !!artistId,
   });
 
   const { data: blogPosts, isLoading: blogLoading } = useQuery<BlogPostWithArtist[]>({
-    queryKey: ["/api/artists", params.id, "blog"],
-    enabled: !!params.id,
+    queryKey: ["/api/artists", artistId, "blog"],
+    enabled: !!artistId,
   });
 
   const publishedPosts = blogPosts?.filter(post => post.isPublished) || [];

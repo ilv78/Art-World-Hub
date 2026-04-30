@@ -389,6 +389,20 @@ export async function registerRoutes(
     }
   });
 
+  // Public artist lookup by slug — used by the artist profile page so that
+  // /artists/:slug can resolve without the client knowing the internal UUID.
+  app.get("/api/public/artists/:slug", async (req, res) => {
+    try {
+      const artist = await storage.getArtistBySlug(req.params.slug);
+      if (!artist) {
+        return res.status(404).json({ error: "Artist not found" });
+      }
+      res.json({ artist });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch artist" });
+    }
+  });
+
   app.get("/api/artists/:id", async (req, res) => {
     try {
       const artist = await storage.getArtist(req.params.id);
@@ -398,6 +412,33 @@ export async function registerRoutes(
       res.json(artist);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch artist" });
+    }
+  });
+
+  // Canonicalize /artists/:idOrSlug before the SPA catch-all so old links
+  // (UUID URLs from before slugs existed, retired slugs from renames) 301
+  // to the current canonical slug. Unknown params fall through so the SPA
+  // still renders its own 404 UI. Registered in registerRoutes() to run
+  // before static.ts / vite.ts install the catch-all.
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  app.get("/artists/:idOrSlug", async (req, res, next) => {
+    const param = req.params.idOrSlug;
+    try {
+      if (UUID_RE.test(param)) {
+        const artist = await storage.getArtist(param);
+        if (artist) return res.redirect(301, `/artists/${artist.slug}`);
+        return next();
+      }
+      // Slug-shaped param: if it matches the current slug, the SPA handles
+      // the request unchanged. Only hit the history table on a miss so the
+      // common path stays one query.
+      const current = await storage.getArtistBySlug(param);
+      if (current) return next();
+      const retired = await storage.getArtistByRetiredSlug(param);
+      if (retired) return res.redirect(301, `/artists/${retired.slug}`);
+      return next();
+    } catch {
+      return next();
     }
   });
 

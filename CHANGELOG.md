@@ -8,7 +8,21 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
-_Nothing yet — all recent work included in v3.11.0 below._
+_Nothing yet — all recent work included in v3.12.0 below._
+
+## [3.12.0] - 2026-04-23
+
+### Added
+- SEO: rank artist profile on page 1 for full name — Phase 1 (name + sameAs) ([#535](https://github.com/ilv78/Art-World-Hub/issues/535))
+
+### Fixed
+- fix(ci): Trivy blocks staging deploy on Go stdlib CVEs in drizzle-kit bundled esbuild ([#540](https://github.com/ilv78/Art-World-Hub/issues/540))
+
+### Security
+- chore(security): suspend weekly security scan cron — pending new cadence ([#533](https://github.com/ilv78/Art-World-Hub/issues/533))
+
+### Added
+- SEO: `sameAs` on artist Person JSON-LD, derived from `artists.socialLinks`. Primary off-platform ranking signal for personal-name queries. ([#535](https://github.com/ilv78/Art-World-Hub/issues/535))
 
 ## [3.11.0] - 2026-04-20
 
