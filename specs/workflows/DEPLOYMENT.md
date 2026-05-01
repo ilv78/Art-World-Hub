@@ -242,6 +242,10 @@ The sudoers rules for both helpers (per `staging` and `production` user) live in
 <user> ALL=(root) NOPASSWD: /usr/sbin/nginx -s reload
 ```
 
+### Response compression
+
+Nginx is the source of truth for compressing responses to clients. The vernis9.art and staging.vernis9.art server blocks both have a `gzip on; gzip_proxied any;` directive set, so any text response from the upstream Express app (HTML, JSON, JS, CSS, SVG, WASM, XML) is gzipped on the way out unless it is already encoded. Express's own `compression` middleware still handles HTML inside the upstream — nginx detects the existing `Content-Encoding` and skips re-compressing — but the bundled `/assets/*` files served by Express's static middleware are uncompressed at the upstream layer and rely on nginx for compression. Brotli is not currently configured because the system nginx package (`nginx 1.24.0` on Ubuntu) is not built with the brotli module. See #550.
+
 ---
 
 ## 6. Docker Image Layout
