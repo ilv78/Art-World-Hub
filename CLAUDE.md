@@ -56,6 +56,12 @@ Three developer keywords drive handoffs (recognize the listed aliases too):
 
 Full protocol, edge cases, and recovery procedures: `specs/workflows/MULTI-DEVICE.md`. KEEP UPDATED with workflow changes.
 
+## VPS Infra Operations
+
+Before SSH-ing to the production/staging VPS (`artverse.idata.ro`) for any operation that needs `sudo` or affects nginx, systemd, or other system state — read `specs/workflows/DEPLOYMENT.md` §5 first. The `staging` and `production` users have **passwordless** sudo only for a specific allowlist (`deploy-nginx-config`, `remove-nginx-config`, `nginx -t`, `nginx -s reload`); anything else (`sudo cp`, `sudo systemctl`, `sudo bash`) prompts for a password. Always prefer the documented helpers — they're non-interactive AND include backup + validate + reload + auto-rollback on `nginx -t` failure.
+
+A PreToolUse hook in `.claude/settings.json` (script at `.claude/hooks/check-vps-infra-ops.sh`) reminds Claude of this when a Bash command targets the VPS with sudo/nginx tokens. Lesson from #550.
+
 ## Commands
 
 ```bash
