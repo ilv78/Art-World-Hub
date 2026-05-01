@@ -18,6 +18,36 @@ interface MetaTags {
   ogUrl: string;
   ogImage: string;
   jsonLd: Record<string, unknown>[];
+  lcpImagePreload?: string; // path of the LCP image to preload (only / today)
+}
+
+// In-memory cache for the home-page LCP candidate. Refreshed on a TTL because
+// `/` is the most-hit URL and we don't want to query the DB on every request.
+// 30s is short enough that hero changes (admin tagging "#featured") propagate
+// quickly, long enough to absorb spike traffic. (#560)
+const HOME_HERO_TTL_MS = 30_000;
+let homeHeroCache: { value: string | null; expiresAt: number } | null = null;
+
+async function getHomeHeroPreloadPath(): Promise<string | null> {
+  const now = Date.now();
+  if (homeHeroCache && homeHeroCache.expiresAt > now) {
+    return homeHeroCache.value;
+  }
+  try {
+    const slide0 = await storage.getHomeHeroSlide0();
+    const value = slide0 ? slide0.imageUrl : null;
+    homeHeroCache = { value, expiresAt: now + HOME_HERO_TTL_MS };
+    return value;
+  } catch {
+    // On error, return null and DO NOT cache — let the next request retry.
+    // Worst case we serve `/` without the preload (the original behavior).
+    return null;
+  }
+}
+
+// Test-only: reset the in-memory cache so unit tests are deterministic.
+export function __resetHomeHeroCache(): void {
+  homeHeroCache = null;
 }
 
 const STATIC_ROUTES: Record<string, Pick<MetaTags, "title" | "ogType"> & { description?: string }> = {
@@ -173,6 +203,8 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
       ));
     }
     const description = staticRoute.description ?? DEFAULT_DESCRIPTION;
+    const lcpImagePreload =
+      path === "/" ? (await getHomeHeroPreloadPath()) ?? undefined : undefined;
     return {
       title: staticRoute.title,
       description,
@@ -182,6 +214,7 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
       ogUrl: `${SITE_URL}${path === "/" ? "/" : path}`,
       ogImage: DEFAULT_OG_IMAGE,
       jsonLd,
+      lcpImagePreload,
     };
   }
 
@@ -372,6 +405,10 @@ export function injectMetaTags(html: string, meta: MetaTags): string {
     .map((ld) => `<script type="application/ld+json">${JSON.stringify(ld)}</script>`)
     .join("\n    ");
 
+  const lcpPreload = meta.lcpImagePreload
+    ? `<link rel="preload" as="image" href="${escapeHtml(meta.lcpImagePreload)}" fetchpriority="high">`
+    : "";
+
   return html
     .replace(/__META_TITLE__/g, escapeHtml(meta.title))
     .replace(/__META_DESCRIPTION__/g, escapeHtml(meta.description))
@@ -382,7 +419,8 @@ export function injectMetaTags(html: string, meta: MetaTags): string {
     .replace(/__META_OG_URL__/g, escapeHtml(meta.ogUrl))
     .replace(/__META_OG_IMAGE__/g, escapeHtml(meta.ogImage))
     .replace(/__META_ROBOTS__/g, isProduction ? "" : '<meta name="robots" content="noindex, nofollow" />')
-    .replace(/__JSON_LD__/g, jsonLdScripts);
+    .replace(/__JSON_LD__/g, jsonLdScripts)
+    .replace(/__LCP_IMAGE_PRELOAD__/g, lcpPreload);
 }
 
 function toAbsoluteUrl(url: string): string {

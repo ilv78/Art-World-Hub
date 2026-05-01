@@ -19,6 +19,7 @@ export function createMockStorage(): IStorage {
     getPublishedArtworkBySlug: vi.fn().mockResolvedValue(undefined),
     getRelatedArtworksByArtist: vi.fn().mockResolvedValue([]),
     getArtworksByArtist: vi.fn().mockResolvedValue([]),
+    getHomeHeroSlide0: vi.fn().mockResolvedValue(null),
     createArtwork: vi.fn().mockResolvedValue({}),
     updateArtwork: vi.fn().mockResolvedValue(undefined),
     deleteArtwork: vi.fn().mockResolvedValue(false),

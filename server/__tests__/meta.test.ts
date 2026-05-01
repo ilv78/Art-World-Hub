@@ -1,9 +1,12 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockStorageState: {
   artwork: Record<string, unknown> | undefined;
   artist: Record<string, unknown> | undefined;
-} = { artwork: undefined, artist: undefined };
+  homeHero: { id: string; imageUrl: string } | null;
+} = { artwork: undefined, artist: undefined, homeHero: null };
+
+const getHomeHeroSlide0Mock = vi.fn(async () => mockStorageState.homeHero);
 
 vi.mock("../storage", () => ({
   storage: {
@@ -11,10 +14,11 @@ vi.mock("../storage", () => ({
     getArtistBySlug: vi.fn(async () => mockStorageState.artist),
     getBlogPost: vi.fn().mockResolvedValue(undefined),
     getPublishedArtworkBySlug: vi.fn(async () => mockStorageState.artwork),
+    getHomeHeroSlide0: getHomeHeroSlide0Mock,
   },
 }));
 
-const { resolveMetaTags } = await import("../meta");
+const { resolveMetaTags, injectMetaTags, __resetHomeHeroCache } = await import("../meta");
 
 function setMockArtwork(artwork: Record<string, unknown> | undefined) {
   mockStorageState.artwork = artwork;
@@ -264,5 +268,108 @@ describe("resolveMetaTags — /artists/:slug canonical URL (issue #537)", () => 
     const meta = await resolveMetaTags("/artists/does-not-exist-00000000");
     const types = meta.jsonLd.map((ld) => ld["@type"]);
     expect(types).not.toContain("Person");
+  });
+});
+
+describe("LCP image preload — / only (issue #560)", () => {
+  beforeEach(() => {
+    __resetHomeHeroCache();
+    getHomeHeroSlide0Mock.mockClear();
+    mockStorageState.homeHero = null;
+  });
+
+  it("populates lcpImagePreload on / when storage returns a hero", async () => {
+    mockStorageState.homeHero = {
+      id: "art-1",
+      imageUrl: "/uploads/artworks/featured.jpg",
+    };
+    const meta = await resolveMetaTags("/");
+    expect(meta.lcpImagePreload).toBe("/uploads/artworks/featured.jpg");
+  });
+
+  it("leaves lcpImagePreload undefined on / when storage returns null", async () => {
+    mockStorageState.homeHero = null;
+    const meta = await resolveMetaTags("/");
+    expect(meta.lcpImagePreload).toBeUndefined();
+  });
+
+  it("never populates lcpImagePreload on non-root static routes", async () => {
+    mockStorageState.homeHero = {
+      id: "art-1",
+      imageUrl: "/uploads/artworks/featured.jpg",
+    };
+    for (const path of ["/gallery", "/store", "/artists", "/blog", "/changelog"]) {
+      const meta = await resolveMetaTags(path);
+      expect(meta.lcpImagePreload).toBeUndefined();
+    }
+  });
+
+  it("caches the storage result within the TTL (only one DB call across N / requests)", async () => {
+    mockStorageState.homeHero = {
+      id: "art-1",
+      imageUrl: "/uploads/artworks/featured.jpg",
+    };
+    await resolveMetaTags("/");
+    await resolveMetaTags("/");
+    await resolveMetaTags("/");
+    expect(getHomeHeroSlide0Mock).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns null and does not cache on storage error", async () => {
+    getHomeHeroSlide0Mock.mockRejectedValueOnce(new Error("db down"));
+    const first = await resolveMetaTags("/");
+    expect(first.lcpImagePreload).toBeUndefined();
+
+    // Second call should retry, not serve a cached null
+    mockStorageState.homeHero = {
+      id: "art-2",
+      imageUrl: "/uploads/artworks/recovered.jpg",
+    };
+    const second = await resolveMetaTags("/");
+    expect(second.lcpImagePreload).toBe("/uploads/artworks/recovered.jpg");
+    expect(getHomeHeroSlide0Mock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("injectMetaTags — LCP preload tag (issue #560)", () => {
+  function baseMeta(): Parameters<typeof injectMetaTags>[1] {
+    return {
+      title: "T",
+      description: "D",
+      ogTitle: "OT",
+      ogDescription: "OD",
+      ogType: "website",
+      ogUrl: "https://x/",
+      ogImage: "https://x/og.png",
+      jsonLd: [],
+    };
+  }
+
+  it("injects <link rel=preload as=image> when lcpImagePreload is set", () => {
+    const html = "<head>__LCP_IMAGE_PRELOAD__</head>";
+    const out = injectMetaTags(html, {
+      ...baseMeta(),
+      lcpImagePreload: "/uploads/artworks/x.jpg",
+    });
+    expect(out).toContain(
+      '<link rel="preload" as="image" href="/uploads/artworks/x.jpg" fetchpriority="high">',
+    );
+  });
+
+  it("strips the placeholder to empty when lcpImagePreload is undefined", () => {
+    const html = "<head>__LCP_IMAGE_PRELOAD__</head>";
+    const out = injectMetaTags(html, baseMeta());
+    expect(out).toBe("<head></head>");
+  });
+
+  it("escapes the URL to prevent attribute injection", () => {
+    const html = "<head>__LCP_IMAGE_PRELOAD__</head>";
+    const out = injectMetaTags(html, {
+      ...baseMeta(),
+      lcpImagePreload: '/uploads/x.jpg" onerror="alert(1)',
+    });
+    // The double-quote and HTML-significant chars must be escaped
+    expect(out).not.toContain('onerror="alert(1)"');
+    expect(out).toContain("&quot;");
   });
 });
