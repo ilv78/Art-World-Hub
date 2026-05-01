@@ -18,6 +18,7 @@ const { mockStorage } = vi.hoisted(() => {
     getPublishedArtworkBySlug: fn().mockResolvedValue(undefined),
     getRelatedArtworksByArtist: fn().mockResolvedValue([]),
     getArtworksByArtist: fn().mockResolvedValue([]),
+    getHomeHeroSlide0: fn().mockResolvedValue(null),
     createArtwork: fn().mockResolvedValue({}),
     updateArtwork: fn().mockResolvedValue(undefined),
     deleteArtwork: fn().mockResolvedValue(false),

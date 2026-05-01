@@ -43,6 +43,7 @@ export interface IStorage {
   getPublishedArtworkBySlug(slug: string): Promise<ArtworkWithArtist | undefined>;
   getRelatedArtworksByArtist(artistId: string, excludeId: string, limit: number): Promise<ArtworkWithArtist[]>;
   getArtworksByArtist(artistId: string, opts?: { includeDrafts?: boolean }): Promise<ArtworkWithArtist[]>;
+  getHomeHeroSlide0(): Promise<{ id: string; imageUrl: string } | null>;
   createArtwork(artwork: InsertArtwork): Promise<Artwork>;
   updateArtwork(id: string, artwork: Partial<InsertArtwork>): Promise<Artwork | undefined>;
   
@@ -171,14 +172,19 @@ export class DatabaseStorage implements IStorage {
 
   // Artworks
   async getArtworks(opts: { includeDrafts?: boolean } = {}): Promise<ArtworkWithArtist[]> {
-    const query = db
+    // Order by id ASC for a deterministic stream. Without it Postgres returns
+    // physical order, which can shift after VACUUM or reindex and de-syncs the
+    // client carousel's slide 0 from the server-side LCP preload picker
+    // (`getHomeHeroSlide0` shares this ordering). UUID-id ordering isn't
+    // user-meaningful but it's stable, which is the property we need. (#560)
+    const baseQuery = db
       .select()
       .from(artworks)
       .innerJoin(artists, eq(artworks.artistId, artists.id));
 
     const result = opts.includeDrafts
-      ? await query
-      : await query.where(eq(artworks.isPublished, true));
+      ? await baseQuery.orderBy(asc(artworks.id))
+      : await baseQuery.where(eq(artworks.isPublished, true)).orderBy(asc(artworks.id));
 
     return result.map(({ artworks: artwork, artists: artist }) => ({
       ...artwork,
@@ -254,6 +260,39 @@ export class DatabaseStorage implements IStorage {
       ...artwork,
       artist,
     }));
+  }
+
+  // Picks the artwork that the home-page hero carousel will display as slide 0.
+  // Mirrors `client/src/pages/home.tsx` ordering so the URL we preload matches
+  // the URL the React carousel ultimately renders. Priority:
+  //   1. Published artworks whose description contains "#featured"
+  //   2. Else published artworks with isInGallery=true
+  //   3. Else any published artwork
+  // Within each tier we order by id ASC so the result is deterministic; the
+  // home-page `getArtworks` query is unordered today, so this picks a stable
+  // candidate even if Postgres' natural row order shifts. Used for the LCP
+  // image preload tag injected into the `/` HTML response. (#560)
+  async getHomeHeroSlide0(): Promise<{ id: string; imageUrl: string } | null> {
+    const rows = await db
+      .select({
+        id: artworks.id,
+        imageUrl: artworks.imageUrl,
+        description: artworks.description,
+        isInGallery: artworks.isInGallery,
+      })
+      .from(artworks)
+      .where(eq(artworks.isPublished, true))
+      .orderBy(asc(artworks.id));
+
+    if (rows.length === 0) return null;
+
+    const featured = rows.find((r) => r.description?.includes("#featured"));
+    if (featured) return { id: featured.id, imageUrl: featured.imageUrl };
+
+    const inGallery = rows.find((r) => r.isInGallery === true);
+    if (inGallery) return { id: inGallery.id, imageUrl: inGallery.imageUrl };
+
+    return { id: rows[0].id, imageUrl: rows[0].imageUrl };
   }
 
   async createArtwork(insertArtwork: InsertArtwork): Promise<Artwork> {

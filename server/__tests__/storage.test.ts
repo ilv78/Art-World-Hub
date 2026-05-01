@@ -142,13 +142,15 @@ describe("DatabaseStorage", () => {
       const chain = selectMock();
       vi.mocked(chain.from).mockReturnThis();
       vi.mocked(chain.innerJoin).mockReturnThis();
-      vi.mocked(chain.where).mockResolvedValueOnce(joinResult as any);
+      vi.mocked(chain.where).mockReturnThis();
+      vi.mocked(chain.orderBy).mockResolvedValueOnce(joinResult as any);
 
       const result = await storage.getArtworks();
       expect(result).toHaveLength(1);
       expect(result[0].title).toBe("Painting");
       expect(result[0].artist.name).toBe("Alice");
       expect(chain.where).toHaveBeenCalled();
+      expect(chain.orderBy).toHaveBeenCalled();
     });
 
     it("skips the published filter when includeDrafts is set", async () => {
@@ -162,11 +164,13 @@ describe("DatabaseStorage", () => {
       const selectMock = vi.mocked(db.select);
       const chain = selectMock();
       vi.mocked(chain.from).mockReturnThis();
-      vi.mocked(chain.innerJoin).mockResolvedValueOnce(joinResult as any);
+      vi.mocked(chain.innerJoin).mockReturnThis();
+      vi.mocked(chain.orderBy).mockResolvedValueOnce(joinResult as any);
 
       const result = await storage.getArtworks({ includeDrafts: true });
       expect(result).toHaveLength(1);
       expect(result[0].isPublished).toBe(false);
+      expect(chain.orderBy).toHaveBeenCalled();
     });
   });
 
