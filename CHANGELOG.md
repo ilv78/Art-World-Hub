@@ -8,7 +8,12 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
-_Nothing yet — all recent work included in v3.14.0 below._
+_Nothing yet — all recent work included in v3.15.0 below._
+
+## [3.15.0] - 2026-05-02
+
+### Added
+- perf: image pipeline for blog cover uploads (sub of #551 P2, follow-up to #564) ([#573](https://github.com/ilv78/Art-World-Hub/issues/573))
 
 ## [3.14.0] - 2026-05-02
 
