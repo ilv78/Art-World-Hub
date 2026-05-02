@@ -35,6 +35,13 @@ export async function setupVite(server: Server, app: Express) {
   app.use("/{*path}", async (req, res, next) => {
     const url = req.originalUrl;
 
+    // Same guard as production: missing /uploads/*, /api/*, /assets/* must
+    // 404, never fall through to the SPA. See server/static.ts for the
+    // longer note. (#567)
+    if (url.startsWith("/uploads/") || url.startsWith("/api/") || url.startsWith("/assets/")) {
+      return res.status(404).end();
+    }
+
     try {
       const clientTemplate = path.resolve(
         import.meta.dirname,

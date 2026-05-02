@@ -345,15 +345,37 @@ describe("injectMetaTags — LCP preload tag (issue #560)", () => {
     };
   }
 
-  it("injects <link rel=preload as=image> when lcpImagePreload is set", () => {
+  it("injects imagesrcset preload pointing at the variant set when hero is /uploads/artworks/* (#567)", () => {
     const html = "<head>__LCP_IMAGE_PRELOAD__</head>";
     const out = injectMetaTags(html, {
       ...baseMeta(),
-      lcpImagePreload: "/uploads/artworks/x.jpg",
+      lcpImagePreload: "/uploads/artworks/abc-uuid.jpg",
+    });
+    expect(out).toContain('rel="preload"');
+    expect(out).toContain('as="image"');
+    expect(out).toContain('imagesrcset=');
+    expect(out).toContain('imagesizes="100vw"');
+    expect(out).toContain('fetchpriority="high"');
+    // Variant URLs the <picture> would render — preload must match so the
+    // bytes the browser preloads are the bytes the picture displays.
+    expect(out).toContain("/uploads/artworks/abc-uuid-480.webp 480w");
+    expect(out).toContain("/uploads/artworks/abc-uuid-960.webp 960w");
+    expect(out).toContain("/uploads/artworks/abc-uuid-1440.webp 1440w");
+    expect(out).toContain("/uploads/artworks/abc-uuid-2400.webp 2400w");
+    // Original-href form must NOT be present — that's the regression we fixed
+    expect(out).not.toContain('href="/uploads/artworks/abc-uuid.jpg"');
+  });
+
+  it("falls back to single-href preload for external (non-/uploads/artworks/) hero URLs", () => {
+    const html = "<head>__LCP_IMAGE_PRELOAD__</head>";
+    const out = injectMetaTags(html, {
+      ...baseMeta(),
+      lcpImagePreload: "https://lh3.googleusercontent.com/pw/abcdef",
     });
     expect(out).toContain(
-      '<link rel="preload" as="image" href="/uploads/artworks/x.jpg" fetchpriority="high">',
+      '<link rel="preload" as="image" href="https://lh3.googleusercontent.com/pw/abcdef" fetchpriority="high">',
     );
+    expect(out).not.toContain("imagesrcset");
   });
 
   it("strips the placeholder to empty when lcpImagePreload is undefined", () => {
@@ -362,13 +384,13 @@ describe("injectMetaTags — LCP preload tag (issue #560)", () => {
     expect(out).toBe("<head></head>");
   });
 
-  it("escapes the URL to prevent attribute injection", () => {
+  it("escapes attribute-injection attempts in the URL", () => {
     const html = "<head>__LCP_IMAGE_PRELOAD__</head>";
     const out = injectMetaTags(html, {
       ...baseMeta(),
+      // Doesn't match /uploads/artworks/ so falls through to single-href path
       lcpImagePreload: '/uploads/x.jpg" onerror="alert(1)',
     });
-    // The double-quote and HTML-significant chars must be escaped
     expect(out).not.toContain('onerror="alert(1)"');
     expect(out).toContain("&quot;");
   });
