@@ -8,7 +8,17 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
-_Nothing yet — all recent work included in v3.12.0 below._
+_Nothing yet — all recent work included in v3.13.0 below._
+
+## [3.13.0] - 2026-05-02
+
+### Added
+- perf(server): inject LCP image preload tag into / HTML so the carousel hero is preload-scannable (sub of #551 P3) ([#560](https://github.com/ilv78/Art-World-Hub/issues/560))
+- perf(client): route-level code-split via React.lazy to remove non-home code from the home bundle (sub of #551) ([#558](https://github.com/ilv78/Art-World-Hub/issues/558))
+- perf(nginx): enable HTTP/2 + Cache-Control immutable on /assets and /uploads (sub of #551) ([#555](https://github.com/ilv78/Art-World-Hub/issues/555))
+
+### Fixed
+- perf(devops): verify Nginx serves gzip/brotli for HTML/JS/CSS on staging + prod ([#550](https://github.com/ilv78/Art-World-Hub/issues/550))
 
 ## [3.12.0] - 2026-04-23
 
