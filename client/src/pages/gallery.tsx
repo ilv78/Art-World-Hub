@@ -391,7 +391,7 @@ export default function Gallery() {
                     {currentArtwork.artist.bio && (
                       <div className="pt-4 border-t">
                         <h4 className="font-serif font-semibold mb-2">About the Artist</h4>
-                        <p className="text-sm text-muted-foreground leading-relaxed">{currentArtwork.artist.bio}</p>
+                        <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{currentArtwork.artist.bio}</p>
                       </div>
                     )}
                   </div>

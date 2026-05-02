@@ -189,7 +189,7 @@ export default function Artists() {
                 <div className="space-y-6 py-4">
                   <div>
                     <h4 className="font-semibold mb-2">About</h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
+                    <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
                       {selectedArtist.bio}
                     </p>
                   </div>
