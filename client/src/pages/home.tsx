@@ -8,6 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArtworkCard } from "@/components/artwork-card";
 import { ArtworkShelf, ShelfItem } from "@/components/artwork-shelf";
+import { ResponsiveArtworkImage } from "@/components/responsive-artwork-image";
+import { ARTWORK_SIZES } from "@/lib/artwork-image";
 import {
   ArrowRight,
   Image,
@@ -70,14 +72,18 @@ function HeroCarousel({ artworks }: { artworks: ArtworkWithArtist[] }) {
           className="absolute inset-0 transition-opacity duration-700 ease-in-out"
           style={{ opacity: i === current ? 1 : 0 }}
         >
-          <img
+          <ResponsiveArtworkImage
             src={s.imageUrl}
             alt={s.title}
+            sizes={ARTWORK_SIZES.hero}
+            loading={i === 0 ? "eager" : "lazy"}
             fetchPriority={i === 0 ? "high" : undefined}
+            decoding="async"
             className="w-full h-full object-cover animate-ken-burns"
             style={{
               animationDelay: `${i * -3}s`,
             }}
+            pictureClassName="block w-full h-full"
           />
         </div>
       ))}
@@ -535,11 +541,14 @@ export default function Home() {
                     <Card className="overflow-hidden group cursor-pointer hover-elevate h-full">
                       <div className="relative h-48 overflow-hidden">
                         {heroImage ? (
-                          <img
+                          <ResponsiveArtworkImage
                             src={heroImage}
                             alt={exhibition.name}
+                            sizes={ARTWORK_SIZES.card}
                             loading="lazy"
+                            decoding="async"
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            pictureClassName="block w-full h-full"
                           />
                         ) : (
                           <div className="w-full h-full bg-muted flex items-center justify-center">

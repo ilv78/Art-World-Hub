@@ -8,6 +8,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeft, Calendar, Ruler, Palette, Box } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import type { ArtworkWithArtist } from "@shared/schema";
+import { ResponsiveArtworkImage } from "@/components/responsive-artwork-image";
+import { ARTWORK_SIZES } from "@/lib/artwork-image";
 
 interface PublicArtworkResponse {
   artwork: ArtworkWithArtist;
@@ -91,9 +93,13 @@ export default function ArtworkDetail({
 
         <div className="grid gap-8 md:grid-cols-2">
           <div className="relative flex items-start justify-center overflow-hidden rounded-lg bg-muted">
-            <img
+            <ResponsiveArtworkImage
               src={artwork.imageUrl}
               alt={`${artwork.title} by ${artwork.artist.name}`}
+              sizes={ARTWORK_SIZES.detail}
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
               className="w-full h-auto object-contain max-h-[80vh]"
             />
             {!artwork.isForSale && (
@@ -210,11 +216,14 @@ export default function ArtworkDetail({
                   className="group block"
                 >
                   <div className="aspect-square overflow-hidden rounded-md bg-muted">
-                    <img
+                    <ResponsiveArtworkImage
                       src={r.imageUrl}
                       alt={r.title}
+                      sizes={ARTWORK_SIZES.card}
                       loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      pictureClassName="block w-full h-full"
                     />
                   </div>
                   <div className="mt-2 text-sm font-medium line-clamp-1 group-hover:text-primary transition-colors">

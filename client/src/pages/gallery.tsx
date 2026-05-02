@@ -23,6 +23,8 @@ import { useImmersiveMode } from "@/hooks/use-immersive-mode";
 import type { ArtworkWithArtist } from "@shared/schema";
 import { useCartStore } from "@/lib/cart-store";
 import { formatPrice } from "@/lib/utils";
+import { ResponsiveArtworkImage } from "@/components/responsive-artwork-image";
+import { ARTWORK_SIZES } from "@/lib/artwork-image";
 import { useToast } from "@/hooks/use-toast";
 import { HallwayGallery3D } from "@/components/hallway-gallery-3d";
 import { ArtworkDetailDialog } from "@/components/artwork-detail-dialog";
@@ -257,10 +259,13 @@ export default function Gallery() {
               style={{ transform: `scale(${zoom})` }}
               onClick={() => setSelectedArtwork(currentArtwork)}
             >
-              <img
+              <ResponsiveArtworkImage
                 src={currentArtwork.imageUrl}
                 alt={currentArtwork.title}
-                loading="lazy"
+                sizes={ARTWORK_SIZES.detail}
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
                 className="max-w-[70vw] sm:max-w-lg max-h-[50vh] sm:max-h-[60vh] object-contain shadow-2xl rounded-sm"
                 data-testid="img-current-artwork"
               />
@@ -315,7 +320,7 @@ export default function Gallery() {
                     }`}
                     data-testid={`button-thumbnail-${artwork.id}`}
                   >
-                    <img src={artwork.imageUrl} alt={artwork.title} loading="lazy" className="w-full h-full object-cover" />
+                    <ResponsiveArtworkImage src={artwork.imageUrl} alt={artwork.title} sizes={ARTWORK_SIZES.thumbnail} loading="lazy" decoding="async" className="w-full h-full object-cover" pictureClassName="block w-full h-full" />
                   </button>
                 ))}
               </div>
@@ -333,7 +338,7 @@ export default function Gallery() {
               <ScrollArea className="flex-1">
                 <div className="p-4 space-y-6">
                   <div className="aspect-4/3 rounded-lg overflow-hidden">
-                    <img src={currentArtwork.imageUrl} alt={currentArtwork.title} loading="lazy" className="w-full h-full object-cover" />
+                    <ResponsiveArtworkImage src={currentArtwork.imageUrl} alt={currentArtwork.title} sizes={ARTWORK_SIZES.card} loading="lazy" decoding="async" className="w-full h-full object-cover" pictureClassName="block w-full h-full" />
                   </div>
                   <div className="space-y-4">
                     <div>

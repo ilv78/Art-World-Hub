@@ -13,6 +13,8 @@ import { ShoppingCart, Calendar, Ruler, Palette, MapPin } from "lucide-react";
 import type { ArtworkWithArtist } from "@shared/schema";
 import { useCartStore } from "@/lib/cart-store";
 import { useToast } from "@/hooks/use-toast";
+import { ResponsiveArtworkImage } from "@/components/responsive-artwork-image";
+import { ARTWORK_SIZES } from "@/lib/artwork-image";
 import { formatPrice } from "@/lib/utils";
 
 interface ArtworkDetailDialogProps {
@@ -48,10 +50,12 @@ export function ArtworkDetailDialog({
       <DialogContent className="sm:max-w-[1200px] lg:max-w-[1400px] max-h-[90vh] overflow-y-auto">
         <div className="grid gap-6 md:grid-cols-2">
           <div className="relative flex items-center justify-center overflow-hidden rounded-lg bg-muted min-h-[200px]">
-            <img
+            <ResponsiveArtworkImage
               src={artwork.imageUrl}
               alt={artwork.title}
+              sizes={ARTWORK_SIZES.detail}
               loading="lazy"
+              decoding="async"
               className="w-full h-auto object-contain max-h-[75vh]"
             />
             {!artwork.isForSale && (

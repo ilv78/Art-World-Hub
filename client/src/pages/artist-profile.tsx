@@ -22,6 +22,8 @@ import {
   X
 } from "lucide-react";
 import { useImmersiveMode } from "@/hooks/use-immersive-mode";
+import { ResponsiveArtworkImage } from "@/components/responsive-artwork-image";
+import { ARTWORK_SIZES } from "@/lib/artwork-image";
 import { SiInstagram, SiX, SiFacebook, SiYoutube, SiTiktok, SiBehance, SiDribbble, SiDeviantart, SiPinterest } from "react-icons/si";
 import { FaLinkedin } from "react-icons/fa6";
 import { useCartStore } from "@/lib/cart-store";
@@ -274,11 +276,14 @@ export default function ArtistProfile() {
                       data-testid={`card-profile-artwork-${artwork.id}`}
                     >
                       <div className="aspect-4/3 relative overflow-visible">
-                        <img
+                        <ResponsiveArtworkImage
                           src={artwork.imageUrl}
                           alt={artwork.title}
+                          sizes={ARTWORK_SIZES.card}
                           loading="lazy"
+                          decoding="async"
                           className="w-full h-full object-cover"
+                          pictureClassName="block w-full h-full"
                         />
                         <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
                           {!artwork.isForSale && (

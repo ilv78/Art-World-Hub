@@ -16,6 +16,7 @@ import fs from "fs";
 import crypto from "crypto";
 import { logger, logFilePath } from "./logger";
 import sharp from "sharp";
+import { generateArtworkVariants } from "./lib/artwork-image";
 import readline from "readline";
 import rateLimit from "express-rate-limit";
 
@@ -243,11 +244,49 @@ export async function registerRoutes(
     };
   }
 
+  function createArtworkUploadHandler(upload: multer.Multer) {
+    return (req: any, res: any) => {
+      upload.single("image")(req, res, async (err: any) => {
+        if (err instanceof multer.MulterError) {
+          if (err.code === "LIMIT_FILE_SIZE") {
+            return res.status(400).json({ error: "File too large. Maximum size is 10MB." });
+          }
+          return res.status(400).json({ error: err.message });
+        }
+        if (err) {
+          return res.status(400).json({ error: err.message });
+        }
+        if (!req.file) {
+          return res.status(400).json({ error: "No image file provided" });
+        }
+        if (!validateMagicBytes(req.file.path, req.file.mimetype)) {
+          fs.unlinkSync(req.file.path);
+          return res.status(400).json({ error: "File content does not match an allowed image type" });
+        }
+        const uuid = path.basename(req.file.filename, path.extname(req.file.filename));
+        const destDir = path.dirname(req.file.path);
+        try {
+          const result = await generateArtworkVariants(req.file.path, uuid, destDir);
+          logger.info(
+            { uuid, generated: result.generated, skipped: result.skipped, failed: result.failed },
+            "artwork variants generated",
+          );
+        } catch (variantErr) {
+          logger.error(
+            { err: variantErr instanceof Error ? variantErr.message : String(variantErr), uuid },
+            "artwork variant generation failed; serving original only",
+          );
+        }
+        res.json({ imageUrl: `/uploads/artworks/${req.file.filename}` });
+      });
+    };
+  }
+
   // Image upload endpoints
   const artworkUpload = createUploadMiddleware("artworks");
   const blogCoverUpload = createUploadMiddleware("blog-covers");
   const avatarUpload = createUploadMiddleware("avatars");
-  app.post("/api/upload/artwork", isAuthenticated, createUploadHandler(artworkUpload, "artworks"));
+  app.post("/api/upload/artwork", isAuthenticated, createArtworkUploadHandler(artworkUpload));
   app.post("/api/upload/blog-cover", isAuthenticated, createUploadHandler(blogCoverUpload, "blog-covers"));
   app.post("/api/upload/avatar", isAuthenticated, (req: any, res: any) => {
     avatarUpload.single("image")(req, res, async (err: any) => {
