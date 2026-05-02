@@ -7,6 +7,8 @@ import type { ArtworkWithArtist } from "@shared/schema";
 import { useCartStore } from "@/lib/cart-store";
 import { useToast } from "@/hooks/use-toast";
 import { formatPrice } from "@/lib/utils";
+import { ResponsiveArtworkImage } from "@/components/responsive-artwork-image";
+import { ARTWORK_SIZES } from "@/lib/artwork-image";
 
 interface ArtworkCardProps {
   artwork: ArtworkWithArtist;
@@ -40,11 +42,14 @@ export function ArtworkCard({ artwork, onViewDetails, showAddToCart = true }: Ar
       data-testid={`card-artwork-${artwork.id}`}
     >
       <div className="relative aspect-4/5 overflow-hidden rounded-t-md">
-        <img
+        <ResponsiveArtworkImage
           src={artwork.imageUrl}
           alt={artwork.title}
+          sizes={ARTWORK_SIZES.card}
           loading="lazy"
+          decoding="async"
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          pictureClassName="block w-full h-full"
         />
         <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         <div className="absolute bottom-4 left-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
