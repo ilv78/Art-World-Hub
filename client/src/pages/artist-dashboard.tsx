@@ -1360,7 +1360,7 @@ export default function ArtistDashboard() {
                       </p>
                     )}
                     {profileForm.bio ? (
-                      <p className="text-sm leading-relaxed" data-testid="text-profile-bio">{profileForm.bio}</p>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap" data-testid="text-profile-bio">{profileForm.bio}</p>
                     ) : (
                       <p className="text-sm text-muted-foreground italic">No bio added yet</p>
                     )}

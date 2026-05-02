@@ -181,7 +181,7 @@ export default function ArtistProfile() {
                     </Badge>
                   )}
                 </div>
-                <p className="text-muted-foreground leading-relaxed">{artist.bio}</p>
+                <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{artist.bio}</p>
                 {artist.socialLinks && Object.values(artist.socialLinks as Record<string, string>).some(Boolean) && (
                   <div className="flex flex-wrap items-center gap-2 mt-3" data-testid="social-links">
                     {Object.entries(artist.socialLinks as Record<string, string>).map(([key, url]) => {
