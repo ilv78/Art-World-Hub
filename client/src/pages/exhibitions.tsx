@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowRight, Calendar, Clock, Image as ImageIcon } from "lucide-react";
 import type { CuratorGalleryWithArtworks } from "@shared/schema";
-import { ResponsiveArtworkImage } from "@/components/responsive-artwork-image";
+import { ResponsiveImage } from "@/components/responsive-image";
 import { ARTWORK_SIZES } from "@/lib/artwork-image";
 
 import { Helmet } from "react-helmet-async";
@@ -106,7 +106,7 @@ function HeroExhibition({ exhibition, formatDate }: {
     <Link href={`/curator-gallery/${exhibition.id}`}>
       <div className="relative rounded-2xl overflow-hidden group cursor-pointer">
         {heroImage ? (
-          <ResponsiveArtworkImage
+          <ResponsiveImage
             src={heroImage}
             alt={exhibition.name}
             sizes={ARTWORK_SIZES.hero}
@@ -157,7 +157,7 @@ function ExhibitionCard({ exhibition, status, formatDate, variant }: {
       {previewArtworks.length > 0 ? (
         <div className="flex h-48 overflow-hidden">
           {previewArtworks.map(aw => (
-            <ResponsiveArtworkImage key={aw.id} src={aw.imageUrl} alt={aw.title} sizes={ARTWORK_SIZES.thumbnail} loading="lazy" decoding="async" className="flex-1 object-cover min-w-0" pictureClassName="flex-1 min-w-0 flex" />
+            <ResponsiveImage key={aw.id} src={aw.imageUrl} alt={aw.title} sizes={ARTWORK_SIZES.thumbnail} loading="lazy" decoding="async" className="flex-1 object-cover min-w-0" pictureClassName="flex-1 min-w-0 flex" />
           ))}
         </div>
       ) : (

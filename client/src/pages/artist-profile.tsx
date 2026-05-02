@@ -22,8 +22,8 @@ import {
   X
 } from "lucide-react";
 import { useImmersiveMode } from "@/hooks/use-immersive-mode";
-import { ResponsiveArtworkImage } from "@/components/responsive-artwork-image";
-import { ARTWORK_SIZES } from "@/lib/artwork-image";
+import { ResponsiveImage } from "@/components/responsive-image";
+import { ARTWORK_SIZES, BLOG_SIZES } from "@shared/responsive-image";
 import { SiInstagram, SiX, SiFacebook, SiYoutube, SiTiktok, SiBehance, SiDribbble, SiDeviantart, SiPinterest } from "react-icons/si";
 import { FaLinkedin } from "react-icons/fa6";
 import { useCartStore } from "@/lib/cart-store";
@@ -276,7 +276,7 @@ export default function ArtistProfile() {
                       data-testid={`card-profile-artwork-${artwork.id}`}
                     >
                       <div className="aspect-4/3 relative overflow-visible">
-                        <ResponsiveArtworkImage
+                        <ResponsiveImage
                           src={artwork.imageUrl}
                           alt={artwork.title}
                           sizes={ARTWORK_SIZES.card}
@@ -366,10 +366,12 @@ export default function ArtistProfile() {
                   >
                     {post.coverImageUrl && (
                       <div className="aspect-3/1 overflow-hidden">
-                        <img
+                        <ResponsiveImage
                           src={post.coverImageUrl}
                           alt={post.title}
+                          sizes={BLOG_SIZES.listCard}
                           loading="lazy"
+                          decoding="async"
                           className="w-full h-full object-cover"
                         />
                       </div>

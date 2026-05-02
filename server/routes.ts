@@ -244,7 +244,7 @@ export async function registerRoutes(
     };
   }
 
-  function createArtworkUploadHandler(upload: multer.Multer) {
+  function createImageVariantUploadHandler(upload: multer.Multer, subdir: string) {
     return (req: any, res: any) => {
       upload.single("image")(req, res, async (err: any) => {
         if (err instanceof multer.MulterError) {
@@ -268,16 +268,16 @@ export async function registerRoutes(
         try {
           const result = await generateArtworkVariants(req.file.path, uuid, destDir);
           logger.info(
-            { uuid, generated: result.generated, skipped: result.skipped, failed: result.failed },
-            "artwork variants generated",
+            { subdir, uuid, generated: result.generated, skipped: result.skipped, failed: result.failed },
+            "image variants generated",
           );
         } catch (variantErr) {
           logger.error(
-            { err: variantErr instanceof Error ? variantErr.message : String(variantErr), uuid },
-            "artwork variant generation failed; serving original only",
+            { err: variantErr instanceof Error ? variantErr.message : String(variantErr), subdir, uuid },
+            "image variant generation failed; serving original only",
           );
         }
-        res.json({ imageUrl: `/uploads/artworks/${req.file.filename}` });
+        res.json({ imageUrl: `/uploads/${subdir}/${req.file.filename}` });
       });
     };
   }
@@ -286,8 +286,8 @@ export async function registerRoutes(
   const artworkUpload = createUploadMiddleware("artworks");
   const blogCoverUpload = createUploadMiddleware("blog-covers");
   const avatarUpload = createUploadMiddleware("avatars");
-  app.post("/api/upload/artwork", isAuthenticated, createArtworkUploadHandler(artworkUpload));
-  app.post("/api/upload/blog-cover", isAuthenticated, createUploadHandler(blogCoverUpload, "blog-covers"));
+  app.post("/api/upload/artwork", isAuthenticated, createImageVariantUploadHandler(artworkUpload, "artworks"));
+  app.post("/api/upload/blog-cover", isAuthenticated, createImageVariantUploadHandler(blogCoverUpload, "blog-covers"));
   app.post("/api/upload/avatar", isAuthenticated, (req: any, res: any) => {
     avatarUpload.single("image")(req, res, async (err: any) => {
       if (err instanceof multer.MulterError) {

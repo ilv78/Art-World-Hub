@@ -12,6 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
+import { ResponsiveImage } from "@/components/responsive-image";
+import { BLOG_SIZES } from "@shared/responsive-image";
 import { 
   Dialog,
   DialogContent,
@@ -581,10 +583,12 @@ export default function ArtistDashboard() {
           </CardDescription>
         </div>
         {post.coverImageUrl && (
-          <img
+          <ResponsiveImage
             src={post.coverImageUrl}
             alt={post.title}
+            sizes={BLOG_SIZES.listCard}
             loading="lazy"
+            decoding="async"
             className="w-24 h-16 object-cover rounded-md"
           />
         )}

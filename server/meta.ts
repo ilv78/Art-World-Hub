@@ -1,6 +1,6 @@
 import { storage } from "./storage";
 import { FAQS } from "../shared/faqs";
-import { ARTWORK_SIZES, getArtworkPictureSources } from "../shared/artwork-image";
+import { ARTWORK_SIZES, getResponsivePictureSources } from "../shared/responsive-image";
 
 const SITE_URL = process.env.SITE_URL || "https://vernis9.art";
 const PRODUCTION_URL = "https://vernis9.art";
@@ -412,7 +412,7 @@ export function injectMetaTags(html: string, meta: MetaTags): string {
   // the picture renders a smaller WebP — wasted bytes and Load Delay regressed.
   let lcpPreload = "";
   if (meta.lcpImagePreload) {
-    const sources = getArtworkPictureSources(meta.lcpImagePreload);
+    const sources = getResponsivePictureSources(meta.lcpImagePreload);
     lcpPreload = sources
       ? `<link rel="preload" as="image" imagesrcset="${escapeHtml(sources.webpSrcSet)}" imagesizes="${escapeHtml(ARTWORK_SIZES.hero)}" fetchpriority="high">`
       : `<link rel="preload" as="image" href="${escapeHtml(meta.lcpImagePreload)}" fetchpriority="high">`;
