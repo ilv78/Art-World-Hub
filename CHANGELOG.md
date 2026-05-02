@@ -8,7 +8,16 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
-_Nothing yet — all recent work included in v3.13.0 below._
+_Nothing yet — all recent work included in v3.14.0 below._
+
+## [3.14.0] - 2026-05-02
+
+### Added
+- perf: image pipeline — responsive srcset + WebP conversion for artwork uploads (sub of #551 P2) ([#564](https://github.com/ilv78/Art-World-Hub/issues/564))
+
+### Fixed
+- Artist description text box adjustment ([#570](https://github.com/ilv78/Art-World-Hub/issues/570))
+- fix: post-#566 follow-ups — LCP preload variant + 404 for missing /uploads ([#567](https://github.com/ilv78/Art-World-Hub/issues/567))
 
 ## [3.13.0] - 2026-05-02
 
