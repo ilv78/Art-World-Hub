@@ -8,8 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArtworkCard } from "@/components/artwork-card";
 import { ArtworkShelf, ShelfItem } from "@/components/artwork-shelf";
-import { ResponsiveArtworkImage } from "@/components/responsive-artwork-image";
-import { ARTWORK_SIZES } from "@/lib/artwork-image";
+import { ResponsiveImage } from "@/components/responsive-image";
+import { ARTWORK_SIZES, BLOG_SIZES } from "@shared/responsive-image";
 import {
   ArrowRight,
   Image,
@@ -72,7 +72,7 @@ function HeroCarousel({ artworks }: { artworks: ArtworkWithArtist[] }) {
           className="absolute inset-0 transition-opacity duration-700 ease-in-out"
           style={{ opacity: i === current ? 1 : 0 }}
         >
-          <ResponsiveArtworkImage
+          <ResponsiveImage
             src={s.imageUrl}
             alt={s.title}
             sizes={ARTWORK_SIZES.hero}
@@ -309,10 +309,12 @@ function BlogHighlights({ posts }: { posts: BlogPostWithArtist[] }) {
               >
                 {post.coverImageUrl && (
                   <div className="relative aspect-[16/10] overflow-hidden">
-                    <img
+                    <ResponsiveImage
                       src={post.coverImageUrl}
                       alt={post.title}
+                      sizes={BLOG_SIZES.listCard}
                       loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                   </div>
@@ -541,7 +543,7 @@ export default function Home() {
                     <Card className="overflow-hidden group cursor-pointer hover-elevate h-full">
                       <div className="relative h-48 overflow-hidden">
                         {heroImage ? (
-                          <ResponsiveArtworkImage
+                          <ResponsiveImage
                             src={heroImage}
                             alt={exhibition.name}
                             sizes={ARTWORK_SIZES.card}

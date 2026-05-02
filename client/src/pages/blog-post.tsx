@@ -5,6 +5,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import type { BlogPostWithArtist } from "@shared/schema";
+import { ResponsiveImage } from "@/components/responsive-image";
+import { BLOG_SIZES } from "@shared/responsive-image";
 
 export default function BlogPost({ params }: { params: { id: string } }) {
   const { data: post, isLoading } = useQuery<BlogPostWithArtist>({
@@ -51,10 +53,13 @@ export default function BlogPost({ params }: { params: { id: string } }) {
 
       {post.coverImageUrl && (
         <div className="aspect-video rounded-lg overflow-hidden">
-          <img
+          <ResponsiveImage
             src={post.coverImageUrl}
             alt={post.title}
-            loading="lazy"
+            sizes={BLOG_SIZES.hero}
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
             className="w-full h-full object-cover"
           />
         </div>

@@ -7,7 +7,7 @@ import type { ArtworkWithArtist } from "@shared/schema";
 import { useCartStore } from "@/lib/cart-store";
 import { useToast } from "@/hooks/use-toast";
 import { formatPrice } from "@/lib/utils";
-import { ResponsiveArtworkImage } from "@/components/responsive-artwork-image";
+import { ResponsiveImage } from "@/components/responsive-image";
 import { ARTWORK_SIZES } from "@/lib/artwork-image";
 
 interface ArtworkCardProps {
@@ -42,7 +42,7 @@ export function ArtworkCard({ artwork, onViewDetails, showAddToCart = true }: Ar
       data-testid={`card-artwork-${artwork.id}`}
     >
       <div className="relative aspect-4/5 overflow-hidden rounded-t-md">
-        <ResponsiveArtworkImage
+        <ResponsiveImage
           src={artwork.imageUrl}
           alt={artwork.title}
           sizes={ARTWORK_SIZES.card}

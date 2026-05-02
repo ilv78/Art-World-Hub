@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeft, Calendar, Ruler, Palette, Box } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import type { ArtworkWithArtist } from "@shared/schema";
-import { ResponsiveArtworkImage } from "@/components/responsive-artwork-image";
+import { ResponsiveImage } from "@/components/responsive-image";
 import { ARTWORK_SIZES } from "@/lib/artwork-image";
 
 interface PublicArtworkResponse {
@@ -93,7 +93,7 @@ export default function ArtworkDetail({
 
         <div className="grid gap-8 md:grid-cols-2">
           <div className="relative flex items-start justify-center overflow-hidden rounded-lg bg-muted">
-            <ResponsiveArtworkImage
+            <ResponsiveImage
               src={artwork.imageUrl}
               alt={`${artwork.title} by ${artwork.artist.name}`}
               sizes={ARTWORK_SIZES.detail}
@@ -216,7 +216,7 @@ export default function ArtworkDetail({
                   className="group block"
                 >
                   <div className="aspect-square overflow-hidden rounded-md bg-muted">
-                    <ResponsiveArtworkImage
+                    <ResponsiveImage
                       src={r.imageUrl}
                       alt={r.title}
                       sizes={ARTWORK_SIZES.card}
