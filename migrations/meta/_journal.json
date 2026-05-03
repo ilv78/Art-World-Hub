@@ -85,6 +85,13 @@
       "when": 1776939481592,
       "tag": "0011_real_loki",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1777794660670,
+      "tag": "0012_add_share_events",
+      "breakpoints": true
     }
   ]
 }

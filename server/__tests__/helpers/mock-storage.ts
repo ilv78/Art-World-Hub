@@ -87,5 +87,9 @@ export function createMockStorage(): IStorage {
     subscribeNewsletter: vi.fn().mockResolvedValue({ alreadySubscribed: false }),
     getNewsletterSubscribers: vi.fn().mockResolvedValue([]),
     deleteNewsletterSubscriber: vi.fn().mockResolvedValue(true),
+
+    // Share events (#569)
+    recordShareEvent: vi.fn().mockResolvedValue({ id: "evt-1" }),
+    getShareEventStats: vi.fn().mockResolvedValue({ totalsByPlatform: [], topItems: [] }),
   };
 }

@@ -24,6 +24,9 @@ import {
 import { useImmersiveMode } from "@/hooks/use-immersive-mode";
 import { ResponsiveImage } from "@/components/responsive-image";
 import { ARTWORK_SIZES, BLOG_SIZES } from "@shared/responsive-image";
+import { ShareButtons } from "@/components/share-buttons";
+import { getCanonicalShareUrl } from "@/lib/share-urls";
+import { useArtworkModalFromQuery } from "@/hooks/use-modal-from-query";
 import { SiInstagram, SiX, SiFacebook, SiYoutube, SiTiktok, SiBehance, SiDribbble, SiDeviantart, SiPinterest } from "react-icons/si";
 import { FaLinkedin } from "react-icons/fa6";
 import { useCartStore } from "@/lib/cart-store";
@@ -55,8 +58,17 @@ export default function ArtistProfile() {
   const params = useParams<{ slug: string }>();
   const addItem = useCartStore((state) => state.addItem);
   const [selectedArtwork, setSelectedArtwork] = useState<ArtworkWithArtist | null>(null);
-  const urlTab = new URLSearchParams(window.location.search).get("tab");
-  const [activeTab, setActiveTab] = useState(urlTab === "portfolio" || urlTab === "blog" ? urlTab : "gallery");
+  const initialQuery = new URLSearchParams(window.location.search);
+  const urlTab = initialQuery.get("tab");
+  // If we land with `?artwork=<slug>` (modal-share URL from #569), default
+  // to the portfolio tab so the modal pops over a list of the artist's work
+  // rather than the empty 3D gallery view.
+  const initialTab = urlTab === "portfolio" || urlTab === "blog"
+    ? urlTab
+    : initialQuery.has("artwork")
+      ? "portfolio"
+      : "gallery";
+  const [activeTab, setActiveTab] = useState(initialTab);
   const { isImmersive, toggleImmersive } = useImmersiveMode();
 
   const { data: artistPayload, isLoading: artistLoading } = useQuery<{ artist: Artist }>({
@@ -79,6 +91,12 @@ export default function ArtistProfile() {
   const { data: blogPosts, isLoading: blogLoading } = useQuery<BlogPostWithArtist[]>({
     queryKey: ["/api/artists", artistId, "blog"],
     enabled: !!artistId,
+  });
+
+  useArtworkModalFromQuery({
+    artworks,
+    selected: selectedArtwork,
+    setSelected: setSelectedArtwork,
   });
 
   const publishedPosts = blogPosts?.filter(post => post.isPublished) || [];
@@ -205,6 +223,19 @@ export default function ArtistProfile() {
                     })}
                   </div>
                 )}
+                <div className="mt-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+                    Share this artist
+                  </p>
+                  <ShareButtons
+                    url={getCanonicalShareUrl()}
+                    itemType="artist"
+                    itemId={artist.id}
+                    title={`${artist.name} on Vernis9`}
+                    description={artist.bio || undefined}
+                    imageUrl={artist.avatarUrl || undefined}
+                  />
+                </div>
               </div>
 
               <Link href="/artists">
@@ -297,7 +328,14 @@ export default function ArtistProfile() {
                       <CardContent className="p-4">
                         <Link
                           href={`/artworks/${artwork.slug}`}
-                          onClick={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            // Open the modal instead of navigating to the
+                            // detail page. Crawlers without JS still follow
+                            // the href, so SEO discovery is preserved.
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSelectedArtwork(artwork);
+                          }}
                           className="hover:text-primary transition-colors"
                         >
                           <h3 className="font-semibold">{artwork.title}</h3>
@@ -331,12 +369,6 @@ export default function ArtistProfile() {
                     </Card>
                   ))}
                 </div>
-
-                <ArtworkDetailDialog
-                  artwork={selectedArtwork}
-                  open={!!selectedArtwork}
-                  onOpenChange={(open) => !open && setSelectedArtwork(null)}
-                />
               </>
             ) : (
               <div className="text-center py-16">
@@ -407,6 +439,12 @@ export default function ArtistProfile() {
             )}
           </TabsContent>
         </Tabs>
+
+        <ArtworkDetailDialog
+          artwork={selectedArtwork}
+          open={!!selectedArtwork}
+          onOpenChange={(open) => !open && setSelectedArtwork(null)}
+        />
       </div>
     </div>
   );

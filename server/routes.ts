@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertArtworkSchema, updateArtworkSchema, insertBidSchema, insertOrderSchema, insertBlogPostSchema, updateBlogPostSchema, updateArtistSchema, ORDER_TRANSITIONS, ORDER_STATUSES, NEWSLETTER_SOURCES } from "@shared/schema";
+import { insertArtworkSchema, updateArtworkSchema, insertBidSchema, insertOrderSchema, insertBlogPostSchema, updateBlogPostSchema, updateArtistSchema, ORDER_TRANSITIONS, ORDER_STATUSES, NEWSLETTER_SOURCES, insertShareEventSchema } from "@shared/schema";
 import { normalizeArtworkForCreate, normalizeArtworkForUpdate } from "./publish";
 import type { Artist, ArtworkWithArtist, Order, InsertOrder } from "@shared/schema";
 import { z } from "zod";
@@ -1414,6 +1414,44 @@ export async function registerRoutes(
   });
 
   // Newsletter subscribe
+  // Share-event tracking (#569). Public endpoint — anyone can record a share
+  // click. Tight 6/min/IP limit because a normal user clicks share a handful
+  // of times in a session at most; anything higher is botting our analytics.
+  const shareEventLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 6,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many share events from this IP" },
+  });
+
+  app.post("/api/share-events", shareEventLimiter, async (req: any, res) => {
+    const parsed = insertShareEventSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Invalid share event payload" });
+    }
+    try {
+      const userId = req.user?.claims?.sub ?? null;
+      await storage.recordShareEvent({ ...parsed.data, userId });
+      // Fire-and-forget shape: 204 No Content keeps the client lightweight.
+      res.status(204).send();
+    } catch (error) {
+      logger.error({ error }, "Failed to record share event");
+      res.status(500).json({ error: "Failed to record share event" });
+    }
+  });
+
+  app.get("/api/admin/share-events/stats", isAdmin, async (req: any, res) => {
+    try {
+      const sinceDays = Math.max(1, Math.min(365, Number(req.query.days) || 30));
+      const stats = await storage.getShareEventStats({ sinceDays });
+      res.json({ sinceDays, ...stats });
+    } catch (error) {
+      logger.error({ error }, "Failed to fetch share event stats");
+      res.status(500).json({ error: "Failed to fetch share event stats" });
+    }
+  });
+
   app.post("/api/newsletter/subscribe", async (req, res) => {
     const { email, source } = req.body ?? {};
     if (!email || typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {

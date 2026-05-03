@@ -17,6 +17,7 @@ import { Search, SlidersHorizontal, Grid3X3, LayoutList, X } from "lucide-react"
 import { ArtworkCard } from "@/components/artwork-card";
 import { formatPrice } from "@/lib/utils";
 import { ArtworkDetailDialog } from "@/components/artwork-detail-dialog";
+import { useArtworkModalFromQuery } from "@/hooks/use-modal-from-query";
 import type { ArtworkWithArtist } from "@shared/schema";
 
 const categories = [
@@ -52,6 +53,12 @@ export default function Store() {
 
   const { data: artworks, isLoading } = useQuery<ArtworkWithArtist[]>({
     queryKey: ["/api/artworks"],
+  });
+
+  useArtworkModalFromQuery({
+    artworks,
+    selected: selectedArtwork,
+    setSelected: setSelectedArtwork,
   });
 
   const isGlobalSearch = !!new URLSearchParams(search).get("search");

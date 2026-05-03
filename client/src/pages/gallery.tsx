@@ -28,6 +28,7 @@ import { ARTWORK_SIZES } from "@/lib/artwork-image";
 import { useToast } from "@/hooks/use-toast";
 import { HallwayGallery3D } from "@/components/hallway-gallery-3d";
 import { ArtworkDetailDialog } from "@/components/artwork-detail-dialog";
+import { useArtworkModalFromQuery } from "@/hooks/use-modal-from-query";
 
 type ViewMode = "3d" | "classic";
 
@@ -62,6 +63,12 @@ export default function Gallery() {
 
   const { data: siteSettings } = useQuery<{ galleryTemplate: string }>({
     queryKey: ["/api/site-settings"],
+  });
+
+  useArtworkModalFromQuery({
+    artworks,
+    selected: selectedArtwork,
+    setSelected: setSelectedArtwork,
   });
 
   const { addItem, items } = useCartStore();

@@ -16,6 +16,18 @@ import { useToast } from "@/hooks/use-toast";
 import { ResponsiveImage } from "@/components/responsive-image";
 import { ARTWORK_SIZES } from "@/lib/artwork-image";
 import { formatPrice } from "@/lib/utils";
+import { ShareButtons } from "@/components/share-buttons";
+
+// Modal share URL — keep the user on the same parent page (store,
+// gallery, artist profile, curator gallery) but encode the artwork in a
+// query param so the recipient gets the same modal-over-context UX. The
+// canonical /artworks/<slug> URL remains the SEO target via <link rel=
+// "canonical"> emitted by server/meta.ts.
+function buildModalShareUrl(slug: string): string {
+  if (typeof window === "undefined") return "";
+  const path = window.location.pathname;
+  return `${window.location.origin}${path}?artwork=${encodeURIComponent(slug)}`;
+}
 
 interface ArtworkDetailDialogProps {
   artwork: ArtworkWithArtist | null;
@@ -154,6 +166,20 @@ export function ArtworkDetailDialog({
                   Sold Out
                 </Button>
               )}
+
+              <div className="pt-2">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+                  Share this artwork
+                </p>
+                <ShareButtons
+                  url={buildModalShareUrl(artwork.slug)}
+                  itemType="artwork"
+                  itemId={artwork.id}
+                  title={`${artwork.title} by ${artwork.artist.name}`}
+                  description={artwork.description || undefined}
+                  imageUrl={artwork.imageUrl}
+                />
+              </div>
             </div>
           </div>
         </div>

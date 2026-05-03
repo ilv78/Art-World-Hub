@@ -68,6 +68,8 @@ const { mockStorage } = vi.hoisted(() => {
     subscribeNewsletter: fn().mockResolvedValue({ alreadySubscribed: false }),
     getNewsletterSubscribers: fn().mockResolvedValue([]),
     deleteNewsletterSubscriber: fn().mockResolvedValue(true),
+    recordShareEvent: fn().mockResolvedValue({ id: "evt-1" }),
+    getShareEventStats: fn().mockResolvedValue({ totalsByPlatform: [], topItems: [] }),
   };
   return { mockStorage };
 });

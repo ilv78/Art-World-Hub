@@ -392,4 +392,68 @@ describe("DatabaseStorage", () => {
       expect(capturedSet.updatedAt.getTime()).toBeGreaterThanOrEqual(before.getTime());
     });
   });
+
+  describe("recordShareEvent (issue #569)", () => {
+    it("inserts the event payload and returns the row", async () => {
+      const insertMock = vi.mocked(db.insert);
+      let capturedValues: any;
+      insertMock.mockImplementation(() => {
+        const chain: any = {
+          values: vi.fn().mockImplementation((data: any) => {
+            capturedValues = data;
+            return chain;
+          }),
+          returning: vi.fn().mockResolvedValue([
+            {
+              id: "evt-1",
+              itemType: "artwork",
+              itemId: "aw-1",
+              platform: "facebook",
+              userId: null,
+              userAgentClass: "desktop",
+              createdAt: new Date(),
+            },
+          ]),
+        };
+        return chain;
+      });
+
+      const result = await storage.recordShareEvent({
+        itemType: "artwork",
+        itemId: "aw-1",
+        platform: "facebook",
+        userAgentClass: "desktop",
+      });
+
+      expect(capturedValues.itemType).toBe("artwork");
+      expect(capturedValues.itemId).toBe("aw-1");
+      expect(capturedValues.platform).toBe("facebook");
+      expect(capturedValues.userId).toBeNull();
+      expect(result.id).toBe("evt-1");
+    });
+
+    it("persists userId when supplied", async () => {
+      const insertMock = vi.mocked(db.insert);
+      let capturedValues: any;
+      insertMock.mockImplementation(() => {
+        const chain: any = {
+          values: vi.fn().mockImplementation((data: any) => {
+            capturedValues = data;
+            return chain;
+          }),
+          returning: vi.fn().mockResolvedValue([{ id: "evt-2" }]),
+        };
+        return chain;
+      });
+
+      await storage.recordShareEvent({
+        itemType: "blog",
+        itemId: "post-1",
+        platform: "x",
+        userId: "user-42",
+      });
+
+      expect(capturedValues.userId).toBe("user-42");
+    });
+  });
 });

@@ -7,6 +7,8 @@ import { ArrowLeft } from "lucide-react";
 import type { BlogPostWithArtist } from "@shared/schema";
 import { ResponsiveImage } from "@/components/responsive-image";
 import { BLOG_SIZES } from "@shared/responsive-image";
+import { ShareButtons } from "@/components/share-buttons";
+import { getCanonicalShareUrl } from "@/lib/share-urls";
 
 export default function BlogPost({ params }: { params: { id: string } }) {
   const { data: post, isLoading } = useQuery<BlogPostWithArtist>({
@@ -90,6 +92,20 @@ export default function BlogPost({ params }: { params: { id: string } }) {
           paragraph.trim() ? <p key={i}>{paragraph}</p> : null
         )}
       </article>
+
+      <div className="border-t pt-6">
+        <p className="text-xs uppercase tracking-wide text-muted-foreground mb-3">
+          Share this post
+        </p>
+        <ShareButtons
+          url={getCanonicalShareUrl()}
+          itemType="blog"
+          itemId={post.id}
+          title={post.title}
+          description={post.excerpt || undefined}
+          imageUrl={post.coverImageUrl || undefined}
+        />
+      </div>
     </div>
   );
 }
