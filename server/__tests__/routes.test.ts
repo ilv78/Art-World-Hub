@@ -53,6 +53,8 @@ beforeEach(() => {
   (mockStorage.deleteArtwork as ReturnType<typeof vi.fn>).mockResolvedValue(false);
   (mockStorage.deleteBlogPost as ReturnType<typeof vi.fn>).mockResolvedValue(false);
   (mockStorage.regenerateArtistGallery as ReturnType<typeof vi.fn>).mockResolvedValue({ width: 3, height: 3, cells: [], spawnPoint: { x: 1, z: 1 } });
+  (mockStorage.recordShareEvent as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "evt-1" });
+  (mockStorage.getShareEventStats as ReturnType<typeof vi.fn>).mockResolvedValue({ totalsByPlatform: [], topItems: [] });
 });
 
 // ----- GET endpoints -----
@@ -895,5 +897,92 @@ describe("POST /api/newsletter/subscribe", () => {
       .send({ email: "repeat@example.com" });
     expect(res.status).toBe(200);
     expect(res.body.alreadySubscribed).toBe(true);
+  });
+});
+
+// ----- POST /api/share-events (issue #569) -----
+
+describe("POST /api/share-events", () => {
+  it("accepts a valid event and returns 204", async () => {
+    const res = await request(app)
+      .post("/api/share-events")
+      .send({ itemType: "artwork", itemId: "aw-1", platform: "facebook" });
+    expect(res.status).toBe(204);
+    expect(mockStorage.recordShareEvent).toHaveBeenCalledTimes(1);
+    const call = (mockStorage.recordShareEvent as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(call.itemType).toBe("artwork");
+    expect(call.platform).toBe("facebook");
+  });
+
+  it("rejects invalid itemType with 400", async () => {
+    const res = await request(app)
+      .post("/api/share-events")
+      .send({ itemType: "bogus", itemId: "x", platform: "facebook" });
+    expect(res.status).toBe(400);
+    expect(mockStorage.recordShareEvent).not.toHaveBeenCalled();
+  });
+
+  it("rejects invalid platform with 400", async () => {
+    const res = await request(app)
+      .post("/api/share-events")
+      .send({ itemType: "artwork", itemId: "x", platform: "myspace" });
+    expect(res.status).toBe(400);
+    expect(mockStorage.recordShareEvent).not.toHaveBeenCalled();
+  });
+
+  it("rejects empty itemId with 400", async () => {
+    const res = await request(app)
+      .post("/api/share-events")
+      .send({ itemType: "artwork", itemId: "", platform: "x" });
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts the native and copy platforms (Web Share + Copy link)", async () => {
+    const res = await request(app)
+      .post("/api/share-events")
+      .send({ itemType: "blog", itemId: "p1", platform: "native" });
+    expect(res.status).toBe(204);
+    expect(mockStorage.recordShareEvent).toHaveBeenCalledTimes(1);
+    expect(
+      (mockStorage.recordShareEvent as ReturnType<typeof vi.fn>).mock.calls[0][0].platform,
+    ).toBe("native");
+  });
+});
+
+describe("GET /api/admin/share-events/stats", () => {
+  it("returns aggregated stats with the requested window", async () => {
+    (mockStorage.getShareEventStats as ReturnType<typeof vi.fn>).mockResolvedValue({
+      totalsByPlatform: [{ platform: "facebook", count: 5 }],
+      topItems: [{ itemType: "artwork", itemId: "aw-1", count: 5 }],
+    });
+
+    const res = await request(app).get("/api/admin/share-events/stats?days=7");
+    expect(res.status).toBe(200);
+    expect(res.body.sinceDays).toBe(7);
+    expect(res.body.totalsByPlatform).toHaveLength(1);
+    expect(res.body.topItems).toHaveLength(1);
+    expect(mockStorage.getShareEventStats).toHaveBeenCalledWith({ sinceDays: 7 });
+  });
+
+  it("clamps days to a sane range", async () => {
+    (mockStorage.getShareEventStats as ReturnType<typeof vi.fn>).mockResolvedValue({
+      totalsByPlatform: [],
+      topItems: [],
+    });
+
+    const res = await request(app).get("/api/admin/share-events/stats?days=99999");
+    expect(res.status).toBe(200);
+    expect(res.body.sinceDays).toBe(365);
+  });
+
+  it("defaults to 30 days when days param missing or invalid", async () => {
+    (mockStorage.getShareEventStats as ReturnType<typeof vi.fn>).mockResolvedValue({
+      totalsByPlatform: [],
+      topItems: [],
+    });
+
+    const res = await request(app).get("/api/admin/share-events/stats");
+    expect(res.status).toBe(200);
+    expect(res.body.sinceDays).toBe(30);
   });
 });

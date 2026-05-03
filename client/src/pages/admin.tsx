@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { AlertTriangle, Shield, Trash2, Users, Palette, Image, Calendar, BookOpen, Settings, Mail, Download } from "lucide-react";
+import { AlertTriangle, Shield, Trash2, Users, Palette, Image, Calendar, BookOpen, Settings, Mail, Download, Share2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { GALLERY_TEMPLATES } from "@/lib/gallery-templates";
 import { formatPrice } from "@/lib/utils";
@@ -327,6 +327,7 @@ export default function AdminPage() {
           <TabsTrigger value="exhibitions"><Calendar className="w-4 h-4 mr-2" />Exhibitions</TabsTrigger>
           <TabsTrigger value="blog"><BookOpen className="w-4 h-4 mr-2" />Blog</TabsTrigger>
           <TabsTrigger value="newsletter"><Mail className="w-4 h-4 mr-2" />Newsletter</TabsTrigger>
+          <TabsTrigger value="shares"><Share2 className="w-4 h-4 mr-2" />Shares</TabsTrigger>
           <TabsTrigger value="settings"><Settings className="w-4 h-4 mr-2" />Settings</TabsTrigger>
         </TabsList>
 
@@ -674,6 +675,10 @@ export default function AdminPage() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="shares">
+          <ShareAnalyticsPanel />
+        </TabsContent>
+
         <TabsContent value="settings">
           <Card>
             <CardHeader>
@@ -713,6 +718,86 @@ export default function AdminPage() {
           </Card>
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+type ShareStats = {
+  sinceDays: number;
+  totalsByPlatform: { platform: string; count: number }[];
+  topItems: { itemType: string; itemId: string; count: number }[];
+};
+
+function ShareAnalyticsPanel() {
+  const { data, isLoading } = useQuery<ShareStats>({
+    queryKey: ["/api/admin/share-events/stats?days=30"],
+  });
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2">
+      <Card>
+        <CardHeader>
+          <CardTitle>Shares by platform</CardTitle>
+          <CardDescription>Last {data?.sinceDays ?? 30} days</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground">Loading…</p>
+          ) : !data || data.totalsByPlatform.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No share events yet.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Platform</TableHead>
+                  <TableHead className="text-right">Count</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.totalsByPlatform.map((row) => (
+                  <TableRow key={row.platform}>
+                    <TableCell className="capitalize">{row.platform}</TableCell>
+                    <TableCell className="text-right font-mono">{row.count}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Top shared items</CardTitle>
+          <CardDescription>Top 20, last {data?.sinceDays ?? 30} days</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground">Loading…</p>
+          ) : !data || data.topItems.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No share events yet.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Item ID</TableHead>
+                  <TableHead className="text-right">Shares</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.topItems.map((row) => (
+                  <TableRow key={`${row.itemType}-${row.itemId}`}>
+                    <TableCell className="capitalize">{row.itemType}</TableCell>
+                    <TableCell className="font-mono text-xs truncate max-w-[200px]">{row.itemId}</TableCell>
+                    <TableCell className="text-right font-mono">{row.count}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

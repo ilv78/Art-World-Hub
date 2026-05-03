@@ -18,6 +18,8 @@ import {
   curatorGalleries, curatorGalleryArtworks,
   type SiteSettings, siteSettings,
   newsletterSubscribers,
+  type ShareEvent, type InsertShareEvent, type ShareItemType, type SharePlatform,
+  shareEvents,
 } from "@shared/schema";
 import { type User, type UserRole, users } from "@shared/models/auth";
 import { sessions } from "@shared/models/auth";
@@ -116,6 +118,13 @@ export interface IStorage {
   subscribeNewsletter(email: string, source?: string): Promise<{ alreadySubscribed: boolean }>;
   getNewsletterSubscribers(): Promise<{ id: number; email: string; source: string; subscribedAt: Date; unsubscribedAt: Date | null }[]>;
   deleteNewsletterSubscriber(id: number): Promise<boolean>;
+
+  // Share-event tracking (#569)
+  recordShareEvent(event: InsertShareEvent & { userId?: string | null }): Promise<ShareEvent>;
+  getShareEventStats(opts: { sinceDays: number }): Promise<{
+    totalsByPlatform: { platform: SharePlatform; count: number }[];
+    topItems: { itemType: ShareItemType; itemId: string; count: number }[];
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -812,6 +821,62 @@ export class DatabaseStorage implements IStorage {
   async deleteNewsletterSubscriber(id: number): Promise<boolean> {
     const result = await db.delete(newsletterSubscribers).where(eq(newsletterSubscribers.id, id)).returning();
     return result.length > 0;
+  }
+
+  // Share events (#569) — append-only analytics
+  async recordShareEvent(
+    event: InsertShareEvent & { userId?: string | null }
+  ): Promise<ShareEvent> {
+    const [row] = await db
+      .insert(shareEvents)
+      .values({
+        itemType: event.itemType,
+        itemId: event.itemId,
+        platform: event.platform,
+        userAgentClass: event.userAgentClass,
+        userId: event.userId ?? null,
+      })
+      .returning();
+    return row;
+  }
+
+  async getShareEventStats(opts: { sinceDays: number }) {
+    const sinceDays = Math.max(1, Math.min(365, opts.sinceDays));
+    const since = sql`now() - (${sinceDays}::int * interval '1 day')`;
+
+    const totalsByPlatform = await db
+      .select({
+        platform: shareEvents.platform,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(shareEvents)
+      .where(sql`${shareEvents.createdAt} >= ${since}`)
+      .groupBy(shareEvents.platform)
+      .orderBy(desc(sql`count(*)`));
+
+    const topItems = await db
+      .select({
+        itemType: shareEvents.itemType,
+        itemId: shareEvents.itemId,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(shareEvents)
+      .where(sql`${shareEvents.createdAt} >= ${since}`)
+      .groupBy(shareEvents.itemType, shareEvents.itemId)
+      .orderBy(desc(sql`count(*)`))
+      .limit(20);
+
+    return {
+      totalsByPlatform: totalsByPlatform.map((r) => ({
+        platform: r.platform as SharePlatform,
+        count: r.count,
+      })),
+      topItems: topItems.map((r) => ({
+        itemType: r.itemType as ShareItemType,
+        itemId: r.itemId,
+        count: r.count,
+      })),
+    };
   }
 }
 

@@ -3,8 +3,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mockStorageState: {
   artwork: Record<string, unknown> | undefined;
   artist: Record<string, unknown> | undefined;
+  curatorGallery: Record<string, unknown> | undefined;
   homeHero: { id: string; imageUrl: string } | null;
-} = { artwork: undefined, artist: undefined, homeHero: null };
+} = { artwork: undefined, artist: undefined, curatorGallery: undefined, homeHero: null };
 
 const getHomeHeroSlide0Mock = vi.fn(async () => mockStorageState.homeHero);
 
@@ -14,6 +15,7 @@ vi.mock("../storage", () => ({
     getArtistBySlug: vi.fn(async () => mockStorageState.artist),
     getBlogPost: vi.fn().mockResolvedValue(undefined),
     getPublishedArtworkBySlug: vi.fn(async () => mockStorageState.artwork),
+    getCuratorGallery: vi.fn(async () => mockStorageState.curatorGallery),
     getHomeHeroSlide0: getHomeHeroSlide0Mock,
   },
 }));
@@ -393,5 +395,107 @@ describe("injectMetaTags — LCP preload tag (issue #560)", () => {
     });
     expect(out).not.toContain('onerror="alert(1)"');
     expect(out).toContain("&quot;");
+  });
+});
+
+describe("resolveMetaTags — ?artwork=<slug> modal-share variant (issue #569)", () => {
+  it("emits artwork-specific OG when ?artwork=<slug> is on a non-artwork path", async () => {
+    setMockArtwork(baseArtwork());
+    const meta = await resolveMetaTags("/store?artwork=red-harbor-sunset-aaaaaaaa");
+    expect(meta.title).toBe("Red Harbor Sunset by Ana Popescu — Vernis9");
+    expect(meta.ogType).toBe("article");
+    expect(findLd(meta.jsonLd, "VisualArtwork")).toBeDefined();
+  });
+
+  it("canonical (og:url) points at /artworks/<slug>, not the parent path", async () => {
+    setMockArtwork(baseArtwork());
+    const meta = await resolveMetaTags("/store?artwork=red-harbor-sunset-aaaaaaaa");
+    expect(meta.ogUrl).toMatch(/\/artworks\/red-harbor-sunset-aaaaaaaa$/);
+    expect(meta.ogUrl).not.toContain("/store");
+    expect(meta.ogUrl).not.toContain("?artwork=");
+  });
+
+  it("falls through to parent-path meta when ?artwork=<slug> is unknown", async () => {
+    setMockArtwork(undefined);
+    const meta = await resolveMetaTags("/store?artwork=missing");
+    // Should resolve as plain /store (the static-route branch)
+    expect(meta.title).toBe("Art Store — Vernis9");
+  });
+
+  it("works on the gallery, artist, and curator-gallery parent paths too", async () => {
+    setMockArtwork(baseArtwork());
+    for (const parentUrl of [
+      "/gallery?artwork=red-harbor-sunset-aaaaaaaa",
+      "/artists/ana-popescu-artist01?artwork=red-harbor-sunset-aaaaaaaa",
+      "/curator-gallery/some-id?artwork=red-harbor-sunset-aaaaaaaa",
+    ]) {
+      const meta = await resolveMetaTags(parentUrl);
+      expect(findLd(meta.jsonLd, "VisualArtwork")).toBeDefined();
+      expect(meta.ogUrl).toMatch(/\/artworks\/red-harbor-sunset-aaaaaaaa$/);
+    }
+  });
+});
+
+describe("resolveMetaTags — /curator-gallery/:id (issue #569)", () => {
+  function baseGallery(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      id: "gallery-1",
+      curatorId: "user-1",
+      name: "Spring Exhibition 2026",
+      description: "A curated walk through emerging Romanian artists.",
+      isPublished: true,
+      startDate: new Date("2026-04-01T00:00:00Z"),
+      endDate: new Date("2026-06-01T00:00:00Z"),
+      curator: { id: "user-1", firstName: "Diana", lastName: "Pop" },
+      artworks: [
+        {
+          id: "aw-1",
+          title: "Light over the Carpathians",
+          imageUrl: "/uploads/artworks/lc.jpg",
+          artist: { id: "a-1", slug: "ana", name: "Ana", avatarUrl: null },
+        },
+      ],
+      ...overrides,
+    };
+  }
+
+  it("emits ExhibitionEvent JSON-LD with virtual location and curator organizer", async () => {
+    mockStorageState.curatorGallery = baseGallery();
+    const meta = await resolveMetaTags("/curator-gallery/gallery-1");
+    const event = findLd(meta.jsonLd, "ExhibitionEvent");
+    expect(event).toBeDefined();
+    expect(event!.name).toBe("Spring Exhibition 2026");
+    expect((event!.location as Record<string, unknown>)["@type"]).toBe("VirtualLocation");
+    expect((event!.organizer as Record<string, unknown>).name).toBe("Diana Pop");
+    expect(event!.startDate).toBe("2026-04-01T00:00:00.000Z");
+    expect(event!.endDate).toBe("2026-06-01T00:00:00.000Z");
+  });
+
+  it("uses the first artwork's image as the OG image (absolute)", async () => {
+    mockStorageState.curatorGallery = baseGallery();
+    const meta = await resolveMetaTags("/curator-gallery/gallery-1");
+    expect(meta.ogImage).toMatch(/\/uploads\/artworks\/lc\.jpg$/);
+    expect(meta.ogImage.startsWith("http")).toBe(true);
+  });
+
+  it("title contains the gallery name and Vernis9 brand", async () => {
+    mockStorageState.curatorGallery = baseGallery();
+    const meta = await resolveMetaTags("/curator-gallery/gallery-1");
+    expect(meta.title).toContain("Spring Exhibition 2026");
+    expect(meta.title).toContain("Vernis9");
+    expect(meta.ogType).toBe("article");
+  });
+
+  it("falls back to default meta when gallery is not published", async () => {
+    mockStorageState.curatorGallery = baseGallery({ isPublished: false });
+    const meta = await resolveMetaTags("/curator-gallery/gallery-1");
+    // Should NOT find an ExhibitionEvent on the fallback path
+    expect(findLd(meta.jsonLd, "ExhibitionEvent")).toBeUndefined();
+  });
+
+  it("falls back to default meta when id not found", async () => {
+    mockStorageState.curatorGallery = undefined;
+    const meta = await resolveMetaTags("/curator-gallery/missing-id");
+    expect(findLd(meta.jsonLd, "ExhibitionEvent")).toBeUndefined();
   });
 });

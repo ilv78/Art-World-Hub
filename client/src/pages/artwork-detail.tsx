@@ -5,11 +5,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Calendar, Ruler, Palette, Box } from "lucide-react";
+import { ArrowLeft, Calendar, Ruler, Palette, Box, ShoppingCart } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import type { ArtworkWithArtist } from "@shared/schema";
 import { ResponsiveImage } from "@/components/responsive-image";
 import { ARTWORK_SIZES } from "@/lib/artwork-image";
+import { ShareButtons } from "@/components/share-buttons";
+import { getCanonicalShareUrl } from "@/lib/share-urls";
+import { useCartStore } from "@/lib/cart-store";
+import { useToast } from "@/hooks/use-toast";
 
 interface PublicArtworkResponse {
   artwork: ArtworkWithArtist;
@@ -33,6 +37,8 @@ export default function ArtworkDetail({
   const { data, isLoading, isError } = useQuery<PublicArtworkResponse>({
     queryKey: [`/api/public/artworks/${params.slug}`],
   });
+  const { addItem, items } = useCartStore();
+  const { toast } = useToast();
 
   if (isLoading) {
     return (
@@ -76,6 +82,17 @@ export default function ArtworkDetail({
       ? artwork.dimensions
       : `${artwork.dimensions} cm`
     : null;
+  const isInCart = items.some((item) => item.artwork.id === artwork.id);
+
+  const handleAddToCart = () => {
+    if (!isInCart && artwork.isForSale) {
+      addItem(artwork);
+      toast({
+        title: "Added to cart",
+        description: `"${artwork.title}" has been added to your cart.`,
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen">
@@ -190,15 +207,47 @@ export default function ArtworkDetail({
               </div>
             )}
 
-            <div className="flex flex-wrap gap-3">
-              <Button asChild size="lg" variant="outline">
-                <Link href={artistUrl}>
-                  View in 3D Gallery
-                </Link>
-              </Button>
-              <Button asChild size="lg" variant="ghost">
-                <Link href={artistUrl}>Contact artist</Link>
-              </Button>
+            <div className="space-y-3">
+              {artwork.isForSale ? (
+                <Button
+                  className="w-full"
+                  size="lg"
+                  onClick={handleAddToCart}
+                  disabled={isInCart}
+                  data-testid="button-detail-page-add-cart"
+                >
+                  <ShoppingCart className="h-5 w-5 mr-2" />
+                  {isInCart ? "Already in Cart" : "Add to Cart"}
+                </Button>
+              ) : (
+                <Button className="w-full" size="lg" disabled>
+                  Sold Out
+                </Button>
+              )}
+              <div className="flex flex-wrap gap-3">
+                <Button asChild size="lg" variant="outline">
+                  <Link href={artistUrl}>
+                    View in 3D Gallery
+                  </Link>
+                </Button>
+                <Button asChild size="lg" variant="ghost">
+                  <Link href={artistUrl}>Contact artist</Link>
+                </Button>
+              </div>
+            </div>
+
+            <div className="border-t pt-6">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-3">
+                Share this artwork
+              </p>
+              <ShareButtons
+                url={getCanonicalShareUrl()}
+                itemType="artwork"
+                itemId={artwork.id}
+                title={`${artwork.title} by ${artwork.artist.name}`}
+                description={artwork.description || undefined}
+                imageUrl={artwork.imageUrl}
+              />
             </div>
           </div>
         </div>

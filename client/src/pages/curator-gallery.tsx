@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Box, X, Frame } from "lucide-react";
 import { useImmersiveMode } from "@/hooks/use-immersive-mode";
+import { ShareButtons } from "@/components/share-buttons";
+import { getCanonicalShareUrl } from "@/lib/share-urls";
+import { useArtworkModalFromQuery } from "@/hooks/use-modal-from-query";
 import type { ArtworkWithArtist, CuratorGalleryWithArtworks, MazeLayout } from "@shared/schema";
 
 type ViewMode = "3d" | "classic";
@@ -24,6 +27,12 @@ export default function CuratorGalleryPage() {
   const { data: gallery, isLoading, error } = useQuery<CuratorGalleryWithArtworks>({
     queryKey: [`/api/curator-galleries/${galleryId}`],
     enabled: !!galleryId,
+  });
+
+  useArtworkModalFromQuery({
+    artworks: gallery?.artworks,
+    selected: selectedArtwork,
+    setSelected: setSelectedArtwork,
   });
 
   if (isLoading) {
@@ -76,22 +85,32 @@ export default function CuratorGalleryPage() {
         </Button>
       )}
       {!isImmersive && (
-        <div className="p-4 border-b bg-background flex items-start justify-between gap-4">
-          <div className="min-w-0">
+        <div className="p-4 border-b bg-background flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
             <h1 className="font-serif text-2xl font-bold">{gallery.name}</h1>
             <p className="text-sm text-muted-foreground">
               Curated by {curatorName}
               {gallery.description && ` — ${gallery.description}`}
             </p>
           </div>
-          {gallery.artworks.length > 0 && layout && (
-            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)} className="shrink-0">
-              <TabsList>
-                <TabsTrigger value="3d"><Box className="h-4 w-4 mr-1" /> 3D</TabsTrigger>
-                <TabsTrigger value="classic"><Frame className="h-4 w-4 mr-1" /> 2D</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          )}
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <ShareButtons
+              url={getCanonicalShareUrl()}
+              itemType="exhibition"
+              itemId={gallery.id}
+              title={`${gallery.name} — Vernis9 Exhibition`}
+              description={gallery.description || `Curated exhibition by ${curatorName} on Vernis9.`}
+              imageUrl={gallery.artworks[0]?.imageUrl}
+            />
+            {gallery.artworks.length > 0 && layout && (
+              <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
+                <TabsList>
+                  <TabsTrigger value="3d"><Box className="h-4 w-4 mr-1" /> 3D</TabsTrigger>
+                  <TabsTrigger value="classic"><Frame className="h-4 w-4 mr-1" /> 2D</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            )}
+          </div>
         </div>
       )}
       <div className="flex-1 relative">

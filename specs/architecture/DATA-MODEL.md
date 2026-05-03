@@ -36,6 +36,7 @@ All tables defined using Drizzle ORM. Main schema in `shared/schema.ts`, auth ta
 | **blog_posts** | `shared/schema.ts` | id, artistId (FK→artists), title, content, excerpt, coverImageUrl, isPublished, createdAt, updatedAt | Artist blog entries |
 | **site_settings** | `shared/schema.ts` | id (default "default"), galleryTemplate (varchar), updatedAt | Global site configuration (singleton row) |
 | **newsletter_subscribers** | `shared/schema.ts` | id (serial), email (unique, varchar 255), source (varchar 50, default `general`), subscribedAt (timestamp), unsubscribedAt (timestamp, nullable) | Newsletter signup list — managed via admin panel. `source` tags the capture origin (`general`, `koningsdag-2026`). |
+| **share_events** | `shared/schema.ts` | id (uuid), itemType (varchar 32 — `artwork`/`blog`/`exhibition`/`artist`), itemId (varchar — loose pointer, no FK so the table is append-only and decoupled from cascades), platform (varchar 16 — `facebook`/`linkedin`/`pinterest`/`x`/`bluesky`/`copy`/`native`), userId (varchar, nullable), userAgentClass (varchar 8 — `mobile`/`desktop`), createdAt (timestamp). Indexes: `(item_type, item_id)`, `created_at`, `platform` | Append-only analytics for #569 social-share buttons. Populated by `POST /api/share-events` (rate-limited 6/min/IP), aggregated by the admin Shares tab. |
 
 ---
 
@@ -72,6 +73,7 @@ Migration files live in `migrations/` and are tracked in git. Drizzle uses `migr
 | `0000_sturdy_frightful_four.sql` | Baseline: 10 tables, all foreign keys and indexes |
 | `0001_illegal_famine.sql` | Add `password`, `email_verified` to users; create `magic_links` table |
 | `0002_noisy_iron_monger.sql` | Add `role` column to users (varchar, default "user", NOT NULL) |
+| `0012_add_share_events.sql` | Create `share_events` table + 3 indexes (#569) |
 
 ### Schema Change Workflow
 

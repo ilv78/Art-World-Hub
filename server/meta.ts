@@ -184,8 +184,110 @@ function normalizePath(url: string): string {
   return path === "/" ? "/" : path.replace(/\/+$/, "");
 }
 
+/** Pull `?artwork=<slug>` from the URL if present. Used by share links from
+ *  the artwork-detail modal, where the URL takes the form `/<parent>?artwork=
+ *  <slug>` and the recipient should see artwork-specific OG even though the
+ *  parent page is something like /store. (#569) */
+function extractArtworkQuery(url: string): string | null {
+  const qIdx = url.indexOf("?");
+  if (qIdx < 0) return null;
+  const queryPart = url.slice(qIdx + 1).split("#")[0];
+  const params = new URLSearchParams(queryPart);
+  const slug = params.get("artwork");
+  return slug && slug.length > 0 ? slug : null;
+}
+
+/** Build the per-artwork MetaTags. Used both by the canonical /artworks/:slug
+ *  route and by the `?artwork=<slug>` modal-share variant — same OG payload,
+ *  the only difference is whether og:url/canonical point at the canonical
+ *  detail page (always) vs. the parent page (never — would confuse FB's
+ *  OG card identity dedup). */
+function buildArtworkMetaFrom(artwork: {
+  title: string;
+  slug: string;
+  description: string | null;
+  imageUrl: string;
+  price: string | number | null;
+  medium: string;
+  year: number | null;
+  category: string | null;
+  isForSale: boolean | null;
+  artist: { name: string; slug: string; avatarUrl: string | null };
+}): MetaTags {
+  const rawDescription = artwork.description || `${artwork.title} by ${artwork.artist.name} on Vernis9.`;
+  const description = rawDescription.slice(0, 160);
+  const image = toAbsoluteUrl(artwork.imageUrl);
+  const artworkUrl = `${SITE_URL}/artworks/${artwork.slug}`;
+  const title = `${artwork.title} by ${artwork.artist.name} — Vernis9`;
+  const priceNumber = Number(artwork.price);
+  const hasValidPrice = Number.isFinite(priceNumber) && priceNumber > 0;
+  const visualArtworkLd: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "VisualArtwork",
+    name: artwork.title,
+    url: artworkUrl,
+    image,
+    description,
+    creator: {
+      "@type": "Person",
+      name: artwork.artist.name,
+      url: `${SITE_URL}/artists/${artwork.artist.slug}`,
+      ...(artwork.artist.avatarUrl ? { image: toAbsoluteUrl(artwork.artist.avatarUrl) } : {}),
+    },
+    artMedium: artwork.medium,
+    ...(artwork.year ? { dateCreated: String(artwork.year) } : {}),
+    ...(artwork.category ? { genre: artwork.category } : {}),
+    ...(artwork.isForSale && hasValidPrice
+      ? {
+          offers: {
+            "@type": "Offer",
+            price: priceNumber.toFixed(2),
+            priceCurrency: "EUR",
+            availability: "https://schema.org/InStock",
+            url: artworkUrl,
+          },
+        }
+      : {}),
+  };
+  return {
+    title,
+    description,
+    ogTitle: title,
+    ogDescription: description,
+    ogType: "article",
+    ogUrl: artworkUrl,
+    ogImage: image,
+    jsonLd: [
+      visualArtworkLd,
+      breadcrumb(
+        { name: "Home", url: `${SITE_URL}/` },
+        { name: "Artists", url: `${SITE_URL}/artists` },
+        { name: artwork.artist.name, url: `${SITE_URL}/artists/${artwork.artist.slug}` },
+        { name: artwork.title },
+      ),
+    ],
+  };
+}
+
 async function resolveMetaTags(url: string): Promise<MetaTags> {
   const path = normalizePath(url);
+
+  // Modal-share fallback: any path with `?artwork=<slug>` emits artwork-
+  // specific OG. og:url/canonical still point at /artworks/<slug> so search
+  // engines and FB's OG-dedup treat the canonical detail page as the source
+  // of truth — the recipient still lands on the parent page (with the modal
+  // open) because that's the URL passed to sharer.php. (#569)
+  const artworkQuerySlug = extractArtworkQuery(url);
+  if (artworkQuerySlug) {
+    try {
+      const artwork = await storage.getPublishedArtworkBySlug(artworkQuerySlug);
+      if (artwork) {
+        return buildArtworkMetaFrom(artwork);
+      }
+    } catch {
+      // fall through to path-based resolution
+    }
+  }
 
   // Static routes
   const staticRoute = STATIC_ROUTES[path];
@@ -273,40 +375,51 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
     try {
       const artwork = await storage.getPublishedArtworkBySlug(artworkMatch[1]);
       if (artwork) {
-        const rawDescription = artwork.description || `${artwork.title} by ${artwork.artist.name} on Vernis9.`;
+        return buildArtworkMetaFrom(artwork);
+      }
+    } catch {
+      // fall through to defaults
+    }
+  }
+
+  // Dynamic: /curator-gallery/:id (per-exhibition detail page) — emits OG so
+  // that shared exhibition links render proper cards on Facebook, LinkedIn,
+  // X, etc. Without this the route fell back to the default site OG card. (#569)
+  const curatorGalleryMatch = path.match(/^\/curator-gallery\/([^/]+)$/);
+  if (curatorGalleryMatch) {
+    try {
+      const gallery = await storage.getCuratorGallery(curatorGalleryMatch[1]);
+      if (gallery && gallery.isPublished) {
+        const curatorName =
+          [gallery.curator.firstName, gallery.curator.lastName].filter(Boolean).join(" ") ||
+          "Curator";
+        const rawDescription =
+          gallery.description ||
+          `Curated exhibition by ${curatorName} on Vernis9 — ${gallery.artworks.length} artworks.`;
         const description = rawDescription.slice(0, 160);
-        const image = toAbsoluteUrl(artwork.imageUrl);
-        const artworkUrl = `${SITE_URL}/artworks/${artwork.slug}`;
-        const title = `${artwork.title} by ${artwork.artist.name} \u2014 Vernis9`;
-        const priceNumber = Number(artwork.price);
-        const hasValidPrice = Number.isFinite(priceNumber) && priceNumber > 0;
-        const visualArtworkLd: Record<string, unknown> = {
+        const heroImage = gallery.artworks[0]?.imageUrl;
+        const image = heroImage ? toAbsoluteUrl(heroImage) : DEFAULT_OG_IMAGE;
+        const galleryUrl = `${SITE_URL}/curator-gallery/${gallery.id}`;
+        const title = `${gallery.name} — Vernis9 Exhibition`;
+        const eventLd: Record<string, unknown> = {
           "@context": "https://schema.org",
-          "@type": "VisualArtwork",
-          name: artwork.title,
-          url: artworkUrl,
-          image,
+          "@type": "ExhibitionEvent",
+          name: gallery.name,
+          url: galleryUrl,
           description,
-          creator: {
-            "@type": "Person",
-            name: artwork.artist.name,
-            url: `${SITE_URL}/artists/${artwork.artist.slug}`,
-            ...(artwork.artist.avatarUrl ? { image: toAbsoluteUrl(artwork.artist.avatarUrl) } : {}),
+          image,
+          ...(gallery.startDate ? { startDate: new Date(gallery.startDate).toISOString() } : {}),
+          ...(gallery.endDate ? { endDate: new Date(gallery.endDate).toISOString() } : {}),
+          eventAttendanceMode: "https://schema.org/OnlineEventAttendanceMode",
+          eventStatus: "https://schema.org/EventScheduled",
+          location: {
+            "@type": "VirtualLocation",
+            url: galleryUrl,
           },
-          artMedium: artwork.medium,
-          ...(artwork.year ? { dateCreated: String(artwork.year) } : {}),
-          ...(artwork.category ? { genre: artwork.category } : {}),
-          ...(artwork.isForSale && hasValidPrice
-            ? {
-                offers: {
-                  "@type": "Offer",
-                  price: priceNumber.toFixed(2),
-                  priceCurrency: "EUR",
-                  availability: "https://schema.org/InStock",
-                  url: artworkUrl,
-                },
-              }
-            : {}),
+          organizer: {
+            "@type": "Person",
+            name: curatorName,
+          },
         };
         return {
           title,
@@ -314,15 +427,14 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
           ogTitle: title,
           ogDescription: description,
           ogType: "article",
-          ogUrl: artworkUrl,
+          ogUrl: galleryUrl,
           ogImage: image,
           jsonLd: [
-            visualArtworkLd,
+            eventLd,
             breadcrumb(
               { name: "Home", url: `${SITE_URL}/` },
-              { name: "Artists", url: `${SITE_URL}/artists` },
-              { name: artwork.artist.name, url: `${SITE_URL}/artists/${artwork.artist.slug}` },
-              { name: artwork.title },
+              { name: "Exhibitions", url: `${SITE_URL}/exhibitions` },
+              { name: gallery.name },
             ),
           ],
         };

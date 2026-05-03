@@ -90,7 +90,18 @@ export function ArtworkCard({ artwork, onViewDetails, showAddToCart = true }: Ar
           <div className="flex items-start justify-between gap-2">
             <Link
               href={artworkUrl}
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                // Prefer the modal when an `onViewDetails` handler is wired
+                // (parent passes one). Crawlers without JS still follow the
+                // href to /artworks/<slug>, preserving SEO.
+                if (onViewDetails) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onViewDetails();
+                } else {
+                  e.stopPropagation();
+                }
+              }}
               className="min-w-0 hover:text-primary transition-colors"
             >
               <h3 className="font-serif font-semibold text-base leading-tight line-clamp-1">

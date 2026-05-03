@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, serial, decimal, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, serial, decimal, timestamp, boolean, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -239,6 +239,56 @@ export const insertNewsletterSchema = z.object({
   email: z.string().email(),
   source: z.enum(NEWSLETTER_SOURCES).optional(),
 });
+
+// Share-event tracking (#569). Records every click on the on-page share buttons
+// so the admin can see which items get shared most and which platforms drive
+// reach. itemId is loose (varchar) because it points at four different tables
+// (artworks, blog_posts, curator_galleries, artists) — keeping it untyped at
+// the DB level avoids cascade-delete coupling and is fine for an analytics
+// table that's append-only and indexed by (item_type, item_id).
+export const SHARE_ITEM_TYPES = ["artwork", "blog", "exhibition", "artist"] as const;
+export type ShareItemType = (typeof SHARE_ITEM_TYPES)[number];
+
+export const SHARE_PLATFORMS = [
+  "facebook",
+  "linkedin",
+  "pinterest",
+  "x",
+  "bluesky",
+  "copy",
+  "native",
+] as const;
+export type SharePlatform = (typeof SHARE_PLATFORMS)[number];
+
+export const SHARE_USER_AGENT_CLASSES = ["mobile", "desktop"] as const;
+export type ShareUserAgentClass = (typeof SHARE_USER_AGENT_CLASSES)[number];
+
+export const shareEvents = pgTable(
+  "share_events",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    itemType: varchar("item_type", { length: 32 }).notNull(),
+    itemId: varchar("item_id").notNull(),
+    platform: varchar("platform", { length: 16 }).notNull(),
+    userId: varchar("user_id"),
+    userAgentClass: varchar("user_agent_class", { length: 8 }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("IDX_share_events_item").on(table.itemType, table.itemId),
+    index("IDX_share_events_created_at").on(table.createdAt),
+    index("IDX_share_events_platform").on(table.platform),
+  ]
+);
+
+export const insertShareEventSchema = z.object({
+  itemType: z.enum(SHARE_ITEM_TYPES),
+  itemId: z.string().min(1).max(128),
+  platform: z.enum(SHARE_PLATFORMS),
+  userAgentClass: z.enum(SHARE_USER_AGENT_CLASSES).optional(),
+});
+export type InsertShareEvent = z.infer<typeof insertShareEventSchema>;
+export type ShareEvent = typeof shareEvents.$inferSelect;
 
 // Layout types for the 3D maze
 export interface MazeCell {
