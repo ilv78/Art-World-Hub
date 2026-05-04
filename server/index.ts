@@ -10,6 +10,7 @@ import { registerMcpRoutes } from "./mcp";
 import healthRouter from "./routes/health";
 import robotsRouter from "./routes/robots";
 import sitemapRouter from "./routes/sitemap";
+import ogCardsRouter from "./routes/og-cards";
 import { logger } from "./logger";
 
 const app = express();
@@ -59,6 +60,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use("/", healthRouter);
 app.use("/", robotsRouter);
 app.use("/", sitemapRouter);
+app.use("/", ogCardsRouter);
 
 // Block search engine indexing on non-production environments
 const SITE_URL = process.env.SITE_URL || "https://vernis9.art";

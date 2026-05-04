@@ -53,7 +53,7 @@ jobs:
             docker pull ghcr.io/ilv78/art-world-hub:$IMAGE_TAG
             sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$IMAGE_TAG/" .env || echo "IMAGE_TAG=$IMAGE_TAG" >> .env
             # Ensure upload subdirs exist on the Docker volume (new subdirs may be missing)
-            docker compose run --rm --no-deps --user root --entrypoint sh app -c "mkdir -p /app/uploads/artworks /app/uploads/blog-covers /app/uploads/avatars /app/logs && chown -R appuser:appgroup /app/uploads /app/logs"
+            docker compose run --rm --no-deps --user root --entrypoint sh app -c "mkdir -p /app/uploads/artworks /app/uploads/blog-covers /app/uploads/avatars /app/uploads/og-cards /app/logs && chown -R appuser:appgroup /app/uploads /app/logs"
             docker compose up -d --remove-orphans
             # Run pending database migrations
             echo "Running database migrations..."
