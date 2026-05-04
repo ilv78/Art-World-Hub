@@ -1,5 +1,9 @@
 # Social Share — Changelog
 
+## 2026-05-04 — Home page auto-open fix (#580)
+
+- `client/src/pages/home.tsx` now wires `useArtworkModalFromQuery` so a `/?artwork=<slug>` URL (e.g. one shared from the home "Featured Artworks" modal) auto-opens the modal on the recipient's side. Previously only store / gallery / artist profile / curator gallery were wired — home was missed in the initial #569 implementation.
+
 ## 2026-05-03 — Initial implementation (#569)
 
 - New `share_events` table + storage methods + `POST /api/share-events` (6/min/IP rate-limited) + admin stats endpoint
