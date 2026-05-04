@@ -43,6 +43,13 @@ app.use(
             },
           }
         : false,
+    // Vernis9 publishes art / blog / exhibition content explicitly intended
+    // to be shared and embedded across the web (Facebook OG previews, Pinterest
+    // saves, blog hotlinks). Helmet's default `same-origin` blocks all of
+    // those use cases. Sensitive endpoints (admin APIs, mutations) are auth-
+    // protected, not CORP-protected; relaxing the default does not weaken
+    // them. (#590)
+    crossOriginResourcePolicy: { policy: "cross-origin" },
   }),
 );
 
