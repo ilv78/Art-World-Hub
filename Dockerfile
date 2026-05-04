@@ -20,6 +20,8 @@ ENV APP_VERSION=$APP_VERSION
 # fontconfig is required for sharp's SVG-text rendering (librsvg uses it to
 # resolve font-family -> file). Bundled brand fonts (Playfair Display, Inter)
 # are installed system-wide so OG card composition produces brand-correct text.
+# hadolint ignore=DL3008 — fontconfig version doesn't matter for our use; pinning
+# would just break on base-image bumps without buying anything.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends fontconfig \
     && rm -rf /var/lib/apt/lists/*
