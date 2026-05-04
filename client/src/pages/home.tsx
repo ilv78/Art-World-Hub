@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArtworkCard } from "@/components/artwork-card";
 import { ArtworkShelf, ShelfItem } from "@/components/artwork-shelf";
+import { useArtworkModalFromQuery } from "@/hooks/use-modal-from-query";
 import { ResponsiveImage } from "@/components/responsive-image";
 import { ARTWORK_SIZES, BLOG_SIZES } from "@shared/responsive-image";
 import {
@@ -467,6 +468,12 @@ export default function Home() {
 
   const { data: blogPosts } = useQuery<BlogPostWithArtist[]>({
     queryKey: ["/api/blog"],
+  });
+
+  useArtworkModalFromQuery({
+    artworks,
+    selected: selectedArtwork,
+    setSelected: setSelectedArtwork,
   });
 
   if (artworksLoading) return <HomeSkeleton />;
