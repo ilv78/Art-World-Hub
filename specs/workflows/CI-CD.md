@@ -1,7 +1,7 @@
 # Vernis9 — CI/CD Pipeline Specification
 
 **Status:** Active
-**Last Updated:** 2026-04-20
+**Last Updated:** 2026-05-09
 
 ---
 
@@ -53,13 +53,14 @@ The "Lint, Type Check, Test & Build" job also declares a `merge_group` trigger s
 
 - **Depends on `build-image`** — runs after the image is pushed to GHCR
 - Pulls the just-built image and runs Trivy vulnerability scanner
-- Fails the pipeline on CRITICAL or HIGH severity findings (unfixed vulnerabilities ignored via `.trivyignore`)
+- Fails the pipeline on CRITICAL or HIGH severity findings (unfixed vulnerabilities ignored via `.trivyignore.yaml` — migrated from the legacy `.trivyignore` plain-text file in #541 to support per-CVE path scoping)
 - Uses the same Trivy action (pinned to SHA) and config as `security.yml` for consistency
 - **Gates staging deploy** — `deploy-staging` depends on this job passing
 
 **Job 5: `deploy-staging`** — Deploy to Staging
 
 - **Depends on `scan-image`** — automatically skipped when build is skipped (docs-only changes) or when Trivy finds critical/high vulnerabilities
+- **Upload-subdir bootstrap step** — before `docker compose up -d`, the deploy script `mkdir -p`s the upload subdirs (`/app/uploads/artworks`, `/app/uploads/blog-covers`, `/app/uploads/avatars`, `/app/uploads/og-cards`, `/app/logs`) on the persistent Docker volume and `chown`s them to `appuser`. This list is **not** auto-derived from the Dockerfile, so any new upload subdir must also be added to this step in both the staging and production deploy jobs (lesson from #588 / og-cards onboarding).
 
 #### Docker Setup
 
@@ -741,3 +742,7 @@ After the health check passes, both staging (`ci.yml`) and production (`deploy-p
 | 2026-04-08 | Spec catch-up — bumped Last Updated header (was 2026-03-23 despite content updates through 2026-03-25), added Section 6.6 (post-deploy version smoke test), expanded Section 6.5 (release workflow) with CHANGELOG validation gate and label cleanup behavior, added the version smoke test to Section 5.2 + 5.4 diagrams, added revision log entries for #303, #304, #362. Resolves recurring `ST-004` doc-agent warning. (Issue [#414](https://github.com/ilv78/Art-World-Hub/issues/414)) |
 | 2026-04-10 | Removed the auto-deploy step from `release-finalize.yml` — the `gh workflow run deploy-production.yml` call had been failing 403 on every release because `RELEASE_PAT` lacks the `actions:write` scope, and the developer preferred staging-verification-then-manual-promote over fixing the PAT scope. Section 5.4 header and Section 6.5 release-flow description updated accordingly. Production deploy is now exclusively `workflow_dispatch`. (Issue [#443](https://github.com/ilv78/Art-World-Hub/issues/443)) |
 | 2026-04-20 | Noted the `merge_group` trigger on the `ci` job — harmless no-op left over from the abandoned merge-queue experiment in [#472](https://github.com/ilv78/Art-World-Hub/issues/472) / PR [#477](https://github.com/ilv78/Art-World-Hub/pull/477). Bundled with [#522](https://github.com/ilv78/Art-World-Hub/issues/522): the `ST-004` doc-audit rule was re-firing on every Dependabot SHA-pin bump because it used raw git-mtime; the rule now ignores commits authored solely by `dependabot[bot]` when measuring workflow-file recency. |
+| 2026-04-25 | Migrated Trivy ignores from `.trivyignore` (plain text) to `.trivyignore.yaml` and path-scoped the drizzle-kit/esbuild CVEs to dev-only paths so production scans aren't masked. Updated §1 Job 4. ([#540](https://github.com/ilv78/Art-World-Hub/issues/540), PR [#541](https://github.com/ilv78/Art-World-Hub/pull/541)) |
+| 2026-05-04 | Added `/app/uploads/og-cards` to the upload-subdir bootstrap `mkdir -p` step in both staging and production deploy jobs (`ci.yml` and `deploy-production.yml`). Branded OG cards (#577) write to this path; missing it on the persistent volume would have caused 500s on first share. Captured the lesson in the §1 Job 5 note. ([#577](https://github.com/ilv78/Art-World-Hub/issues/577), PR [#588](https://github.com/ilv78/Art-World-Hub/pull/588)) |
+| 2026-05-09 | Resolved a fresh wave of `npm audit` advisories (`fast-uri` HIGH + `hono` / `@hono/node-server` / `ip-address` moderate) blocking the security gate on every PR since 2026-05-09 19:53 UTC. Bumped `express-rate-limit` to `^8.5.1` and added `npm overrides` for `fast-uri@^3.1.2`, `hono@^4.12.18`, `@hono/node-server@^1.19.13` to coerce `@modelcontextprotocol/sdk@1.29.0` transitives onto patched versions (no upstream MCP SDK release available). No CI workflow changes — `npm audit --audit-level=high` is now clean. ([#595](https://github.com/ilv78/Art-World-Hub/issues/595), PR [#596](https://github.com/ilv78/Art-World-Hub/pull/596)) |
+| 2026-05-09 | Spec catch-up — bumped `Last Updated` header (was 2026-04-20), refreshed §1 Job 4 (Trivy ignore migration to `.trivyignore.yaml`) and §1 Job 5 (upload-subdir bootstrap note covering og-cards), added revision-log entries for #541, #588, and #595. Resolves recurring `ST-004` doc-agent warning from the rolling docs-audit issue (#579). |

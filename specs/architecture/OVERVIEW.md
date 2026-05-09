@@ -1,7 +1,7 @@
 # ArtVerse — Architecture Overview
 
 **Status:** Active
-**Last Updated:** 2026-04-09
+**Last Updated:** 2026-05-09
 **Owner:** Architecture
 
 ---
@@ -12,15 +12,20 @@ ArtVerse is a full-stack art gallery platform that combines e-commerce with an i
 
 ### Core Capabilities
 
-- **3D Virtual Museum** — First-person walkable gallery with per-artist exhibition rooms (Three.js WebGL)
+- **Dual Gallery Views** — 2D (default) and 3D first-person walkable views, toggleable via shared `ViewModeToggle` (#576)
+- **3D Virtual Museum** — Per-artist exhibition rooms with mesh-based collision (Three.js WebGL)
 - **Online Art Store** — Browse, search, filter, and purchase artworks with a cart/checkout flow
 - **Live Auctions** — Real-time bidding with validation (minimum increments, time windows)
-- **Artist Dashboard** — Full CRUD for artworks, blog posts, order management, and profile settings
-- **Blog System** — Artists can publish posts with cover images and excerpts
+- **Artist Dashboard** — Full CRUD for artworks (with draft/published state), blog posts, order management, and profile settings
+- **Curator Dashboard** — Curators assemble cross-artist `curator_galleries` viewable in 2D/3D
+- **Admin Dashboard** — User/artist/artwork/blog moderation, role management, log viewer
+- **Blog System** — Artists publish posts with cover images, responsive WebP/JPEG variants, and excerpts
 - **Exhibition System** — Curated group exhibitions with wall placement metadata
+- **Social Sharing & Analytics** — Item-share buttons (FB/X/LinkedIn/Bluesky/Pinterest/Telegram/email), branded server-rendered OG cards, self-tracked `share_events` table; see `specs/features/social-share/SPEC.md`
 - **MCP Server** — 14 resources, 12 tools, 4 prompt templates for AI integration
 - **Authentication** — Google OIDC + email/password with magic link signup (Resend)
 - **SEO Infrastructure** — Server-side meta injection, structured data, sitemap, environment-aware crawler controls (see §8c)
+- **Performance Pipeline** — Image variant pipeline (sharp), LCP preload, route-level code splitting, nginx HTTP/2 + immutable assets (see §8d)
 
 ---
 
@@ -49,8 +54,10 @@ ArtVerse is a full-stack art gallery platform that combines e-commerce with an i
 ┌─────────────────────────────────────────────────────────────────────┐
 │                      PostgreSQL 16                                  │
 │                                                                     │
-│  users, sessions, magic_links, artists, artworks, auctions, bids,  │
-│  orders, exhibitions, exhibition_artworks, blog_posts              │
+│  users, sessions, magic_links, artists, artist_slug_history,        │
+│  artworks, auctions, bids, orders, exhibitions, exhibition_artworks,│
+│  blog_posts, curator_galleries, curator_gallery_artworks,           │
+│  share_events, site_settings, newsletter_subscribers                │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -59,26 +66,31 @@ ArtVerse is a full-stack art gallery platform that combines e-commerce with an i
 ```
 Art-World-Hub/
 ├── client/src/           React frontend
-│   ├── pages/            10 page components
+│   ├── pages/            21 page components (route-level lazy loaded)
 │   ├── components/       3D galleries, cards, dialogs, 47 Shadcn UI components
-│   ├── hooks/            use-auth, use-toast, use-mobile
-│   └── lib/              queryClient, cart-store, utils
+│   ├── hooks/            use-auth, use-toast, use-mobile, use-immersive-mode
+│   └── lib/              queryClient, cart-store, share-urls, utils
 ├── server/               Express backend
-│   ├── routes.ts         40+ API endpoints
-│   ├── storage.ts        34-method database layer (IStorage interface)
+│   ├── routes.ts         66 API endpoints
+│   ├── routes/           sitemap, robots, og-cards, health
+│   ├── storage.ts        DatabaseStorage (IStorage interface)
 │   ├── mcp.ts            MCP server (AI integration)
 │   ├── email.ts          Resend email client (magic links, order emails)
-│   ├── __tests__/        70+ unit & integration tests
+│   ├── meta.ts           Server-side meta tag injection (SEO)
+│   ├── lib/              image-variants pipeline, share-events, etc.
+│   ├── __tests__/        12 test files / 190 tests
 │   └── replit_integrations/auth/   Authentication (OIDC + local)
 ├── shared/
 │   ├── schema.ts         Single source of truth: Drizzle tables, Zod schemas, TS types
-│   └── models/auth.ts    Auth tables (users, sessions, magic_links)
+│   ├── models/auth.ts    Auth tables (users, sessions, magic_links)
+│   └── responsive-image.ts  Variant width definitions (client + server)
+├── assets/fonts/         Bundled brand fonts (OFL) for OG-card rendering
 ├── script/build.ts       Production build orchestrator
 ├── .github/workflows/    CI/CD pipelines
 ├── deploy/               Docker-compose files, Nginx configs, setup scripts
 ├── migrations/           Drizzle SQL migration files (versioned)
 ├── docker-compose.yml    Local dev: PostgreSQL + app containers
-└── Dockerfile            Multi-stage Node 20 build
+└── Dockerfile            Multi-stage Node 25 build
 ```
 
 ---
@@ -143,11 +155,64 @@ All routes defined in `server/routes.ts`. Base path: `/api/`.
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | GET | `/api/gallery/hallway` | No | Get hallway museum data (all artists with exhibition artworks) |
+| GET | `/api/gallery/curated` | No | Get all curated galleries with artworks for the museum hallway |
+
+### Curator Galleries
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/curated-exhibitions` | No | Public list of published curator galleries |
+| GET | `/api/curator-galleries/:id` | No | Public curator gallery (with placed artworks + 3D layout) |
+| GET | `/api/curator/galleries` | Yes (curator) | Current curator's galleries |
+| POST | `/api/curator/galleries` | Yes (curator) | Create curator gallery |
+| PATCH | `/api/curator/galleries/:id` | Yes (curator) | Update curator gallery |
+| DELETE | `/api/curator/galleries/:id` | Yes (curator) | Delete curator gallery |
+| PUT | `/api/curator/galleries/:id/artworks` | Yes (curator) | Replace artwork placements |
+| GET | `/api/curator/artworks/available` | Yes (curator) | Pool of artworks eligible for placement |
+| PATCH | `/api/curator/profile` | Yes (curator) | Update curator profile |
+
+### Admin
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET / DELETE | `/api/admin/users` and `/:id` | Yes (admin) | List + delete users |
+| PATCH | `/api/admin/users/:id/role` | Yes (admin) | Promote/demote (user / curator / admin) |
+| GET / DELETE | `/api/admin/artists`, `/api/admin/artworks`, `/api/admin/exhibitions`, `/api/admin/blog` | Yes (admin) | Cross-artist moderation lists + deletes |
+| PATCH | `/api/admin/site-settings` | Yes (admin) | Site-wide settings (e.g. default gallery template) |
+| GET | `/api/admin/logs` | Yes (admin) | Stream the structured pino log file |
+| GET | `/api/admin/share-events/stats` | Yes (admin) | Aggregated share-event stats for the admin Shares tab |
+
+### Share Analytics
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/api/share-events` | No (rate-limited) | Record a self-tracked share click — Zod-validated, 6/min/IP limit |
+
+### Newsletter
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/api/newsletter/subscribe` | No | Subscribe an email |
+| GET | `/api/newsletter/subscribers` | Yes (admin) | Subscriber list (CSV export) |
+| DELETE | `/api/newsletter/subscribers/:id` | Yes (admin) | Remove subscriber |
+
+### Site Metadata
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/site-settings` | No | Public site settings (e.g. default gallery template) |
+| GET | `/api/version` | No | Deployed app version (`APP_VERSION` build arg) |
+| GET | `/api/changelog` | No | Raw `CHANGELOG.md` |
 
 ### Utilities
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | GET | `/api/image-proxy` | No | Proxy external images (CORS bypass, 1-day cache, SSRF-protected) |
+| POST | `/api/upload/artwork` | Yes | Upload artwork image, generates responsive WebP/JPEG variants (#564) |
+| POST | `/api/upload/blog-cover` | Yes | Upload blog cover, generates responsive variants (#574) |
+| POST | `/api/upload/avatar` | Yes | Upload artist avatar |
+
+### Public (non-API) routes
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/sitemap.xml` | No | Dynamically-generated sitemap (1-hour cache; see §8c) |
+| GET | `/robots.txt` | No | Environment-aware robots policy (see §8c) |
+| GET | `/api/og/:type/:id.jpg` | No | Branded server-rendered OG card for `artist`/`artwork`/`exhibition`/`blog` (#577) |
 
 ### Authentication
 | Method | Path | Auth | Description |
@@ -173,19 +238,29 @@ All routes defined in `server/routes.ts`. Base path: `/api/`.
 
 Router: Wouter (lightweight, `<Route path="...">` pattern). Defined in `client/src/App.tsx`.
 
+All pages are loaded via `React.lazy` for route-level code splitting (#558).
+
 | Route | Page Component | Description |
 |-------|---------------|-------------|
-| `/` | `home.tsx` | Landing page — hero section, feature cards, featured artworks carousel |
-| `/gallery` | `gallery.tsx` | Virtual gallery — toggle between 3D museum hallway and classic framed viewer |
+| `/` | `home.tsx` | Landing page — hero, feature cards, featured artworks carousel |
+| `/gallery` | `gallery.tsx` | Virtual gallery — 2D classic carousel (default) or 3D museum hallway |
+| `/exhibitions` | `exhibitions.tsx` | Exhibition listing |
 | `/store` | `store.tsx` | Art store — search, category/sort filters, grid/list toggle, detail dialogs |
-| `/auctions` | `auctions.tsx` | Auction platform — active/upcoming/ended tabs, bid placement, stats |
-| `/artists` | `artists.tsx` | Artist directory — search, featured cards, detail dialogs |
-| `/artists/:id` | `artist-profile.tsx` | Artist profile — 3D maze gallery, portfolio, blog tabs |
-| `/dashboard` | `artist-dashboard.tsx` | Artist management — artworks CRUD, blog, orders, profile settings |
-| `/blog` | `blog.tsx` | Blog listing page |
+| `/auctions` | `auctions.tsx` | Auction platform — active/upcoming/ended tabs, bid placement |
+| `/artists` | `artists.tsx` | Artist directory |
+| `/artists/:slug` | `artist-profile.tsx` | Artist profile — Gallery tab (2D default / 3D maze), portfolio, blog |
+| `/artworks/:slug` | `artwork-detail.tsx` | Standalone artwork detail page |
+| `/dashboard` | `artist-dashboard.tsx` | Artist management — artworks (drafts/published), blog, orders, profile settings |
+| `/curator` | `curator-dashboard.tsx` | Curator management — assemble curator galleries from cross-artist artworks |
+| `/curator-gallery/:id` | `curator-gallery.tsx` | Public curator-gallery view (2D grid default / 3D maze toggle) |
+| `/admin` | `admin.tsx` | Admin moderation — users, artists, artworks, exhibitions, blog, settings, logs |
+| `/blog` | `blog.tsx` | Blog listing |
 | `/blog/:id` | `blog-post.tsx` | Individual blog post |
 | `/auth` | `auth-page.tsx` | Login/signup (email + password, Google OIDC) |
-| `/auth/set-password` | `set-password-page.tsx` | Set password after magic link verification |
+| `/auth/set-password` | `set-password.tsx` | Set password after magic link verification |
+| `/changelog` | `changelog.tsx` | Renders `CHANGELOG.md` via the public `/api/changelog` endpoint |
+| `/privacy`, `/terms` | `privacy.tsx`, `terms.tsx` | Static legal pages |
+| `/koningsdag` | `koningsdag.tsx` | Seasonal landing page (King's Day, NL) |
 | `*` | `not-found.tsx` | 404 page |
 
 ### App Layout Structure
@@ -206,7 +281,7 @@ App
 
 ## 5. 3D Gallery System
 
-Two Three.js WebGL components power the virtual museum experience.
+Two Three.js WebGL components power the virtual museum experience. **2D classic view is the default everywhere** (museum hallway, curator galleries, artist exhibitions); the shared `client/src/components/view-mode-toggle.tsx` switches to 3D, with a `?view=3d` URL parameter for deep-linking (#576).
 
 ### HallwayGallery3D (`components/hallway-gallery-3d.tsx`)
 
@@ -413,6 +488,44 @@ When `SITE_URL ≠ https://vernis9.art`, three layers prevent indexing:
 - Below-the-fold images use `loading="lazy"` (#368)
 - All `<img>` and `<AvatarImage>` elements have descriptive `alt` text (#369)
 - Default OG image at `/og-default.png` (1200×630) used as fallback for routes without entity-specific imagery
+- Branded server-rendered OG cards at `/api/og/:type/:id.jpg` for item shares (artist / artwork / exhibition / blog) — sharp + SVG composite, brand fonts bundled at `assets/fonts/` (#577)
+
+---
+
+## 8d. Performance Infrastructure
+
+The site is image-heavy and benchmarks against the same Lighthouse / CrUX p75 metrics that drive search ranking. Section 8d covers the layered performance work shipped through v3.13–v3.16.
+
+### Image variant pipeline
+
+`server/lib/image-variants.ts` (driven by `sharp@0.34`) emits responsive WebP + JPEG variants at multiple widths for every uploaded asset:
+
+- **Artwork uploads** (#564) — variants written under `/uploads/artworks/<id>/`; consumed via `<ResponsiveImage srcSet=…>` from `client/src/components/responsive-image.tsx`
+- **Blog cover uploads** (#574) — variants under `/uploads/blog-covers/<id>/`
+- Variant widths defined in `shared/responsive-image.ts` (`ARTWORK_SIZES`, `BLOG_SIZES`) so client + server stay in sync
+
+### LCP optimization
+
+- Server-injected `<link rel="preload" as="image" fetchpriority="high">` for the LCP image on `/` (#560), aligned with the picture-element variant chosen by the browser (#567)
+- `fetchPriority="high"` on hero `<img>` and Avatar primary slots (#506)
+- `<link rel="preload" as="font">` for the brand Playfair woff2 (#506)
+
+### Code splitting
+
+Route-level lazy-loading via `React.lazy` + `<Suspense>` in `client/src/App.tsx` (#558). Each page is a separate chunk; only the home bundle is in the critical path.
+
+### Nginx caching & compression
+
+Production nginx config (`deploy/nginx/vernis9.art.conf`) — staging mirrors:
+
+- **HTTP/2** enabled on the SSL listener (#555)
+- `Cache-Control: public, max-age=31536000, immutable` on `/assets/*` (Vite hashed bundles)
+- `Cache-Control: public, max-age=2592000` (30d) on `/uploads/*`
+- `gzip` on text responses for `/assets/*` (#550) — text/css, application/javascript, application/json, image/svg+xml
+
+### Cross-origin Resource Policy
+
+Helmet's `Cross-Origin-Resource-Policy` default relaxed from `same-origin` to `cross-origin` so social embedders (Facebook, Telegram, LinkedIn, X) can render `og:image` previews that reference our `/og-default.png`, `/uploads/*`, and favicons (#590).
 
 ---
 
@@ -444,8 +557,8 @@ npm run dev    # tsx hot-reload on port 5000, Vite HMR for client
 3. Selective dependency bundling via allowlist (reduces cold-start time)
 
 ### Docker
-- **Multi-stage Dockerfile:** deps → build → run (Node 20 slim)
-- **docker-compose.yml:** PostgreSQL 16 Alpine + app, health checks, named volume for data persistence
+- **Multi-stage Dockerfile:** deps → build → run (Node 25 bookworm-slim, with `fontconfig` + bundled brand fonts for OG-card rendering)
+- **docker-compose.yml:** PostgreSQL 16 + app, health checks, named volume for data persistence
 - Ports: PostgreSQL on 5433, app on 5000 (localhost only)
 
 ### CI/CD (GitHub Actions)
@@ -495,26 +608,30 @@ npx vitest run <file>       # Single file
 
 ## 13. Key Dependencies
 
+Versions reflect `package.json` ranges as of the **Last Updated** header.
+
 | Package | Version | Role |
 |---------|---------|------|
-| React | 18.3 | UI framework |
+| React | 19.2 | UI framework |
 | Express | 5.0 | HTTP server |
-| Drizzle ORM | 0.39 | Database ORM (dual-mode: push for staging, migrations for production) |
+| Drizzle ORM | 0.45 | Database ORM (dual-mode: push for staging, migrations for production) |
 | PostgreSQL (pg) | 8.16 | Database driver |
-| Three.js | 0.182 | 3D WebGL rendering |
-| Vite | 7.3 | Frontend build tool + dev server |
-| TanStack Query | 5.60 | Server state management |
+| Three.js | 0.184 | 3D WebGL rendering |
+| Vite | 8.0 | Frontend build tool + dev server |
+| TanStack Query | 5.10 | Server state management |
 | Zustand | 5.0 | Client state management |
-| Wouter | 3.3 | Client-side routing |
+| Wouter | 3.9 | Client-side routing |
 | Passport | 0.7 | Authentication middleware |
 | openid-client | 6.8 | OIDC protocol |
 | bcryptjs | 3.0 | Password hashing |
-| Resend | 4.0 | Transactional email |
-| Zod | 4.3 | Schema validation |
-| @modelcontextprotocol/sdk | 1.26 | MCP server |
-| esbuild | 0.25 | Server bundler |
-| Vitest | 3.2 | Test framework |
-| TypeScript | 5.6 | Type system |
+| Resend | 6.12 | Transactional email |
+| Zod | 4.4 | Schema validation |
+| @modelcontextprotocol/sdk | 1.29 | MCP server (transitive deps pinned via `npm overrides` — see #595) |
+| sharp | 0.34 | Image variant pipeline + OG-card compositing |
+| express-rate-limit | 8.5 | Per-route + per-IP rate limiting |
+| esbuild | 0.28 | Server bundler |
+| Vitest | 4.1 | Test framework |
+| TypeScript | 6.0 | Type system |
 
 ---
 
