@@ -8,7 +8,18 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
-_Nothing yet — all recent work included in v3.15.0 below._
+_Nothing yet — all recent work included in v3.16.0 below._
+
+## [3.16.0] - 2026-05-04
+
+### Added
+- Add Social network share buttons for artworks , for blog posts , exhibitions . ([#569](https://github.com/ilv78/Art-World-Hub/issues/569))
+
+### Fixed
+- Static-route OG previews blocked by Cross-Origin-Resource-Policy: same-origin ([#590](https://github.com/ilv78/Art-World-Hub/issues/590))
+- Blog post page back button is hardcoded "Back to Blog" — should return to actual referrer ([#586](https://github.com/ilv78/Art-World-Hub/issues/586))
+- Artist profile Blog tab: post titles don't link to /blog/:id (blocks per-post sharing) ([#582](https://github.com/ilv78/Art-World-Hub/issues/582))
+- Home page does not auto-open artwork modal from shared ?artwork= URL ([#580](https://github.com/ilv78/Art-World-Hub/issues/580))
 
 ## [3.15.0] - 2026-05-02
 

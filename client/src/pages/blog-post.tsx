@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Helmet } from "react-helmet-async";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -11,9 +11,24 @@ import { ShareButtons } from "@/components/share-buttons";
 import { getCanonicalShareUrl } from "@/lib/share-urls";
 
 export default function BlogPost({ params }: { params: { id: string } }) {
+  const [, setLocation] = useLocation();
   const { data: post, isLoading } = useQuery<BlogPostWithArtist>({
     queryKey: [`/api/blog/${params.id}`],
   });
+
+  // Smart back: walk one step up the session history when the user has any
+  // prior entry (any in-SPA navigation grows history.length via pushState),
+  // so they return to the artist profile / /blog list / search / wherever
+  // they came from. Cold landings (shared link, bookmark, search engine, new
+  // tab) have history.length === 1 and fall back to the global /blog index.
+  // (document.referrer is not reliable here — SPA navigation never updates it.)
+  const handleBack = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      window.history.back();
+    } else {
+      setLocation("/blog");
+    }
+  };
 
   if (isLoading) {
     return (
@@ -46,11 +61,9 @@ export default function BlogPost({ params }: { params: { id: string } }) {
   return (
     <div className="min-h-screen p-6 max-w-3xl mx-auto space-y-6">
       <Helmet><title>{`${post.title} — Vernis9 Blog`}</title></Helmet>
-      <Button asChild variant="ghost" size="sm">
-        <Link href="/blog">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Blog
-        </Link>
+      <Button variant="ghost" size="sm" onClick={handleBack}>
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        Back
       </Button>
 
       {post.coverImageUrl && (

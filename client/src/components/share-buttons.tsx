@@ -17,6 +17,7 @@ import {
   buildShareUrl,
   buildNativeShareData,
   postShareEvent,
+  withUtm,
   type ShareTarget,
 } from "@/lib/share-urls";
 import type { SharePlatform, ShareItemType } from "@shared/schema";
@@ -142,7 +143,11 @@ export function ShareButtons({
 
   const onCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(url);
+      // UTM-tag the copied URL just like platform buttons do (#577) — gives
+      // analytics a "copy" channel AND varies the URL string per share, which
+      // bypasses per-URL preview caches in apps like Telegram that otherwise
+      // lock onto a single stale preview for the bare URL.
+      await navigator.clipboard.writeText(withUtm(url, "copy", itemType));
       recordEvent("copy");
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);

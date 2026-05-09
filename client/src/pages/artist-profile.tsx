@@ -391,41 +391,39 @@ export default function ArtistProfile() {
             ) : publishedPosts.length > 0 ? (
               <div className="space-y-6">
                 {publishedPosts.map((post) => (
-                  <Card 
-                    key={post.id} 
-                    className="overflow-hidden"
+                  <Link
+                    key={post.id}
+                    href={`/blog/${post.id}`}
+                    className="block"
                     data-testid={`card-profile-blog-${post.id}`}
                   >
-                    {post.coverImageUrl && (
-                      <div className="aspect-3/1 overflow-hidden">
-                        <ResponsiveImage
-                          src={post.coverImageUrl}
-                          alt={post.title}
-                          sizes={BLOG_SIZES.listCard}
-                          loading="lazy"
-                          decoding="async"
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    )}
-                    <CardHeader>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                        <Calendar className="h-4 w-4" />
-                        {formatDate(post.createdAt)}
-                      </div>
-                      <CardTitle className="font-serif text-2xl">{post.title}</CardTitle>
-                      {post.excerpt && (
-                        <CardDescription className="text-base">
-                          {post.excerpt}
-                        </CardDescription>
+                    <Card className="overflow-hidden hover-elevate cursor-pointer">
+                      {post.coverImageUrl && (
+                        <div className="aspect-3/1 overflow-hidden">
+                          <ResponsiveImage
+                            src={post.coverImageUrl}
+                            alt={post.title}
+                            sizes={BLOG_SIZES.listCard}
+                            loading="lazy"
+                            decoding="async"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
                       )}
-                    </CardHeader>
-                    <CardContent>
-                      <div className="prose prose-sm dark:prose-invert max-w-none">
-                        <p className="whitespace-pre-wrap">{post.content}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      <CardHeader>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                          <Calendar className="h-4 w-4" />
+                          {formatDate(post.createdAt)}
+                        </div>
+                        <CardTitle className="font-serif text-2xl">{post.title}</CardTitle>
+                        {post.excerpt && (
+                          <CardDescription className="text-base">
+                            {post.excerpt}
+                          </CardDescription>
+                        )}
+                      </CardHeader>
+                    </Card>
+                  </Link>
                 ))}
               </div>
             ) : (

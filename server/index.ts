@@ -10,6 +10,7 @@ import { registerMcpRoutes } from "./mcp";
 import healthRouter from "./routes/health";
 import robotsRouter from "./routes/robots";
 import sitemapRouter from "./routes/sitemap";
+import ogCardsRouter from "./routes/og-cards";
 import { logger } from "./logger";
 
 const app = express();
@@ -42,6 +43,13 @@ app.use(
             },
           }
         : false,
+    // Vernis9 publishes art / blog / exhibition content explicitly intended
+    // to be shared and embedded across the web (Facebook OG previews, Pinterest
+    // saves, blog hotlinks). Helmet's default `same-origin` blocks all of
+    // those use cases. Sensitive endpoints (admin APIs, mutations) are auth-
+    // protected, not CORP-protected; relaxing the default does not weaken
+    // them. (#590)
+    crossOriginResourcePolicy: { policy: "cross-origin" },
   }),
 );
 
@@ -59,6 +67,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use("/", healthRouter);
 app.use("/", robotsRouter);
 app.use("/", sitemapRouter);
+app.use("/", ogCardsRouter);
 
 // Block search engine indexing on non-production environments
 const SITE_URL = process.env.SITE_URL || "https://vernis9.art";

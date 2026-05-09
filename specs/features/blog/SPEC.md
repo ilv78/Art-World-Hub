@@ -23,7 +23,7 @@ As an artist, I want to write and publish blog posts, so that I can share my tho
 - [x] Draft posts hidden from public `/blog` but visible in dashboard
 - [x] Cover images optional (fallback icon if missing)
 - [x] `updatedAt` auto-set on edits
-- [x] Artist profile blog tab shows only published posts
+- [x] Artist profile blog tab shows only published posts (teaser cards: cover + title + excerpt + date) and each card links to `/blog/:id` for the full content + share
 
 ## Technical Design
 

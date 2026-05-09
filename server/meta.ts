@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import { storage } from "./storage";
 import { FAQS } from "../shared/faqs";
 import { ARTWORK_SIZES, getResponsivePictureSources } from "../shared/responsive-image";
@@ -9,6 +10,23 @@ const DEFAULT_TITLE = "Vernis9 \u2014 Virtual Art Gallery & Marketplace";
 const DEFAULT_DESCRIPTION =
   "Experience art like never before. Explore our immersive 3D virtual gallery, discover stunning artworks from talented artists, and participate in exclusive auctions.";
 const DEFAULT_OG_IMAGE = `${SITE_URL}/og-default.png`;
+
+// Branded OG card URL — points at the dynamic /api/og/<type>/<id>.jpg
+// endpoint (#577). Static-route OG images are intentionally NOT routed
+// through this helper: per the issue, only items shared via the in-app
+// share button (artwork / blog / exhibition / artist) get the branded card.
+// The website's general OG (`/`, `/store`, etc.) keeps DEFAULT_OG_IMAGE.
+function ogCardUrl(
+  type: "artwork" | "blog" | "exhibition" | "artist",
+  id: string,
+  bustParts: Array<string | null | undefined>,
+): string {
+  const v = createHash("sha1")
+    .update(bustParts.filter(Boolean).join("|"))
+    .digest("base64url")
+    .slice(0, 8);
+  return `${SITE_URL}/api/og/${type}/${encodeURIComponent(id)}.jpg?v=${v}`;
+}
 
 interface MetaTags {
   title: string;
@@ -256,7 +274,11 @@ function buildArtworkMetaFrom(artwork: {
     ogDescription: description,
     ogType: "article",
     ogUrl: artworkUrl,
-    ogImage: image,
+    ogImage: ogCardUrl("artwork", artwork.slug, [
+      artwork.title,
+      artwork.artist.name,
+      artwork.imageUrl,
+    ]),
     jsonLd: [
       visualArtworkLd,
       breadcrumb(
@@ -330,9 +352,6 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
         const description = artist.bio
           ? artist.bio.slice(0, 160)
           : `Explore ${artist.name}'s artwork on Vernis9.`;
-        const image = artist.avatarUrl
-          ? toAbsoluteUrl(artist.avatarUrl)
-          : DEFAULT_OG_IMAGE;
         const artistUrl = `${SITE_URL}/artists/${artist.slug}`;
         const sameAs = extractSameAs(artist.socialLinks);
         const personLd: Record<string, unknown> = {
@@ -353,7 +372,11 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
           ogDescription: description,
           ogType: "profile",
           ogUrl: artistUrl,
-          ogImage: image,
+          ogImage: ogCardUrl("artist", artist.slug, [
+            artist.name,
+            artist.specialization,
+            artist.avatarUrl,
+          ]),
           jsonLd: [
             personLd,
             breadcrumb(
@@ -428,7 +451,11 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
           ogDescription: description,
           ogType: "article",
           ogUrl: galleryUrl,
-          ogImage: image,
+          ogImage: ogCardUrl("exhibition", gallery.id, [
+            gallery.name,
+            curatorName,
+            heroImage,
+          ]),
           jsonLd: [
             eventLd,
             breadcrumb(
@@ -453,9 +480,6 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
         const description = post.excerpt
           ? post.excerpt.slice(0, 160)
           : post.content.slice(0, 160);
-        const image = post.coverImageUrl
-          ? toAbsoluteUrl(post.coverImageUrl)
-          : DEFAULT_OG_IMAGE;
         const postUrl = `${SITE_URL}/blog/${post.id}`;
         const blogPostingLd: Record<string, unknown> = {
           "@context": "https://schema.org",
@@ -484,7 +508,11 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
           ogDescription: description,
           ogType: "article",
           ogUrl: postUrl,
-          ogImage: image,
+          ogImage: ogCardUrl("blog", post.id, [
+            post.title,
+            post.artist?.name,
+            post.coverImageUrl,
+          ]),
           jsonLd: [
             blogPostingLd,
             breadcrumb(
@@ -564,7 +592,13 @@ function extractSameAs(socialLinks: unknown): string[] {
 }
 
 function escapeHtml(str: string): string {
+  // Collapse whitespace before HTML-escaping. Source values like an artist's
+  // bio can contain literal newlines/tabs; left as-is they break HTML
+  // attribute parsing in stricter consumers (Facebook's OG scraper bails on
+  // a meta tag whose `content="..."` value spans multiple physical lines).
   return str
+    .replace(/\s+/g, " ")
+    .trim()
     .replace(/&/g, "&amp;")
     .replace(/"/g, "&quot;")
     .replace(/</g, "&lt;")

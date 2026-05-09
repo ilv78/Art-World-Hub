@@ -50,6 +50,18 @@ Outbound URLs are tagged with `?utm_source=<platform>&utm_medium=share&utm_campa
   - New `/curator-gallery/:id` branch — OG/Twitter tags + `ExhibitionEvent` JSON-LD with `VirtualLocation`
   - New `?artwork=<slug>` short-circuit — when any URL carries this query param, emit artwork-specific OG and set canonical/og:url to `/artworks/<slug>` so SEO + FB OG dedup treat the detail page as authoritative even when the shared URL is e.g. `/store?artwork=foo`
   - Refactored existing `/artworks/:slug` branch to share `buildArtworkMetaFrom()` with the query-param flow (eliminated ~50 lines of duplication)
+  - **`ogImage` for the four item branches points at `/api/og/<type>/<id>.jpg?v=<8charHash>`** (#577) — the dynamic branded card endpoint. Hash is computed over `title|subtitle|sourceImageUrl` so an item edit busts FB/X external cache. Static routes (`/`, `/store`, `/gallery`, etc.) keep `DEFAULT_OG_IMAGE` — only items shared via the in-app share button get the branded card.
+- **Branded OG card pipeline** (`server/lib/og-card.ts`, `server/routes/og-cards.ts`) — see #577:
+  - 1200×630 JPEG composed via sharp + SVG overlay (Playfair Display Bold title, Inter Regular subtitle, full-width brand-orange divider near the bottom, V-diamond logo + `vernis9.art` wordmark beneath the divider — mirrors the in-app `<Vernis9Logo>`)
+  - Source image: blurred 20px + brightness modulated to 0.85; gradient darken on top for title legibility. When no source asset exists (artist with no avatar, artwork hosted on an external URL we won't fetch), the background uses a brand-orange radial-glow + faint diagonal accent so the card looks intentional rather than "image failed"
+  - On-disk cache at `uploads/og-cards/<type>-<id>.jpg`; freshness check compares cache file mtime to source-image mtime (works without table-level `updatedAt`)
+  - Sets `Cross-Origin-Resource-Policy: cross-origin` on every response — overrides helmet's `same-origin` default which otherwise blocks Facebook / X / LinkedIn / Telegram from embedding the image cross-origin
+  - Fallback chain: item not found / unknown type / sharp error → `client/public/og-default.png` with short TTL
+  - Brand fonts bundled in `assets/fonts/` (SIL OFL); installed system-wide in the Docker image via `fontconfig`
+- **OG meta hardening** (`client/index.html`, `server/meta.ts`):
+  - Added `og:image:width` / `og:image:height` (1200×630, applies to both branded card and `og-default.png`) + `og:image:alt` / `twitter:image:alt`. FB / Telegram skip images on cold scrapes when dimensions are missing
+  - `escapeHtml` in `server/meta.ts` now collapses whitespace (`\s+` → ` `) before HTML-escaping. Source values like artist bios contain literal newlines; unescaped, they break HTML attribute parsing in stricter consumers (FB bails on a meta tag whose `content="..."` value spans multiple physical lines and never reaches `og:image`)
+- **Copy link share** (`client/src/components/share-buttons.tsx`): now UTM-tags the copied URL via `withUtm(url, "copy", itemType)` like the platform buttons do. Gives analytics a "copy" channel AND varies the URL string per share, which bypasses per-URL preview caches in apps like Telegram that otherwise lock onto a single stale preview for a bare URL
 
 ### Client
 
