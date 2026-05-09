@@ -32,7 +32,9 @@ import { FaLinkedin } from "react-icons/fa6";
 import { useCartStore } from "@/lib/cart-store";
 import { formatPrice } from "@/lib/utils";
 import { MazeGallery3D } from "@/components/maze-gallery-3d";
+import { ArtworkCard } from "@/components/artwork-card";
 import { ArtworkDetailDialog } from "@/components/artwork-detail-dialog";
+import { ViewModeToggle, type ViewMode } from "@/components/view-mode-toggle";
 import type { Artist, ArtworkWithArtist, BlogPostWithArtist, MazeLayout } from "@shared/schema";
 
 interface GalleryData {
@@ -69,6 +71,8 @@ export default function ArtistProfile() {
       ? "portfolio"
       : "gallery";
   const [activeTab, setActiveTab] = useState(initialTab);
+  const initialViewMode: ViewMode = initialQuery.get("view") === "3d" ? "3d" : "classic";
+  const [galleryViewMode, setGalleryViewMode] = useState<ViewMode>(initialViewMode);
   const { isImmersive, toggleImmersive } = useImmersiveMode();
 
   const { data: artistPayload, isLoading: artistLoading } = useQuery<{ artist: Artist }>({
@@ -267,17 +271,37 @@ export default function ArtistProfile() {
             {galleryLoading ? (
               <Skeleton className="h-[500px] rounded-md" />
             ) : galleryArtworks.length > 0 && galleryLayout ? (
-              <div data-testid="artist-gallery-3d">
-                <MazeGallery3D
-                  artworks={galleryArtworks}
-                  layout={galleryLayout}
-                  galleryTemplate={artist.galleryTemplate || "contemporary"}
-                  artist={artist}
-                  onExitGallery={() => setActiveTab("portfolio")}
-                  isImmersive={isImmersive}
-                  onRequestImmersive={toggleImmersive}
-                />
-              </div>
+              <>
+                <div className="flex justify-end">
+                  <ViewModeToggle value={galleryViewMode} onValueChange={setGalleryViewMode} />
+                </div>
+                {galleryViewMode === "3d" ? (
+                  <div data-testid="artist-gallery-3d">
+                    <MazeGallery3D
+                      artworks={galleryArtworks}
+                      layout={galleryLayout}
+                      galleryTemplate={artist.galleryTemplate || "contemporary"}
+                      artist={artist}
+                      onExitGallery={() => setActiveTab("portfolio")}
+                      isImmersive={isImmersive}
+                      onRequestImmersive={toggleImmersive}
+                    />
+                  </div>
+                ) : (
+                  <div
+                    className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4"
+                    data-testid="artist-gallery-2d"
+                  >
+                    {galleryArtworks.map((artwork) => (
+                      <ArtworkCard
+                        key={artwork.id}
+                        artwork={artwork}
+                        onViewDetails={() => setSelectedArtwork(artwork)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
             ) : (
               <div className="text-center py-16">
                 <Box className="h-12 w-12 mx-auto text-muted-foreground mb-4" />

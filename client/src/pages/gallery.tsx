@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ChevronLeft,
   ChevronRight,
@@ -17,7 +16,6 @@ import {
   ShoppingCart,
   X,
   Box,
-  Frame,
 } from "lucide-react";
 import { useImmersiveMode } from "@/hooks/use-immersive-mode";
 import type { ArtworkWithArtist } from "@shared/schema";
@@ -29,8 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { HallwayGallery3D } from "@/components/hallway-gallery-3d";
 import { ArtworkDetailDialog } from "@/components/artwork-detail-dialog";
 import { useArtworkModalFromQuery } from "@/hooks/use-modal-from-query";
-
-type ViewMode = "3d" | "classic";
+import { ViewModeToggle, type ViewMode } from "@/components/view-mode-toggle";
 
 interface ArtistRoom {
   artist: { id: string; name: string; avatarUrl: string | null; specialization: string | null };
@@ -38,10 +35,12 @@ interface ArtistRoom {
 }
 
 export default function Gallery() {
-  const isMobile = typeof window !== "undefined" && ("ontouchstart" in window || navigator.maxTouchPoints > 0);
-  const searchParams = new URLSearchParams(window.location.search);
-  const requestedView = searchParams.get("view");
-  const [viewMode, setViewMode] = useState<ViewMode>(requestedView === "classic" ? "classic" : isMobile ? "classic" : "3d");
+  const initialView: ViewMode = (() => {
+    if (typeof window === "undefined") return "classic";
+    const requested = new URLSearchParams(window.location.search).get("view");
+    return requested === "3d" ? "3d" : "classic";
+  })();
+  const [viewMode, setViewMode] = useState<ViewMode>(initialView);
   const { isImmersive, toggleImmersive } = useImmersiveMode();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [zoom, setZoom] = useState(1);
@@ -197,18 +196,7 @@ export default function Gallery() {
           </p>
         </div>
         <div className="flex items-center gap-4">
-          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
-            <TabsList>
-              <TabsTrigger value="3d" className="gap-2" data-testid="tab-3d-view">
-                <Box className="h-4 w-4" />
-                <span className="hidden sm:inline">3D Museum</span>
-              </TabsTrigger>
-              <TabsTrigger value="classic" className="gap-2" data-testid="tab-classic-view">
-                <Frame className="h-4 w-4" />
-                <span className="hidden sm:inline">Classic</span>
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <ViewModeToggle value={viewMode} onValueChange={setViewMode} />
           {viewMode === "classic" && (
             <Button
               variant="ghost"
