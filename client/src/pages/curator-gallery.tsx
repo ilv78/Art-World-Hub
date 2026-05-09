@@ -6,22 +6,24 @@ import { ArtworkCard } from "@/components/artwork-card";
 import { ArtworkDetailDialog } from "@/components/artwork-detail-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Box, X, Frame } from "lucide-react";
+import { Box, X } from "lucide-react";
 import { useImmersiveMode } from "@/hooks/use-immersive-mode";
 import { ShareButtons } from "@/components/share-buttons";
 import { getCanonicalShareUrl } from "@/lib/share-urls";
 import { useArtworkModalFromQuery } from "@/hooks/use-modal-from-query";
+import { ViewModeToggle, type ViewMode } from "@/components/view-mode-toggle";
 import type { ArtworkWithArtist, CuratorGalleryWithArtworks, MazeLayout } from "@shared/schema";
-
-type ViewMode = "3d" | "classic";
 
 export default function CuratorGalleryPage() {
   const [, params] = useRoute("/curator-gallery/:id");
   const galleryId = params?.id;
   const { isImmersive, toggleImmersive } = useImmersiveMode();
-  const isMobile = typeof window !== "undefined" && ("ontouchstart" in window || navigator.maxTouchPoints > 0);
-  const [viewMode, setViewMode] = useState<ViewMode>(isMobile ? "classic" : "3d");
+  const initialView: ViewMode = (() => {
+    if (typeof window === "undefined") return "classic";
+    const requested = new URLSearchParams(window.location.search).get("view");
+    return requested === "3d" ? "3d" : "classic";
+  })();
+  const [viewMode, setViewMode] = useState<ViewMode>(initialView);
   const [selectedArtwork, setSelectedArtwork] = useState<ArtworkWithArtist | null>(null);
 
   const { data: gallery, isLoading, error } = useQuery<CuratorGalleryWithArtworks>({
@@ -103,12 +105,7 @@ export default function CuratorGalleryPage() {
               imageUrl={gallery.artworks[0]?.imageUrl}
             />
             {gallery.artworks.length > 0 && layout && (
-              <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
-                <TabsList>
-                  <TabsTrigger value="3d"><Box className="h-4 w-4 mr-1" /> 3D</TabsTrigger>
-                  <TabsTrigger value="classic"><Frame className="h-4 w-4 mr-1" /> 2D</TabsTrigger>
-                </TabsList>
-              </Tabs>
+              <ViewModeToggle value={viewMode} onValueChange={setViewMode} />
             )}
           </div>
         </div>
