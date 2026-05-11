@@ -246,6 +246,36 @@ The sudoers rules for both helpers (per `staging` and `production` user) live in
 
 Nginx is the source of truth for compressing responses to clients. The vernis9.art and staging.vernis9.art server blocks both have a `gzip on; gzip_proxied any;` directive set, so any text response from the upstream Express app (HTML, JSON, JS, CSS, SVG, WASM, XML) is gzipped on the way out unless it is already encoded. Express's own `compression` middleware still handles HTML inside the upstream — nginx detects the existing `Content-Encoding` and skips re-compressing — but the bundled `/assets/*` files served by Express's static middleware are uncompressed at the upstream layer and rely on nginx for compression. Brotli is not currently configured because the system nginx package (`nginx 1.24.0` on Ubuntu) is not built with the brotli module. See #550.
 
+### Access log format (`detailed`)
+
+The default nginx `combined` log_format omits the fields needed for latency analysis (`$request_time`, `$upstream_response_time`, `$body_bytes_sent`, `$gzip_ratio`, `$upstream_cache_status`). A custom `detailed` format is defined in `/etc/nginx/conf.d/log-format.conf` and source-controlled at `deploy/nginx/log-format.conf`. Each `vernis9.art` and `staging.vernis9.art` server block sets `access_log /var/log/nginx/<host>.access.log detailed;` so the dedicated detailed-format log file is separate from the global `access.log` (which keeps `combined` format and any pre-existing history). (#548)
+
+Per-line format:
+
+```
+<ip> - <user> [<time>] "<request>" <status> bb=<bytes> "<referer>" "<ua>" rt=<request_time> urt=<upstream_response_time> cs=<cache_status> gzr=<gzip_ratio>
+```
+
+**One-time root install of `log-format.conf`** (the `log_format` directive must live in `http {}` context, which is outside the per-site `sites-available/` files handled by `deploy-nginx-config`). This step is **outside the passwordless sudo allowlist** and will prompt for the sudo password:
+
+```bash
+# 1. Copy to /tmp on the VPS (passwordless)
+scp deploy/nginx/log-format.conf production:/tmp/
+
+# 2. Install to /etc/nginx/conf.d/ (sudo password prompt)
+ssh production
+sudo cp /tmp/log-format.conf /etc/nginx/conf.d/log-format.conf
+sudo nginx -t && sudo nginx -s reload
+```
+
+After that, every subsequent edit to a per-site config that references `detailed` deploys normally via `deploy-nginx-config`. Re-installing the format file is only needed when the format itself changes.
+
+### Edge-level probe blocking
+
+The `vernis9.art` and `staging.vernis9.art` server blocks `return 444` for known scanner probe paths (`.env`, `.git`, `.aws`, `.boto`, `.svn`, `.hg`, `wp-admin`, `wp-login.php`, `wp-includes`, `xmlrpc.php`, `phpinfo.php`, `phpmyadmin`). `444` is nginx-specific: it closes the TCP connection with no HTTP response, which is faster than `404` and skips logging request-body buffering. These bursts otherwise dominate the upstream log noise. (#548)
+
+If a real path ever needs to start with `.` or a WP-like prefix, the regex must be loosened before adding the route — otherwise nginx will silently drop it.
+
 ---
 
 ## 6. Docker Image Layout
