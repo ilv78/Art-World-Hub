@@ -8,7 +8,16 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
-_Nothing yet — all recent work included in v3.16.0 below._
+_Nothing yet — all recent work included in v3.17.0 below._
+
+## [3.17.0] - 2026-05-11
+
+### Added
+- Gallery view deprioritization ([#576](https://github.com/ilv78/Art-World-Hub/issues/576))
+- Securing and optimizing website ([#548](https://github.com/ilv78/Art-World-Hub/issues/548))
+
+### Fixed
+- npm audit failures since 2026-05-09 — fast-uri (HIGH) + hono / ip-address (moderate) ([#595](https://github.com/ilv78/Art-World-Hub/issues/595))
 
 ## [3.16.0] - 2026-05-04
 
