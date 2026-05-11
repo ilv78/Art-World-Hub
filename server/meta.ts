@@ -11,11 +11,13 @@ const DEFAULT_DESCRIPTION =
   "Experience art like never before. Explore our immersive 3D virtual gallery, discover stunning artworks from talented artists, and participate in exclusive auctions.";
 const DEFAULT_OG_IMAGE = `${SITE_URL}/og-default.png`;
 
-// Branded OG card URL — points at the dynamic /api/og/<type>/<id>.jpg
-// endpoint (#577). Static-route OG images are intentionally NOT routed
-// through this helper: per the issue, only items shared via the in-app
-// share button (artwork / blog / exhibition / artist) get the branded card.
-// The website's general OG (`/`, `/store`, etc.) keeps DEFAULT_OG_IMAGE.
+// Branded OG card URL — points at the dynamic /og/<type>/<id>.jpg
+// endpoint (#577). Path is deliberately not under /api/: Facebook's
+// scraper silently skips og:image URLs under that prefix (#593). Static-
+// route OG images are intentionally NOT routed through this helper: per
+// the issue, only items shared via the in-app share button (artwork /
+// blog / exhibition / artist) get the branded card. The website's
+// general OG (`/`, `/store`, etc.) keeps DEFAULT_OG_IMAGE.
 function ogCardUrl(
   type: "artwork" | "blog" | "exhibition" | "artist",
   id: string,
@@ -25,7 +27,7 @@ function ogCardUrl(
     .update(bustParts.filter(Boolean).join("|"))
     .digest("base64url")
     .slice(0, 8);
-  return `${SITE_URL}/api/og/${type}/${encodeURIComponent(id)}.jpg?v=${v}`;
+  return `${SITE_URL}/og/${type}/${encodeURIComponent(id)}.jpg?v=${v}`;
 }
 
 interface MetaTags {

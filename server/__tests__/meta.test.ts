@@ -471,12 +471,13 @@ describe("resolveMetaTags — /curator-gallery/:id (issue #569)", () => {
     expect(event!.endDate).toBe("2026-06-01T00:00:00.000Z");
   });
 
-  it("uses the branded /api/og endpoint as the OG image (absolute, with cache-bust)", async () => {
+  it("uses the branded /og endpoint as the OG image (absolute, with cache-bust)", async () => {
     mockStorageState.curatorGallery = baseGallery();
     const meta = await resolveMetaTags("/curator-gallery/gallery-1");
     // Per #577 every item-share OG image goes through the branded card route;
-    // the raw asset URL still appears in the Event JSON-LD `image` field.
-    expect(meta.ogImage).toMatch(/\/api\/og\/exhibition\/gallery-1\.jpg\?v=[A-Za-z0-9_-]+$/);
+    // the raw asset URL still appears in the Event JSON-LD `image` field. Path
+    // is /og/ not /api/og/ — FB scraper skips the latter (#593).
+    expect(meta.ogImage).toMatch(/\/og\/exhibition\/gallery-1\.jpg\?v=[A-Za-z0-9_-]+$/);
     expect(meta.ogImage.startsWith("http")).toBe(true);
   });
 
