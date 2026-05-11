@@ -97,10 +97,10 @@ function artworkRow(overrides: Record<string, unknown> = {}) {
   };
 }
 
-describe("GET /api/og/:type/:id.jpg", () => {
+describe("GET /og/:type/:id.jpg", () => {
   it("returns a 1200x630 JPEG for a published artwork", async () => {
     mockStorage.getPublishedArtworkBySlug.mockResolvedValue(artworkRow());
-    const res = await request(makeApp()).get("/api/og/artwork/my-piece-abc.jpg");
+    const res = await request(makeApp()).get("/og/artwork/my-piece-abc.jpg");
     expect(res.status).toBe(200);
     expect(res.headers["content-type"]).toBe("image/jpeg");
     expect(res.headers["x-og-cache"]).toBe("miss");
@@ -113,23 +113,23 @@ describe("GET /api/og/:type/:id.jpg", () => {
   it("serves from cache on the second request and sets X-OG-Cache: hit", async () => {
     mockStorage.getPublishedArtworkBySlug.mockResolvedValue(artworkRow());
     const app = makeApp();
-    const first = await request(app).get("/api/og/artwork/my-piece-abc.jpg");
+    const first = await request(app).get("/og/artwork/my-piece-abc.jpg");
     expect(first.headers["x-og-cache"]).toBe("miss");
-    const second = await request(app).get("/api/og/artwork/my-piece-abc.jpg");
+    const second = await request(app).get("/og/artwork/my-piece-abc.jpg");
     expect(second.headers["x-og-cache"]).toBe("hit");
     expect(second.body.equals(first.body)).toBe(true);
   });
 
   it("falls back to og-default.png when the item is not found", async () => {
     mockStorage.getPublishedArtworkBySlug.mockResolvedValue(undefined);
-    const res = await request(makeApp()).get("/api/og/artwork/missing.jpg");
+    const res = await request(makeApp()).get("/og/artwork/missing.jpg");
     expect(res.status).toBe(200);
     expect(res.headers["content-type"]).toBe("image/png");
     expect(res.headers["cache-control"]).toMatch(/max-age=300/);
   });
 
   it("rejects unknown types by serving the default card", async () => {
-    const res = await request(makeApp()).get("/api/og/auction/whatever.jpg");
+    const res = await request(makeApp()).get("/og/auction/whatever.jpg");
     expect(res.status).toBe(200);
     expect(res.headers["content-type"]).toBe("image/png");
   });
@@ -138,7 +138,7 @@ describe("GET /api/og/:type/:id.jpg", () => {
     mockStorage.getPublishedArtworkBySlug.mockResolvedValue(
       artworkRow({ imageUrl: "/uploads/artworks/does-not-exist.jpg" }),
     );
-    const res = await request(makeApp()).get("/api/og/artwork/my-piece-abc.jpg");
+    const res = await request(makeApp()).get("/og/artwork/my-piece-abc.jpg");
     // Composition fails inside sharp — route catches and returns default PNG.
     expect(res.status).toBe(200);
     expect(res.headers["content-type"]).toBe("image/png");
@@ -153,7 +153,7 @@ describe("GET /api/og/:type/:id.jpg", () => {
       avatarUrl: null,
       specialization: "Painter",
     });
-    const res = await request(makeApp()).get("/api/og/artist/no-avatar.jpg");
+    const res = await request(makeApp()).get("/og/artist/no-avatar.jpg");
     expect(res.status).toBe(200);
     expect(res.headers["content-type"]).toBe("image/jpeg");
     const meta = await sharp(res.body).metadata();

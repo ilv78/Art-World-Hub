@@ -212,7 +212,7 @@ All routes defined in `server/routes.ts`. Base path: `/api/`.
 |--------|------|------|-------------|
 | GET | `/sitemap.xml` | No | Dynamically-generated sitemap (1-hour cache; see §8c) |
 | GET | `/robots.txt` | No | Environment-aware robots policy (see §8c) |
-| GET | `/api/og/:type/:id.jpg` | No | Branded server-rendered OG card for `artist`/`artwork`/`exhibition`/`blog` (#577) |
+| GET | `/og/:type/:id.jpg` | No | Branded server-rendered OG card for `artist`/`artwork`/`exhibition`/`blog` (#577; moved out of `/api/` in #593 — FB scraper skips og:image under `/api/`) |
 
 ### Authentication
 | Method | Path | Auth | Description |
@@ -488,7 +488,7 @@ When `SITE_URL ≠ https://vernis9.art`, three layers prevent indexing:
 - Below-the-fold images use `loading="lazy"` (#368)
 - All `<img>` and `<AvatarImage>` elements have descriptive `alt` text (#369)
 - Default OG image at `/og-default.png` (1200×630) used as fallback for routes without entity-specific imagery
-- Branded server-rendered OG cards at `/api/og/:type/:id.jpg` for item shares (artist / artwork / exhibition / blog) — sharp + SVG composite, brand fonts bundled at `assets/fonts/` (#577)
+- Branded server-rendered OG cards at `/og/:type/:id.jpg` for item shares (artist / artwork / exhibition / blog) — sharp + SVG composite, brand fonts bundled at `assets/fonts/` (#577; moved out of `/api/` in #593 — FB scraper skipped that prefix)
 
 ---
 

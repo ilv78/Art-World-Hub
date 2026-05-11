@@ -133,7 +133,12 @@ async function isCacheFresh(
   return cacheMtime >= sourceMtime;
 }
 
-router.get("/api/og/:type/:id.jpg", async (req, res) => {
+// Path deliberately not under /api/ — Facebook's scraper silently skips
+// og:image URLs whose path starts with /api/. Other major scrapers
+// (WhatsApp, LinkedIn, Telegram, iOS) don't share that heuristic, but FB
+// is the dominant share platform for our audience so the route lives at
+// /og/<type>/<id>.jpg instead. (#593)
+router.get("/og/:type/:id.jpg", async (req, res) => {
   const { type, id } = req.params as { type: string; id: string };
 
   // Helmet's default Cross-Origin-Resource-Policy is `same-origin`, which
