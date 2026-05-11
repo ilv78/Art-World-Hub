@@ -256,19 +256,38 @@ Per-line format:
 <ip> - <user> [<time>] "<request>" <status> bb=<bytes> "<referer>" "<ua>" rt=<request_time> urt=<upstream_response_time> cs=<cache_status> gzr=<gzip_ratio>
 ```
 
-**One-time root install of `log-format.conf`** (the `log_format` directive must live in `http {}` context, which is outside the per-site `sites-available/` files handled by `deploy-nginx-config`). This step is **outside the passwordless sudo allowlist** and will prompt for the sudo password:
+#### Where the file lives — shared-nginx today, per-machine future
+
+`log_format` must live in nginx's `http {}` context, which is outside the per-site `sites-available/` files that `deploy-nginx-config` handles. So it ships as a separate file in `/etc/nginx/conf.d/log-format.conf` (loaded automatically before `sites-enabled/*`).
+
+**Current topology — single VPS, one nginx, multiple env users.** Staging and production are both Linux users on the same Webdock VPS (`artverse.idata.ro`), each owning their own docker-compose stack on a different upstream port, but they share a single nginx instance and a single `/etc/nginx/` tree. `log-format.conf` is therefore a **per-machine** asset, **not** a per-environment asset:
+
+- One copy in `/etc/nginx/conf.d/log-format.conf` serves every server block on this VPS.
+- Install once from any sudo-capable env user (the file lands in a root-owned path either way); subsequent envs need nothing.
+
+**Future topology — staging and production split onto separate VPS hosts.** When staging moves to its own machine, that host gets its own `/etc/nginx/` tree and its own copy of `log-format.conf`. The install procedure below is written so it works for either topology: do it once per machine that runs nginx.
+
+#### One-time per-machine install
+
+This step is **outside the passwordless sudo allowlist** and will prompt for the sudo password:
 
 ```bash
-# 1. Copy to /tmp on the VPS (passwordless)
-scp deploy/nginx/log-format.conf production:/tmp/
+# 1. SCP to the env user's home — /tmp/ can collide with other users on shared VPS
+scp deploy/nginx/log-format.conf <env-user>@<host>:~/log-format.conf
 
-# 2. Install to /etc/nginx/conf.d/ (sudo password prompt)
-ssh production
-sudo cp /tmp/log-format.conf /etc/nginx/conf.d/log-format.conf
+# 2. Install to /etc/nginx/conf.d/ (sudo password prompt — outside NOPASSWD)
+ssh <env-user>@<host>
+sudo cp ~/log-format.conf /etc/nginx/conf.d/log-format.conf
+sudo chown root:root /etc/nginx/conf.d/log-format.conf
+sudo chmod 644 /etc/nginx/conf.d/log-format.conf
+
+# 3. Validate + reload (these ARE passwordless)
 sudo nginx -t && sudo nginx -s reload
 ```
 
-After that, every subsequent edit to a per-site config that references `detailed` deploys normally via `deploy-nginx-config`. Re-installing the format file is only needed when the format itself changes.
+On the shared-VPS setup, **skip steps 1–2 for any additional env user on the same VPS** — the file is already in place. Per-site configs (`vernis9.art.conf`, `staging.vernis9.art.conf`) still deploy normally via `deploy-nginx-config` for every env, since each one is a separate server block.
+
+Re-installing the format file is only needed when the format itself changes.
 
 ### Edge-level probe blocking
 
