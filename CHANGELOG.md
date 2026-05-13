@@ -8,7 +8,13 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
-_Nothing yet — all recent work included in v3.17.0 below._
+_Nothing yet — all recent work included in v3.17.1 below._
+
+## [3.17.1] - 2026-05-13
+
+### Fixed
+- fix(ci): Trivy blocks staging deploy on 5 new Go stdlib CVEs in drizzle-kit bundled esbuild (refs #540) ([#612](https://github.com/ilv78/Art-World-Hub/issues/612))
+- Interface scaling at artist box ([#609](https://github.com/ilv78/Art-World-Hub/issues/609))
 
 ## [3.17.0] - 2026-05-11
 
