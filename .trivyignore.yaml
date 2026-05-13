@@ -8,7 +8,7 @@
 # affects every copy of the vulnerable library in the image. Every entry
 # MUST have a `statement` and `expired_at` so review is forced.
 #
-# Last reviewed: 2026-04-23 (issue #540)
+# Last reviewed: 2026-05-13 (issue #612)
 
 vulnerabilities:
   # ─── npm bundled dependencies (node:25-bookworm-slim) ───────────
@@ -116,4 +116,44 @@ vulnerabilities:
     paths:
       - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
     statement: "Not runtime-reachable: drizzle-kit internal build tool, no TLS surface. Fix requires drizzle-kit to bump esbuild >= 0.26."
+    expired_at: 2026-10-23
+
+  # ─── NEW: Go 1.23.12 stdlib batch in drizzle-kit esbuild (issue #612) ─
+  # Five HIGH CVEs disclosed against Go 1.23.12 between 2026-04-23 and
+  # 2026-05-13, all flagged on the same drizzle-kit-bundled esbuild
+  # binary. Same reachability argument as the #540 entries above: this
+  # binary is invoked only at build / migration time, has no inbound
+  # network surface, parses no attacker-controlled email/DNS/HTTP input,
+  # and runs only on Linux. Suppressions are path-scoped, time-boxed,
+  # and revisited together with the #540 batch when drizzle-kit bumps
+  # esbuild >= 0.26.
+
+  - id: CVE-2026-33811
+    paths:
+      - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
+    statement: "Not runtime-reachable: drizzle-kit internal build tool, no DNS surface. Fix requires drizzle-kit to bump esbuild >= 0.26."
+    expired_at: 2026-10-23
+
+  - id: CVE-2026-33814
+    paths:
+      - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
+    statement: "Not runtime-reachable: drizzle-kit internal build tool, no HTTP/2 surface. Fix requires drizzle-kit to bump esbuild >= 0.26."
+    expired_at: 2026-10-23
+
+  - id: CVE-2026-39820
+    paths:
+      - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
+    statement: "Not runtime-reachable: drizzle-kit internal build tool, no mail-parser surface. Fix requires drizzle-kit to bump esbuild >= 0.26."
+    expired_at: 2026-10-23
+
+  - id: CVE-2026-39836
+    paths:
+      - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
+    statement: "Not runtime-reachable: Linux-only image (Windows-specific Dial/LookupPort panic) and drizzle-kit internal build tool has no attacker-controlled hostname input. Fix requires drizzle-kit to bump esbuild >= 0.26."
+    expired_at: 2026-10-23
+
+  - id: CVE-2026-42499
+    paths:
+      - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
+    statement: "Not runtime-reachable: drizzle-kit internal build tool, no mail-parser surface. Fix requires drizzle-kit to bump esbuild >= 0.26."
     expired_at: 2026-10-23
