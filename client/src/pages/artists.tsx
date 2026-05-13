@@ -17,6 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, MapPin, Palette, Image, ExternalLink } from "lucide-react";
 import { Link } from "wouter";
 import type { Artist, ArtworkWithArtist } from "@shared/schema";
+import { truncateAtWord } from "@/lib/utils";
 
 import { Helmet } from "react-helmet-async";
 
@@ -123,9 +124,15 @@ export default function Artists() {
                       </div>
 
                       {artist.specialization && (
-                        <Badge variant="outline" className={isFeatured ? "" : "mx-auto"}>
-                          <Palette className="h-3 w-3 mr-1" />
-                          {artist.specialization}
+                        <Badge
+                          variant="outline"
+                          className={`max-w-full min-w-0 ${isFeatured ? "" : "mx-auto"}`}
+                          title={artist.specialization}
+                        >
+                          <Palette className="h-3 w-3 mr-1 shrink-0" />
+                          <span className="truncate">
+                            {truncateAtWord(artist.specialization, 28)}
+                          </span>
                         </Badge>
                       )}
 
@@ -174,9 +181,14 @@ export default function Artists() {
                       {selectedArtist.specialization && (
                         <>
                           <span>|</span>
-                          <span className="flex items-center gap-1">
-                            <Palette className="h-3 w-3" />
-                            {selectedArtist.specialization}
+                          <span
+                            className="flex items-center gap-1 min-w-0"
+                            title={selectedArtist.specialization}
+                          >
+                            <Palette className="h-3 w-3 shrink-0" />
+                            <span className="truncate">
+                              {truncateAtWord(selectedArtist.specialization, 40)}
+                            </span>
                           </span>
                         </>
                       )}
