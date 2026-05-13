@@ -197,9 +197,12 @@ export default function ArtistProfile() {
                     </span>
                   )}
                   {artist.specialization && (
-                    <Badge variant="outline">
-                      <Palette className="h-3 w-3 mr-1" />
-                      {artist.specialization}
+                    <Badge
+                      variant="outline"
+                      className="max-w-full whitespace-normal items-start text-left"
+                    >
+                      <Palette className="h-3 w-3 mr-1 mt-0.5 shrink-0" />
+                      <span>{artist.specialization}</span>
                     </Badge>
                   )}
                 </div>
