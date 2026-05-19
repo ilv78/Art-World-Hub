@@ -364,6 +364,16 @@ Implemented in `server/replit_integrations/auth/`.
 - HttpOnly/Secure/SameSite=Lax cookies
 - User lookup by stable email key with upsert-on-conflict
 
+### User Roles & Workflows
+
+Three explicit roles (`USER_ROLES` in `shared/models/auth.ts`: `user`, `curator`, `admin`) plus the implicit unauthenticated **visitor**. Mermaid workflow diagrams for each role live in [`workflows/`](./workflows/README.md):
+
+- [Visitor](./workflows/visitor.md) — browse, cart, checkout
+- [Artist](./workflows/artist.md) (`role=user`) — upload, exhibit, sell, fulfill
+- [Curator](./workflows/curator.md) (`role=curator`) — assemble curated galleries across artists
+- [Admin](./workflows/admin.md) (`role=admin`) — user/role management, content moderation, settings
+- [Order lifecycle](./workflows/order-lifecycle.md) — shared state machine
+
 ---
 
 ## 8. MCP Server
