@@ -14,12 +14,23 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useCartStore } from "@/lib/cart-store";
 import { formatPrice } from "@/lib/utils";
-import { useState } from "react";
-import { CheckoutDialog } from "./checkout-dialog";
+import { lazy, Suspense, useState } from "react";
+
+// Lazy: the checkout dialog drags zod + react-hook-form (~200 KB raw / ~60 KB
+// gzip). Keeping it out of the shared bundle so first-paint doesn't pay for it
+// until the user actually clicks Checkout. (#622)
+const CheckoutDialog = lazy(() =>
+  import("./checkout-dialog").then((m) => ({ default: m.CheckoutDialog })),
+);
+
+const preloadCheckoutDialog = () => {
+  void import("./checkout-dialog");
+};
 
 export function CartSheet() {
   const { items, removeItem, getTotal, getItemCount, clearCart } = useCartStore();
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [hasOpenedCheckout, setHasOpenedCheckout] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
   const itemCount = getItemCount();
@@ -33,7 +44,13 @@ export function CartSheet() {
 
   return (
     <>
-      <Sheet open={isOpen} onOpenChange={setIsOpen}>
+      <Sheet
+        open={isOpen}
+        onOpenChange={(next) => {
+          setIsOpen(next);
+          if (next) preloadCheckoutDialog();
+        }}
+      >
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon" className="relative" data-testid="button-cart">
             <ShoppingCart className="h-5 w-5" />
@@ -128,7 +145,10 @@ export function CartSheet() {
                   </Button>
                   <Button
                     className="flex-1"
-                    onClick={() => setIsCheckoutOpen(true)}
+                    onClick={() => {
+                      setHasOpenedCheckout(true);
+                      setIsCheckoutOpen(true);
+                    }}
                     data-testid="button-checkout"
                   >
                     Checkout
@@ -148,13 +168,17 @@ export function CartSheet() {
         </SheetContent>
       </Sheet>
 
-      <CheckoutDialog
-        open={isCheckoutOpen}
-        onOpenChange={setIsCheckoutOpen}
-        items={items}
-        total={total}
-        onSuccess={handleCheckoutSuccess}
-      />
+      {hasOpenedCheckout && (
+        <Suspense fallback={null}>
+          <CheckoutDialog
+            open={isCheckoutOpen}
+            onOpenChange={setIsCheckoutOpen}
+            items={items}
+            total={total}
+            onSuccess={handleCheckoutSuccess}
+          />
+        </Suspense>
+      )}
     </>
   );
 }
