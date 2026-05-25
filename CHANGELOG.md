@@ -8,7 +8,13 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
-_Nothing yet — all recent work included in v3.17.1 below._
+_Nothing yet — all recent work included in v3.18.0 below._
+
+## [3.18.0] - 2026-05-25
+
+### Added
+- perf: shrink 744 KB shared initial chunk (#551 P1.3 follow-up) ([#622](https://github.com/ilv78/Art-World-Hub/issues/622))
+- Companion - e-ink display ([#616](https://github.com/ilv78/Art-World-Hub/issues/616))
 
 ## [3.17.1] - 2026-05-13
 
