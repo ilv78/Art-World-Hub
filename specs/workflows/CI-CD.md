@@ -1,7 +1,7 @@
 # Vernis9 — CI/CD Pipeline Specification
 
 **Status:** Active
-**Last Updated:** 2026-05-09
+**Last Updated:** 2026-05-26
 
 ---
 
@@ -36,30 +36,24 @@ The "Lint, Type Check, Test & Build" job also declares a `merge_group` trigger s
 - Outputs `code: true/false` — docs-only pushes (`specs/`, `docs/`, `**/*.md`, `.github/ISSUE_TEMPLATE/`) output `false`
 - Prevents unnecessary Docker builds and staging deploys for documentation-only changes
 
-**Job 3: `build-image`** — Build & Push Docker Image
+**Job 3: `build-and-scan`** — Build & Trivy Container Scan
 
 | Step | What it does |
 |------|-------------|
 | Checkout | Clones the repo |
 | Setup Docker Buildx | Enables advanced Docker builds |
 | Login to GHCR | Authenticates to GitHub Container Registry |
-| Build & push image | Multi-stage Docker build, pushes `latest` + `sha` + `run_number` tags, passes `APP_VERSION` build arg |
+| Build image | Multi-stage Docker build; `load: true` for local Trivy scan; `push: true` only on `main`/`redesign/v3` push (not on PRs) |
+| Trivy scan | Runs Trivy vulnerability scanner against the locally-built image; fails on CRITICAL or HIGH severity findings (unfixed ignored via `.trivyignore.yaml`) |
 
-- **Gated on CI + code changes** — `needs: [ci, changes]`, skipped when only docs changed
-- **Only on main push** — `if: github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.changes.outputs.code == 'true'`
-- Uses GHA layer caching for fast rebuilds
+- **Runs on PR + push** — gated on `needs.changes.outputs.code == 'true'` so docs-only changes still skip. PRs build locally without pushing to GHCR; push happens only on `main` / `redesign/v3`.
+- **Closes the auto-merge gap (#631)** — previously `scan-image` was main-only. PRs could auto-merge while Trivy was still pending or about to fail on main. Now Trivy is a PR-side required check.
+- Uses the same Trivy action (pinned to SHA) and config as `security.yml::container-scan` (the two are intentionally redundant — both will catch a CVE; deduping deferred).
+- **Gates staging deploy** — `deploy-staging` depends on this job passing.
 
-**Job 4: `scan-image`** — Trivy Container Scan
+**Job 4: `deploy-staging`** — Deploy to Staging
 
-- **Depends on `build-image`** — runs after the image is pushed to GHCR
-- Pulls the just-built image and runs Trivy vulnerability scanner
-- Fails the pipeline on CRITICAL or HIGH severity findings (unfixed vulnerabilities ignored via `.trivyignore.yaml` — migrated from the legacy `.trivyignore` plain-text file in #541 to support per-CVE path scoping)
-- Uses the same Trivy action (pinned to SHA) and config as `security.yml` for consistency
-- **Gates staging deploy** — `deploy-staging` depends on this job passing
-
-**Job 5: `deploy-staging`** — Deploy to Staging
-
-- **Depends on `scan-image`** — automatically skipped when build is skipped (docs-only changes) or when Trivy finds critical/high vulnerabilities
+- **Depends on `build-and-scan`** — automatically skipped when build is skipped (docs-only changes) or when Trivy finds critical/high vulnerabilities
 - **Upload-subdir bootstrap step** — before `docker compose up -d`, the deploy script `mkdir -p`s the upload subdirs (`/app/uploads/artworks`, `/app/uploads/blog-covers`, `/app/uploads/avatars`, `/app/uploads/og-cards`, `/app/logs`) on the persistent Docker volume and `chown`s them to `appuser`. This list is **not** auto-derived from the Dockerfile, so any new upload subdir must also be added to this step in both the staging and production deploy jobs (lesson from #588 / og-cards onboarding).
 
 #### Docker Setup
@@ -525,7 +519,13 @@ DB passwords and session secrets are stored in `.env` files on the VPS (not in G
 
 ### 5.3 Auto-Merge (auto-merge.yml — automatic)
 
-Non-draft PRs by the repo owner are automatically approved and have auto-merge enabled (squash). GitHub waits for all required branch protection checks to pass before merging. Dependabot PRs are handled separately by `dependabot-auto-merge.yml`.
+Non-draft PRs by the repo owner are automatically approved and have auto-merge enabled (squash). GitHub waits for all required checks to pass before merging. Dependabot PRs are handled separately by `dependabot-auto-merge.yml`.
+
+**Required checks on PR (post-#631):** all the standard PR-side jobs PLUS `Build & Trivy Container Scan` (ci.yml) and `Container Scan (Trivy)` (security.yml). Prior to #631 both Trivy jobs were main-only, so auto-merge fired before either ran — a six-merge silent-failure streak in May 2026 surfaced the gap. The Trivy DB updating between PR-time and main-time can still cause a rare temporal-drift failure on main; the **CI Failure Notifier** (§5.5) is the safety net for that.
+
+### 5.5 CI Failure Notifier (ci-failure-notify.yml — automatic, on workflow_run)
+
+Fires on completion of CI/CD or Security workflows when `conclusion == failure` AND `head_branch == main`. Sends a Telegram message with the workflow name, commit SHA, title, and a link to the run. Catches failures that the existing per-job notifications miss — in particular when a job is *skipped* (not failed) because an upstream job failed, the `if: always()` Telegram step inside the skipped job never runs.
 
 ### 5.4 Production Deploy (deploy-production.yml — manual dispatch)
 
@@ -746,3 +746,4 @@ After the health check passes, both staging (`ci.yml`) and production (`deploy-p
 | 2026-05-04 | Added `/app/uploads/og-cards` to the upload-subdir bootstrap `mkdir -p` step in both staging and production deploy jobs (`ci.yml` and `deploy-production.yml`). Branded OG cards (#577) write to this path; missing it on the persistent volume would have caused 500s on first share. Captured the lesson in the §1 Job 5 note. ([#577](https://github.com/ilv78/Art-World-Hub/issues/577), PR [#588](https://github.com/ilv78/Art-World-Hub/pull/588)) |
 | 2026-05-09 | Resolved a fresh wave of `npm audit` advisories (`fast-uri` HIGH + `hono` / `@hono/node-server` / `ip-address` moderate) blocking the security gate on every PR since 2026-05-09 19:53 UTC. Bumped `express-rate-limit` to `^8.5.1` and added `npm overrides` for `fast-uri@^3.1.2`, `hono@^4.12.18`, `@hono/node-server@^1.19.13` to coerce `@modelcontextprotocol/sdk@1.29.0` transitives onto patched versions (no upstream MCP SDK release available). No CI workflow changes — `npm audit --audit-level=high` is now clean. ([#595](https://github.com/ilv78/Art-World-Hub/issues/595), PR [#596](https://github.com/ilv78/Art-World-Hub/pull/596)) |
 | 2026-05-09 | Spec catch-up — bumped `Last Updated` header (was 2026-04-20), refreshed §1 Job 4 (Trivy ignore migration to `.trivyignore.yaml`) and §1 Job 5 (upload-subdir bootstrap note covering og-cards), added revision-log entries for #541, #588, and #595. Resolves recurring `ST-004` doc-agent warning from the rolling docs-audit issue (#579). |
+| 2026-05-26 | Closed the auto-merge silent-failure gap (#631): merged `build-image` + `scan-image` into a single `build-and-scan` job that runs on PR + push (push to GHCR only on `main`/`redesign/v3`), so Trivy is now a PR-side required check. Removed the main-only gate on `security.yml::container-scan` and added it to the security `Gate` `needs:` list. Added new `ci-failure-notify.yml` workflow that pings Telegram on any `main`-branch CI/CD or Security workflow failure — the safety net for the case where the existing per-job notifications are silenced by a *skipped* job (the v3.18.0 incident: 6 consecutive main failures with no notification, because `deploy-staging` was skipped not failed). Updated §1 Job 3/4 numbering, §5.3 Auto-Merge, added §5.5 CI Failure Notifier. |
