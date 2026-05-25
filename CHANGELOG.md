@@ -14,7 +14,6 @@ _Nothing yet — all recent work included in v3.18.0 below._
 
 ### Added
 - perf: shrink 744 KB shared initial chunk (#551 P1.3 follow-up) ([#622](https://github.com/ilv78/Art-World-Hub/issues/622))
-- Companion - e-ink display ([#616](https://github.com/ilv78/Art-World-Hub/issues/616))
 
 ## [3.17.1] - 2026-05-13
 
