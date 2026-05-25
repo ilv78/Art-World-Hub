@@ -112,7 +112,9 @@ jobs:
   container-scan:
     name: Container Scan (Trivy)
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.event_name == 'schedule'
+    # Runs on PR + push + schedule. Previously gated to main-only, which let
+    # auto-merge fire before Trivy ran — see #631 for the silent-failure
+    # incident this fixes.
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -163,6 +165,7 @@ jobs:
       - sast
       - dockerfile-lint
       - custom-checks
+      - container-scan
     if: always()
     steps:
       - name: Check all security jobs passed
