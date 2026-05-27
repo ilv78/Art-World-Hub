@@ -1,0 +1,48 @@
+name: CI Failure Notifier
+
+# Safety net for the v3.18.0 incident: six consecutive main-CI runs failed
+# on Trivy while auto-merge kept firing, and no Telegram ping went out
+# because the existing notification step lived inside deploy-staging
+# (which is skipped — not failed — when a prior job fails). This workflow
+# pings on any main-branch CI/CD or Security workflow that ends in failure.
+# See #631.
+
+on:
+  workflow_run:
+    workflows: ["CI/CD", "Security"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    if: >-
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          WORKFLOW: ${{ github.event.workflow_run.name }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+          URL: ${{ github.event.workflow_run.html_url }}
+          TITLE: ${{ github.event.workflow_run.display_title }}
+          ACTOR: ${{ github.event.workflow_run.actor.login }}
+        run: |
+          if [ -z "$TELEGRAM_BOT_TOKEN" ]; then
+            echo "No TELEGRAM_BOT_TOKEN secret; skipping notification."
+            exit 0
+          fi
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            -d parse_mode="HTML" \
+            -d disable_web_page_preview="true" \
+            -d text="@racu8_bot
+          ❌ <b>${WORKFLOW} failed on main</b>
+          ${TITLE}
+          SHA: <code>${SHA}</code>
+          By: ${ACTOR}
+          <a href=\"${URL}\">View run</a>"

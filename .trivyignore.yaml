@@ -8,7 +8,7 @@
 # affects every copy of the vulnerable library in the image. Every entry
 # MUST have a `statement` and `expired_at` so review is forced.
 #
-# Last reviewed: 2026-05-13 (issue #612)
+# Last reviewed: 2026-05-25 (issue #629)
 
 vulnerabilities:
   # ─── npm bundled dependencies (node:25-bookworm-slim) ───────────
@@ -157,3 +157,32 @@ vulnerabilities:
       - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
     statement: "Not runtime-reachable: drizzle-kit internal build tool, no mail-parser surface. Fix requires drizzle-kit to bump esbuild >= 0.26."
     expired_at: 2026-10-23
+
+  # ─── NEW: libgnutls30 OS-layer CVEs in node:25-bookworm-slim (issue #629) ─
+  # Five CVEs (2 CRITICAL, 3 HIGH) against libgnutls30 3.7.9-2+deb12u6,
+  # disclosed in the Trivy DB between 2026-05-24 and 2026-05-25. Debian has
+  # 3.7.9-2+deb12u7 available; fix is a base-image rebuild tracked in #629.
+  #
+  # Reachability: gnutls sits in the OS layer of node:25-bookworm-slim as a
+  # transitive dep of system tools (apt, wget, etc.). Our Express app uses
+  # Node's `tls` module backed by OpenSSL, not GnuTLS. Nothing in the request
+  # path links against gnutls. CVEs are real but not reachable from deployed
+  # code. Suppression is global because the lib lives in the OS layer, not
+  # under a single file path. Tight expiry to force a re-check on base-image
+  # rebuild.
+
+  - id: CVE-2026-33845
+    statement: "libgnutls30 OS-layer DoS via DTLS zero-length. Not reachable: Node app uses OpenSSL via Node tls, not GnuTLS. Fix tracked in #629 (base-image rebuild)."
+    expired_at: 2026-07-25
+  - id: CVE-2026-42010
+    statement: "libgnutls30 OS-layer auth bypass via NUL char in cert. Not reachable: Node app uses OpenSSL via Node tls, not GnuTLS. Fix tracked in #629."
+    expired_at: 2026-07-25
+  - id: CVE-2026-33846
+    statement: "libgnutls30 OS-layer DoS via heap buffer overflow. Not reachable: Node app uses OpenSSL via Node tls, not GnuTLS. Fix tracked in #629."
+    expired_at: 2026-07-25
+  - id: CVE-2026-3833
+    statement: "libgnutls30 OS-layer policy bypass (case-sensitive). Not reachable: Node app uses OpenSSL via Node tls, not GnuTLS. Fix tracked in #629."
+    expired_at: 2026-07-25
+  - id: CVE-2026-42009
+    statement: "libgnutls30 OS-layer DoS via DTLS packet reordering. Not reachable: Node app uses OpenSSL via Node tls, not GnuTLS. Fix tracked in #629."
+    expired_at: 2026-07-25

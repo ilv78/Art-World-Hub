@@ -83,7 +83,6 @@ jobs:
   changes:
     name: Detect Code Changes
     needs: ci
-    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/redesign/v3') && github.event_name == 'push'
     runs-on: ubuntu-latest
 
     permissions:
@@ -106,10 +105,14 @@ jobs:
             code:
               - '!(specs/**|docs/**|**/*.md|.github/ISSUE_TEMPLATE/**)'
 
-  build-image:
-    name: Build & Push Docker Image
+  # Build + Trivy scan run on BOTH pull_request and push.
+  # Image is pushed to GHCR only on push to main / redesign/v3 (PRs build
+  # locally and scan without pushing). This closes the gap where auto-merge
+  # was firing before Trivy ran. See #631.
+  build-and-scan:
+    name: Build & Trivy Container Scan
     needs: [ci, changes]
-    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/redesign/v3') && github.event_name == 'push' && needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
 
     permissions:
@@ -121,10 +124,10 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -134,11 +137,12 @@ jobs:
         id: image
         run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
 
-      - name: Build and push image
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
+      - name: Build image (load locally; push only on main/redesign)
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
         with:
           context: .
-          push: true
+          load: true
+          push: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/redesign/v3') }}
           tags: |
             ${{ steps.image.outputs.name }}:latest
             ${{ steps.image.outputs.name }}:${{ github.sha }}
@@ -147,33 +151,6 @@ jobs:
             APP_VERSION=${{ github.run_number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-  scan-image:
-    name: Trivy Container Scan
-    needs: build-image
-    runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      packages: read
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Lowercase image name
-        id: image
-        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
-
-      - name: Pull image
-        run: docker pull "${{ steps.image.outputs.name }}:${{ github.sha }}"
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.30.0
@@ -187,8 +164,8 @@ jobs:
 
   deploy-staging:
     name: Deploy to Staging
-    needs: scan-image
-    if: github.ref == 'refs/heads/main'
+    needs: build-and-scan
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
 
     permissions:
@@ -325,8 +302,8 @@ jobs:
 
   deploy-preview:
     name: Deploy to Preview
-    needs: scan-image
-    if: github.ref == 'refs/heads/redesign/v3'
+    needs: build-and-scan
+    if: github.ref == 'refs/heads/redesign/v3' && github.event_name == 'push'
     runs-on: ubuntu-latest
 
     permissions:
