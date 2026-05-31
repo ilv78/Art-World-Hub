@@ -4,7 +4,7 @@ on:
   push:
     branches: ["**"]
   pull_request:
-    branches: [main, redesign/v3]
+    branches: [main, v4]
   merge_group:
     branches: [main]
 
@@ -106,7 +106,7 @@ jobs:
               - '!(specs/**|docs/**|**/*.md|.github/ISSUE_TEMPLATE/**)'
 
   # Build + Trivy scan run on BOTH pull_request and push.
-  # Image is pushed to GHCR only on push to main / redesign/v3 (PRs build
+  # Image is pushed to GHCR only on push to main / v4 (PRs build
   # locally and scan without pushing). This closes the gap where auto-merge
   # was firing before Trivy ran. See #631.
   build-and-scan:
@@ -137,12 +137,12 @@ jobs:
         id: image
         run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
 
-      - name: Build image (load locally; push only on main/redesign)
+      - name: Build image (load locally; push only on main/v4)
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
         with:
           context: .
           load: true
-          push: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/redesign/v3') }}
+          push: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/v4') }}
           tags: |
             ${{ steps.image.outputs.name }}:latest
             ${{ steps.image.outputs.name }}:${{ github.sha }}
@@ -303,7 +303,7 @@ jobs:
   deploy-preview:
     name: Deploy to Preview
     needs: build-and-scan
-    if: github.ref == 'refs/heads/redesign/v3' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/v4' && github.event_name == 'push'
     runs-on: ubuntu-latest
 
     permissions:
@@ -390,6 +390,6 @@ jobs:
             -d text="@racu8_bot
           ${EMOJI} <b>Preview deployment: ${DEPLOY_STATUS}</b> [${REPO_NAME}]
           Preview address: https://preview.vernis9.art
-          Branch: redesign/v3
+          Branch: v4
           Tag: <code>${DEPLOY_SHA}</code>
           By: ${TRIGGERED_BY}"

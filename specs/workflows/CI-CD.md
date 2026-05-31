@@ -43,10 +43,10 @@ The "Lint, Type Check, Test & Build" job also declares a `merge_group` trigger s
 | Checkout | Clones the repo |
 | Setup Docker Buildx | Enables advanced Docker builds |
 | Login to GHCR | Authenticates to GitHub Container Registry |
-| Build image | Multi-stage Docker build; `load: true` for local Trivy scan; `push: true` only on `main`/`redesign/v3` push (not on PRs) |
+| Build image | Multi-stage Docker build; `load: true` for local Trivy scan; `push: true` only on `main`/`v4` push (not on PRs) |
 | Trivy scan | Runs Trivy vulnerability scanner against the locally-built image; fails on CRITICAL or HIGH severity findings (unfixed ignored via `.trivyignore.yaml`) |
 
-- **Runs on PR + push** — gated on `needs.changes.outputs.code == 'true'` so docs-only changes still skip. PRs build locally without pushing to GHCR; push happens only on `main` / `redesign/v3`.
+- **Runs on PR + push** — gated on `needs.changes.outputs.code == 'true'` so docs-only changes still skip. PRs build locally without pushing to GHCR; push happens only on `main` / `v4`.
 - **Closes the auto-merge gap (#631)** — previously `scan-image` was main-only. PRs could auto-merge while Trivy was still pending or about to fail on main. Now Trivy is a PR-side required check.
 - Uses the same Trivy action (pinned to SHA) and config as `security.yml::container-scan` (the two are intentionally redundant — both will catch a CVE; deduping deferred).
 - **Gates staging deploy** — `deploy-staging` depends on this job passing.
@@ -131,7 +131,7 @@ Feature Branch                   main
 | **Local** | Development | `npm run dev` / `docker compose up` | Local PostgreSQL (port 5433) | `localhost:5000` |
 | **CI** | Validation | Push / PR | Ephemeral service container | N/A |
 | **Staging** | Pre-production testing | Auto on merge to `main` | Dedicated staging DB | `staging.artverse.<domain>` |
-| **Preview** | v3 redesign testing | Auto on push to `redesign/v3` | Dedicated preview DB | `preview.artverse.<domain>` |
+| **Preview** | v4 / AR feature testing | Auto on push to `v4` | Dedicated preview DB | `preview.vernis9.art` |
 | **Production** | Live site | Manual approval / git tag | Dedicated production DB | `artverse.<domain>` |
 
 ---
@@ -601,7 +601,7 @@ Fires on completion of CI/CD or Security workflows when `conclusion == failure` 
      │  DB     → :5435      │  │  DB     → :5436       │  │  DB     → :5434       │
      │                      │  │                       │  │                       │
      │  DB mode: push       │  │  DB mode: push        │  │  DB mode: migrate     │
-     │  Auto-deploy on main │  │  Auto on redesign/v3  │  │  Manual deploy        │
+     │  Auto-deploy on main │  │  Auto on v4           │  │  Manual deploy        │
      └──────────┬───────────┘  └──────────┬────────────┘  └──────────┬────────────┘
                 │                         │                          │
                 └────────┬────────────────┴──────────────────────────┘
@@ -747,3 +747,4 @@ After the health check passes, both staging (`ci.yml`) and production (`deploy-p
 | 2026-05-09 | Resolved a fresh wave of `npm audit` advisories (`fast-uri` HIGH + `hono` / `@hono/node-server` / `ip-address` moderate) blocking the security gate on every PR since 2026-05-09 19:53 UTC. Bumped `express-rate-limit` to `^8.5.1` and added `npm overrides` for `fast-uri@^3.1.2`, `hono@^4.12.18`, `@hono/node-server@^1.19.13` to coerce `@modelcontextprotocol/sdk@1.29.0` transitives onto patched versions (no upstream MCP SDK release available). No CI workflow changes — `npm audit --audit-level=high` is now clean. ([#595](https://github.com/ilv78/Art-World-Hub/issues/595), PR [#596](https://github.com/ilv78/Art-World-Hub/pull/596)) |
 | 2026-05-09 | Spec catch-up — bumped `Last Updated` header (was 2026-04-20), refreshed §1 Job 4 (Trivy ignore migration to `.trivyignore.yaml`) and §1 Job 5 (upload-subdir bootstrap note covering og-cards), added revision-log entries for #541, #588, and #595. Resolves recurring `ST-004` doc-agent warning from the rolling docs-audit issue (#579). |
 | 2026-05-26 | Closed the auto-merge silent-failure gap (#631): merged `build-image` + `scan-image` into a single `build-and-scan` job that runs on PR + push (push to GHCR only on `main`/`redesign/v3`), so Trivy is now a PR-side required check. Removed the main-only gate on `security.yml::container-scan` and added it to the security `Gate` `needs:` list. Added new `ci-failure-notify.yml` workflow that pings Telegram on any `main`-branch CI/CD or Security workflow failure — the safety net for the case where the existing per-job notifications are silenced by a *skipped* job (the v3.18.0 incident: 6 consecutive main failures with no notification, because `deploy-staging` was skipped not failed). Updated §1 Job 3/4 numbering, §5.3 Auto-Merge, added §5.5 CI Failure Notifier. |
+| 2026-05-31 | Established `v4` as the long-lived integration branch for the major AR "View in My Room" feature (#634) and repointed the preview environment (`preview.vernis9.art`) from `redesign/v3` to `v4` in `ci.yml` (PR CI target, GHCR image push, `deploy-preview` job + Telegram). `redesign/v3` had already been merged and deleted, so preview was idle. `main` remains the v3 maintenance/urgent-fix line. (Issue [#634](https://github.com/ilv78/Art-World-Hub/issues/634)) |
