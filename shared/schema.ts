@@ -46,6 +46,13 @@ export const artworks = pgTable("artworks", {
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   medium: text("medium").notNull(),
   dimensions: text("dimensions"),
+  // Structured physical size for AR "View in my room" (#634). Nullable —
+  // backfilled from the free-text `dimensions` string where parseable, set
+  // explicitly via the artist dashboard otherwise. Decimal (string-typed,
+  // like `price`) to preserve fractional cm/inch values.
+  widthCm: decimal("width_cm", { precision: 7, scale: 2 }),
+  heightCm: decimal("height_cm", { precision: 7, scale: 2 }),
+  dimensionUnit: text("dimension_unit").default("cm"),
   year: integer("year"),
   isPublished: boolean("is_published").default(false),
   isForSale: boolean("is_for_sale").default(true),

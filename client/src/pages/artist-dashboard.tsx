@@ -136,6 +136,9 @@ export default function ArtistDashboard() {
     price: "",
     medium: "",
     dimensions: "",
+    widthCm: "",
+    heightCm: "",
+    dimensionUnit: "cm",
     year: new Date().getFullYear().toString(),
     category: "painting",
     isPublished: false,
@@ -369,6 +372,9 @@ export default function ArtistDashboard() {
       price: "",
       medium: "",
       dimensions: "",
+      widthCm: "",
+      heightCm: "",
+      dimensionUnit: "cm",
       year: new Date().getFullYear().toString(),
       category: "painting",
       isPublished: false,
@@ -399,6 +405,9 @@ export default function ArtistDashboard() {
       price: artworkForm.price,
       medium: artworkForm.medium || "",
       dimensions: artworkForm.dimensions || null,
+      widthCm: artworkForm.widthCm.trim() ? artworkForm.widthCm.trim() : null,
+      heightCm: artworkForm.heightCm.trim() ? artworkForm.heightCm.trim() : null,
+      dimensionUnit: artworkForm.dimensionUnit || "cm",
       year: artworkForm.year ? parseInt(artworkForm.year) : null,
       category: artworkForm.category || "painting",
       isPublished: artworkForm.isPublished,
@@ -442,6 +451,9 @@ export default function ArtistDashboard() {
       price: artwork.price,
       medium: artwork.medium || "",
       dimensions: artwork.dimensions || "",
+      widthCm: artwork.widthCm?.toString() || "",
+      heightCm: artwork.heightCm?.toString() || "",
+      dimensionUnit: artwork.dimensionUnit || "cm",
       year: artwork.year?.toString() || "",
       category: artwork.category || "painting",
       isPublished: artwork.isPublished ?? false,
@@ -803,7 +815,7 @@ export default function ArtistDashboard() {
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="dimensions">Dimensions (cm)</Label>
+                      <Label htmlFor="dimensions">Dimensions (label)</Label>
                       <Input
                         id="dimensions"
                         value={artworkForm.dimensions}
@@ -812,6 +824,44 @@ export default function ArtistDashboard() {
                         data-testid="input-artwork-dimensions"
                       />
                     </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Exact size — enables "View in my room" (AR)</Label>
+                    <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        inputMode="decimal"
+                        value={artworkForm.widthCm}
+                        onChange={(e) => setArtworkForm({ ...artworkForm, widthCm: e.target.value })}
+                        placeholder="Width"
+                        data-testid="input-artwork-width"
+                      />
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        inputMode="decimal"
+                        value={artworkForm.heightCm}
+                        onChange={(e) => setArtworkForm({ ...artworkForm, heightCm: e.target.value })}
+                        placeholder="Height"
+                        data-testid="input-artwork-height"
+                      />
+                      <select
+                        className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                        value={artworkForm.dimensionUnit}
+                        onChange={(e) => setArtworkForm({ ...artworkForm, dimensionUnit: e.target.value })}
+                        data-testid="select-artwork-dimension-unit"
+                      >
+                        <option value="cm">cm</option>
+                        <option value="mm">mm</option>
+                        <option value="in">in</option>
+                      </select>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Used to scale the artwork realistically when a buyer previews it on their wall.
+                    </p>
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="description">Description</Label>
