@@ -8,7 +8,7 @@
 # affects every copy of the vulnerable library in the image. Every entry
 # MUST have a `statement` and `expired_at` so review is forced.
 #
-# Last reviewed: 2026-05-25 (issue #629)
+# Last reviewed: 2026-05-31 (issue #635)
 
 vulnerabilities:
   # ─── npm bundled dependencies (node:25-bookworm-slim) ───────────
@@ -156,6 +156,32 @@ vulnerabilities:
     paths:
       - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
     statement: "Not runtime-reachable: drizzle-kit internal build tool, no mail-parser surface. Fix requires drizzle-kit to bump esbuild >= 0.26."
+    expired_at: 2026-10-23
+
+  # ─── NEW: Go 1.23.12 stdlib batch in drizzle-kit esbuild (issue #635) ─
+  # Three HIGH CVEs disclosed into the Trivy DB after 2026-05-25, all on
+  # the same drizzle-kit-bundled esbuild binary (Go 1.23.12). Identical
+  # reachability argument to the #540 / #612 batches above: build/migration-
+  # time bundler only, no inbound network surface, no attacker-controlled
+  # input, Linux-only. Path-scoped, time-boxed, revisited with the other
+  # drizzle-kit batches when drizzle-kit bumps esbuild >= 0.26.
+
+  - id: CVE-2026-39823
+    paths:
+      - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
+    statement: "Not runtime-reachable: drizzle-kit internal build tool, no HTTP/URL-parsing surface. Fix requires drizzle-kit to bump esbuild >= 0.26."
+    expired_at: 2026-10-23
+
+  - id: CVE-2026-39825
+    paths:
+      - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
+    statement: "Not runtime-reachable: drizzle-kit internal build tool, no ReverseProxy/HTTP surface. Fix requires drizzle-kit to bump esbuild >= 0.26."
+    expired_at: 2026-10-23
+
+  - id: CVE-2026-39826
+    paths:
+      - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
+    statement: "Not runtime-reachable: drizzle-kit internal build tool, no html/template rendering surface. Fix requires drizzle-kit to bump esbuild >= 0.26."
     expired_at: 2026-10-23
 
   # ─── NEW: libgnutls30 OS-layer CVEs in node:25-bookworm-slim (issue #629) ─
