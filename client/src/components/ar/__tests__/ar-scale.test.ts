@@ -19,7 +19,8 @@ describe("clampZoom", () => {
   });
   it("falls back to 1 on non-finite", () => {
     expect(clampZoom(NaN)).toBe(1);
-    expect(clampZoom(Infinity)).toBe(MAX_ZOOM);
+    expect(clampZoom(Infinity)).toBe(1);
+    expect(clampZoom(-Infinity)).toBe(1);
   });
 });
 

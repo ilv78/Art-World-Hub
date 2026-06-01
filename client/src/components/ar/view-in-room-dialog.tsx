@@ -36,25 +36,59 @@ export function ViewInRoomDialog({ artworkImage, title, widthCm, heightCm }: Vie
   const [open, setOpen] = useState(false);
   const [roomImage, setRoomImage] = useState<string | null>(null);
   const [wallWidthCm, setWallWidthCm] = useState(DEFAULT_WALL_WIDTH_CM);
+  // Phase 1b: scale auto-detected from a reference object in the room photo.
+  const [detecting, setDetecting] = useState(false);
+  const [autoRef, setAutoRef] = useState<string | null>(null);
   const { transform, handlers, reset, setZoom } = usePanZoom();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const surfaceRef = useRef<HTMLDivElement>(null);
 
+  // Best-effort: detect a known-size object in the photo and back out the wall
+  // width from it, replacing the slider default. Fully non-blocking — if the
+  // model fails to load or finds nothing recognisable, the manual slider stays.
+  const autoDetectScale = useCallback(async (objectUrl: string) => {
+    setDetecting(true);
+    setAutoRef(null);
+    try {
+      const [{ detectObjects }, { estimateWallWidthCm }] = await Promise.all([
+        import("./detect-objects"),
+        import("./wall-estimator"),
+      ]);
+      const img = new Image();
+      img.src = objectUrl;
+      await img.decode();
+      const detections = await detectObjects(img);
+      const estimate = estimateWallWidthCm(detections, img.naturalWidth);
+      if (estimate) {
+        setWallWidthCm(estimate.wallWidthCm);
+        setAutoRef(estimate.reference);
+      }
+    } catch {
+      /* detection is optional — fall back to the manual slider */
+    } finally {
+      setDetecting(false);
+    }
+  }, []);
+
   const onPickFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const url = URL.createObjectURL(file);
     setRoomImage((prev) => {
       if (prev) URL.revokeObjectURL(prev);
-      return URL.createObjectURL(file);
+      return url;
     });
     reset();
-  }, [reset]);
+    void autoDetectScale(url);
+  }, [reset, autoDetectScale]);
 
   const clearRoom = useCallback(() => {
     setRoomImage((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return null;
     });
+    setAutoRef(null);
+    setDetecting(false);
     reset();
   }, [reset]);
 
@@ -145,7 +179,10 @@ export function ViewInRoomDialog({ artworkImage, title, widthCm, heightCm }: Vie
                   max={600}
                   step={10}
                   value={[wallWidthCm]}
-                  onValueChange={(v) => setWallWidthCm(v[0])}
+                  onValueChange={(v) => {
+                    setWallWidthCm(v[0]);
+                    setAutoRef(null); // manual override — drop the auto-detected hint
+                  }}
                   data-testid="slider-wall-width"
                 />
                 <span className="w-12 text-right text-xs tabular-nums text-muted-foreground">{wallWidthCm}cm</span>
@@ -158,7 +195,18 @@ export function ViewInRoomDialog({ artworkImage, title, widthCm, heightCm }: Vie
                 Change photo
               </Button>
             </div>
-            {(!widthCm || !heightCm) && (
+            {detecting && (
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground" data-testid="ar-detecting">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Measuring your wall from the photo…
+              </p>
+            )}
+            {!detecting && autoRef && (
+              <p className="text-xs text-muted-foreground" data-testid="ar-auto-scale">
+                Scale auto-detected from the {autoRef} in your photo. Adjust the slider if it looks off.
+              </p>
+            )}
+            {!detecting && !autoRef && (!widthCm || !heightCm) && (
               <p className="text-xs text-muted-foreground">
                 This artwork has no exact size set, so scale is approximate. Use the wall-width slider to calibrate.
               </p>
