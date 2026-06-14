@@ -87,7 +87,7 @@ export default function CuratorGalleryPage() {
         </Button>
       )}
       {!isImmersive && (
-        <div className="p-4 border-b bg-background flex flex-wrap items-start justify-between gap-4">
+        <div className="p-4 border-b bg-background flex flex-col sm:flex-row sm:flex-wrap sm:items-start sm:justify-between gap-4">
           <div className="min-w-0 flex-1">
             <h1 className="font-serif text-2xl font-bold">{gallery.name}</h1>
             <p className="text-sm text-muted-foreground">
