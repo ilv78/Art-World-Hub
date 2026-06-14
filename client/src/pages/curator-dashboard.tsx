@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Plus, Trash2, Save, Loader2, Image as ImageIcon, GripVertical, LogIn, Pencil } from "lucide-react";
+import { Plus, Trash2, Save, Loader2, Image as ImageIcon, ChevronUp, ChevronDown, LogIn, Pencil } from "lucide-react";
 import type { CuratorGalleryWithArtworks, ArtworkWithArtist } from "@shared/schema";
 
 export default function CuratorDashboard() {
@@ -516,10 +516,10 @@ function ArtworkPicker({ galleryId, selectedArtworks }: { galleryId: string; sel
                       <span className="flex-1 truncate">{aw?.title ?? id}</span>
                       <span className="text-muted-foreground truncate text-xs">{aw?.artist?.name}</span>
                       <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => moveUp(id)} disabled={idx === 0}>
-                        <GripVertical className="w-3 h-3 rotate-180" />
+                        <ChevronUp className="w-3 h-3" />
                       </Button>
                       <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => moveDown(id)} disabled={idx === selected.length - 1}>
-                        <GripVertical className="w-3 h-3" />
+                        <ChevronDown className="w-3 h-3" />
                       </Button>
                     </div>
                   );
