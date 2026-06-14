@@ -8,7 +8,15 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
-_Nothing yet — all recent work included in v3.18.0 below._
+_Nothing yet — all recent work included in v3.18.1 below._
+
+## [3.18.1] - 2026-06-14
+
+### Fixed
+- fix(ui): curator-gallery mobile header squeezes description into narrow column ([#646](https://github.com/ilv78/Art-World-Hub/issues/646))
+
+### Changed
+- devops: Trivy gate red on new esbuild CVE-2026-42504 + GHSA-gv7w-rqvm-qjhr — blocking staging deploy ([#649](https://github.com/ilv78/Art-World-Hub/issues/649))
 
 ## [3.18.0] - 2026-05-25
 
