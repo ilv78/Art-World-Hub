@@ -8,7 +8,13 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
-_Nothing yet — all recent work included in v3.18.1 below._
+_Nothing yet — all recent work included in v3.18.2 below._
+
+## [3.18.2] - 2026-06-14
+
+### Fixed
+- fix(ui): curator dashboard reorder buttons use identical icon — should be up/down arrows ([#656](https://github.com/ilv78/Art-World-Hub/issues/656))
+- fix(ui): gallery 2D view — nav arrows shift position when changing artwork ([#654](https://github.com/ilv78/Art-World-Hub/issues/654))
 
 ## [3.18.1] - 2026-06-14
 
