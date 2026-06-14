@@ -242,7 +242,7 @@ export default function Gallery() {
             <Button
               variant="secondary"
               size="icon"
-              className="shrink-0 z-20 h-12 w-12 rounded-full shadow-lg"
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-20 h-12 w-12 rounded-full shadow-lg"
               onClick={handlePrevious}
               data-testid="button-prev-artwork"
             >
@@ -279,7 +279,7 @@ export default function Gallery() {
             <Button
               variant="secondary"
               size="icon"
-              className="shrink-0 z-20 h-12 w-12 rounded-full shadow-lg"
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-20 h-12 w-12 rounded-full shadow-lg"
               onClick={handleNext}
               data-testid="button-next-artwork"
             >
