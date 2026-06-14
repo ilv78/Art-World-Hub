@@ -239,52 +239,64 @@ export default function Gallery() {
           </div>
 
           <div className="relative flex-1 flex items-center justify-center gap-2 sm:gap-4 p-4 sm:p-8">
-            <Button
-              variant="secondary"
-              size="icon"
-              className="absolute left-4 top-1/2 -translate-y-1/2 z-20 h-12 w-12 rounded-full shadow-lg"
-              onClick={handlePrevious}
-              data-testid="button-prev-artwork"
-            >
-              <ChevronLeft className="h-6 w-6" />
-            </Button>
+            {/* Positioning lives on a plain wrapper div: the Button's own
+                `hover-elevate` utility forces position:relative, which would
+                override an `absolute` placed directly on the Button. */}
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 z-20">
+              <Button
+                variant="secondary"
+                size="icon"
+                className="h-12 w-12 rounded-full shadow-lg"
+                onClick={handlePrevious}
+                data-testid="button-prev-artwork"
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </Button>
+            </div>
 
-            <div
-              className="relative transition-transform duration-500 ease-out cursor-pointer"
-              style={{ transform: `scale(${zoom})` }}
-              onClick={() => setSelectedArtwork(currentArtwork)}
-            >
-              <ResponsiveImage
-                src={currentArtwork.imageUrl}
-                alt={currentArtwork.title}
-                sizes={ARTWORK_SIZES.detail}
-                loading="eager"
-                fetchPriority="high"
-                decoding="async"
-                className="max-w-[70vw] sm:max-w-lg max-h-[50vh] sm:max-h-[60vh] object-contain shadow-2xl rounded-sm"
-                data-testid="img-current-artwork"
-              />
-              <div className="absolute -bottom-12 left-0 right-0 sm:bottom-0 sm:left-full sm:right-auto sm:ml-2 z-20 w-auto sm:w-48 p-2 bg-white/90 dark:bg-stone-800/90 backdrop-blur-sm shadow-lg rounded-sm text-left">
-                <h3 className="font-serif font-bold text-sm truncate" data-testid="text-artwork-title">
-                  {currentArtwork.title}
-                </h3>
-                <p className="text-xs text-muted-foreground" data-testid="text-artwork-artist">
-                  {currentArtwork.artist.name}
-                  {currentArtwork.year && `, ${currentArtwork.year}`}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1 hidden sm:block">{currentArtwork.medium}</p>
+            {/* Fixed-height stage keeps the viewing area stable regardless of the
+                artwork's orientation, so the absolutely-positioned nav arrows
+                don't shift vertically when navigating between portrait/landscape. */}
+            <div className="flex items-center justify-center h-[50vh] sm:h-[60vh]">
+              <div
+                className="relative transition-transform duration-500 ease-out cursor-pointer"
+                style={{ transform: `scale(${zoom})` }}
+                onClick={() => setSelectedArtwork(currentArtwork)}
+              >
+                <ResponsiveImage
+                  src={currentArtwork.imageUrl}
+                  alt={currentArtwork.title}
+                  sizes={ARTWORK_SIZES.detail}
+                  loading="eager"
+                  fetchPriority="high"
+                  decoding="async"
+                  className="max-w-[70vw] sm:max-w-lg max-h-[50vh] sm:max-h-[60vh] object-contain shadow-2xl rounded-sm"
+                  data-testid="img-current-artwork"
+                />
+                <div className="absolute -bottom-12 left-0 right-0 sm:bottom-0 sm:left-full sm:right-auto sm:ml-2 z-20 w-auto sm:w-48 p-2 bg-white/90 dark:bg-stone-800/90 backdrop-blur-sm shadow-lg rounded-sm text-left">
+                  <h3 className="font-serif font-bold text-sm truncate" data-testid="text-artwork-title">
+                    {currentArtwork.title}
+                  </h3>
+                  <p className="text-xs text-muted-foreground" data-testid="text-artwork-artist">
+                    {currentArtwork.artist.name}
+                    {currentArtwork.year && `, ${currentArtwork.year}`}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1 hidden sm:block">{currentArtwork.medium}</p>
+                </div>
               </div>
             </div>
 
-            <Button
-              variant="secondary"
-              size="icon"
-              className="absolute right-4 top-1/2 -translate-y-1/2 z-20 h-12 w-12 rounded-full shadow-lg"
-              onClick={handleNext}
-              data-testid="button-next-artwork"
-            >
-              <ChevronRight className="h-6 w-6" />
-            </Button>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 z-20">
+              <Button
+                variant="secondary"
+                size="icon"
+                className="h-12 w-12 rounded-full shadow-lg"
+                onClick={handleNext}
+                data-testid="button-next-artwork"
+              >
+                <ChevronRight className="h-6 w-6" />
+              </Button>
+            </div>
 
           </div>
 
