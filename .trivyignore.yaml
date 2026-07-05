@@ -243,3 +243,14 @@ vulnerabilities:
   - id: CVE-2026-42009
     statement: "libgnutls30 OS-layer DoS via DTLS packet reordering. Not reachable: Node app uses OpenSSL via Node tls, not GnuTLS. Fix tracked in #629."
     expired_at: 2026-07-25
+
+  # ── July 2026 (#670): new advisories that surfaced while main sat idle ──
+  # hono CVE-2026-54290 and multer CVE-2026-5079 are NOT here — they are fixed
+  # by bumping our lockfile (hono 4.12.27, multer 2.2.0). Only the two
+  # non-fixable-by-us findings below are suppressed.
+  - id: CVE-2026-27145
+    statement: "Go crypto/x509 stdlib DoS in the drizzle-kit/esbuild build-time Go binary. Same non-reachable build-tool class as #540/#635/#649; fix blocked on upstream esbuild rebuilding its Go toolchain. Build-time only, no network surface at runtime."
+    expired_at: 2026-10-23
+  - id: CVE-2026-48815
+    statement: "sigstore 4.1.0 bundled inside the npm CLI in the node base image (provenance tooling); not a project dependency (absent from our lockfile). Same npm-base-image-bundled class as the cross-spawn/glob/tar entries above."
+    expired_at: 2026-10-23
