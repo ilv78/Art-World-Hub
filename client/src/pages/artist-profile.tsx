@@ -16,6 +16,7 @@ import {
   Calendar,
   ArrowLeft,
   ShoppingCart,
+  Mail,
   Box,
   Globe,
   ExternalLink,
@@ -381,9 +382,20 @@ export default function ArtistProfile() {
                         {artwork.dimensions && (
                           <p className="text-sm text-muted-foreground">{artwork.dimensions}{!/cm/i.test(artwork.dimensions) ? ' cm' : ''}</p>
                         )}
-                        {artwork.isForSale && (
-                          <Button 
-                            className="w-full mt-4" 
+                        {artwork.isForSale && artwork.priceOnRequest && (
+                          <Button
+                            className="w-full mt-4"
+                            size="sm"
+                            onClick={(e) => { e.stopPropagation(); setSelectedArtwork(artwork); }}
+                            data-testid={`button-enquire-${artwork.id}`}
+                          >
+                            <Mail className="h-4 w-4 mr-2" />
+                            Enquire
+                          </Button>
+                        )}
+                        {artwork.isForSale && !artwork.priceOnRequest && (
+                          <Button
+                            className="w-full mt-4"
                             size="sm"
                             onClick={(e) => { e.stopPropagation(); addItem(artwork); }}
                             data-testid={`button-add-to-cart-${artwork.id}`}
