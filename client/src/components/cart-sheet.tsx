@@ -100,7 +100,7 @@ export function CartSheet() {
                           by {item.artwork.artist.name}
                         </p>
                         <p className="text-sm font-semibold text-primary mt-1">
-                          {formatPrice(item.artwork.price)}
+                          {formatPrice(item.artwork.price ?? "0")}
                         </p>
                       </div>
                       <Button

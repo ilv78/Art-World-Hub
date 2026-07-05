@@ -1,9 +1,9 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertArtworkSchema, updateArtworkSchema, insertBidSchema, insertOrderSchema, insertBlogPostSchema, updateBlogPostSchema, updateArtistSchema, ORDER_TRANSITIONS, ORDER_STATUSES, NEWSLETTER_SOURCES, insertShareEventSchema } from "@shared/schema";
+import { insertArtworkSchema, updateArtworkSchema, insertBidSchema, insertOrderSchema, insertBlogPostSchema, updateBlogPostSchema, updateArtistSchema, ORDER_TRANSITIONS, ORDER_STATUSES, NEWSLETTER_SOURCES, insertShareEventSchema, artworkEnquirySchema } from "@shared/schema";
 import { normalizeArtworkForCreate, normalizeArtworkForUpdate } from "./publish";
-import type { Artist, ArtworkWithArtist, Order, InsertOrder } from "@shared/schema";
+import type { Artist, ArtworkWithArtist, Order, InsertOrder, ArtworkEnquiry } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes, isAuthenticated, isAdmin, isCurator, authStorage } from "./replit_integrations/auth";
 import { USER_ROLES, type UserRole } from "@shared/models/auth";
@@ -145,6 +145,61 @@ async function sendBuyerConfirmationEmail(
     subject,
     html,
   });
+}
+
+// Price-on-request enquiry: emails the artist the visitor's message with the
+// visitor as reply-to. Falls back to the site inbox when the artist has no
+// email on file, so an enquiry is never silently dropped. Returns false when
+// email delivery is not configured. (#668)
+async function sendArtworkEnquiryEmail(
+  artwork: ArtworkWithArtist,
+  enquiry: ArtworkEnquiry,
+): Promise<boolean> {
+  let client;
+  try {
+    client = getResendClient();
+  } catch (e) {
+    logger.warn({ err: e }, "Resend not configured, cannot send artwork enquiry");
+    return false;
+  }
+
+  const to = artwork.artist.email || getFromEmail();
+  const subject = `Enquiry about "${artwork.title}"`;
+  const messageHtml = escapeHtml(enquiry.message).replace(/\n/g, "<br>");
+  const html = `
+    <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <h1 style="color: #1a1a2e; border-bottom: 2px solid #F97316; padding-bottom: 10px;">New Artwork Enquiry</h1>
+      <p>Dear ${escapeHtml(artwork.artist.name)},</p>
+      <p>You have received an enquiry about <strong>${escapeHtml(artwork.title)}</strong>.</p>
+
+      <div style="background: #f0f0f0; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h2 style="color: #1a1a2e; margin-top: 0;">From</h2>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr><td style="padding: 8px 0; color: #666;">Name:</td><td style="padding: 8px 0; font-weight: bold;">${escapeHtml(enquiry.name)}</td></tr>
+          <tr><td style="padding: 8px 0; color: #666;">Email:</td><td style="padding: 8px 0;">${escapeHtml(enquiry.email)}</td></tr>
+        </table>
+      </div>
+
+      <div style="background: #faf8f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h2 style="color: #1a1a2e; margin-top: 0;">Message</h2>
+        <p style="white-space: pre-wrap;">${messageHtml}</p>
+      </div>
+
+      <p style="color: #666; font-size: 14px; margin-top: 30px;">
+        Reply directly to this email to respond to ${escapeHtml(enquiry.name)}.
+      </p>
+      <p style="color: #999; font-size: 12px;">This is an automated notification from Vernis9.</p>
+    </div>
+  `;
+
+  await client.emails.send({
+    from: getFromEmail(),
+    to,
+    replyTo: enquiry.email,
+    subject,
+    html,
+  });
+  return true;
 }
 
 export async function registerRoutes(
@@ -709,6 +764,9 @@ export async function registerRoutes(
       }
       if (!artwork.isForSale) {
         return res.status(400).json({ error: "Artwork is not available for purchase" });
+      }
+      if (artwork.priceOnRequest || artwork.price == null) {
+        return res.status(400).json({ error: "Artwork is price-on-request; please enquire with the artist" });
       }
 
       // Use actual DB price and force pending status
@@ -1438,6 +1496,37 @@ export async function registerRoutes(
     } catch (error) {
       logger.error({ error }, "Failed to record share event");
       res.status(500).json({ error: "Failed to record share event" });
+    }
+  });
+
+  // Price-on-request enquiries send email from public input — keep the limit
+  // tight to deter abuse. (#668)
+  const enquiryLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many enquiries from this IP, please try again later" },
+  });
+
+  app.post("/api/artworks/:id/enquire", enquiryLimiter, async (req: any, res) => {
+    const parsed = artworkEnquirySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid enquiry" });
+    }
+    try {
+      const artwork = await storage.getArtwork(req.params.id);
+      if (!artwork) {
+        return res.status(404).json({ error: "Artwork not found" });
+      }
+      const sent = await sendArtworkEnquiryEmail(artwork, parsed.data);
+      if (!sent) {
+        return res.status(503).json({ error: "Enquiries are temporarily unavailable" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      logger.error({ error }, "Failed to send artwork enquiry");
+      res.status(500).json({ error: "Failed to send enquiry" });
     }
   });
 

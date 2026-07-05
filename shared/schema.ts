@@ -43,7 +43,8 @@ export const artworks = pgTable("artworks", {
   description: text("description").notNull(),
   imageUrl: text("image_url").notNull(),
   artistId: varchar("artist_id").references(() => artists.id).notNull(),
-  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  price: decimal("price", { precision: 10, scale: 2 }),
+  priceOnRequest: boolean("price_on_request").default(false).notNull(),
   medium: text("medium").notNull(),
   dimensions: text("dimensions"),
   year: integer("year"),
@@ -55,8 +56,26 @@ export const artworks = pgTable("artworks", {
   category: text("category").notNull(),
 });
 
-export const insertArtworkSchema = createInsertSchema(artworks).omit({ id: true, slug: true });
-export const updateArtworkSchema = insertArtworkSchema.partial().omit({ artistId: true });
+// Price is required unless the artwork is marked "price on request".
+const hasPrice = (v: unknown) => v != null && String(v).trim() !== "";
+const PRICE_REQUIRED_MSG = "Price is required unless 'Price on request' is enabled";
+
+export const insertArtworkSchema = createInsertSchema(artworks)
+  .omit({ id: true, slug: true })
+  .refine((data) => data.priceOnRequest === true || hasPrice(data.price), {
+    message: PRICE_REQUIRED_MSG,
+    path: ["price"],
+  });
+// Partial for updates; enforce the price rule only when priceOnRequest is
+// explicitly being set to false (so unrelated partial updates aren't blocked).
+export const updateArtworkSchema = createInsertSchema(artworks)
+  .omit({ id: true, slug: true })
+  .partial()
+  .omit({ artistId: true })
+  .refine((data) => data.priceOnRequest !== false || hasPrice(data.price), {
+    message: PRICE_REQUIRED_MSG,
+    path: ["price"],
+  });
 export type InsertArtwork = z.infer<typeof insertArtworkSchema>;
 export type Artwork = typeof artworks.$inferSelect;
 
@@ -72,6 +91,15 @@ export const auctions = pgTable("auctions", {
   status: text("status").notNull().default("upcoming"),
   winnerName: text("winner_name"),
 });
+
+// Artwork enquiry (price-on-request) — collected via the Enquire modal and
+// emailed to the artist. Not persisted (#668).
+export const artworkEnquirySchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(120),
+  email: z.string().trim().email("A valid email is required").max(254),
+  message: z.string().trim().min(1, "Message is required").max(2000),
+});
+export type ArtworkEnquiry = z.infer<typeof artworkEnquirySchema>;
 
 export const insertAuctionSchema = createInsertSchema(auctions).omit({ id: true });
 export type InsertAuction = z.infer<typeof insertAuctionSchema>;

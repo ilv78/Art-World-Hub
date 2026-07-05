@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { AlertTriangle, Shield, Trash2, Users, Palette, Image, Calendar, BookOpen, Settings, Mail, Download, Share2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { GALLERY_TEMPLATES } from "@/lib/gallery-templates";
-import { formatPrice } from "@/lib/utils";
+import { formatArtworkPrice } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -484,7 +484,7 @@ export default function AdminPage() {
                         <TableCell className="font-medium">{aw.title}</TableCell>
                         <TableCell>{aw.artist.name}</TableCell>
                         <TableCell>{aw.medium}</TableCell>
-                        <TableCell>{formatPrice(aw.price)}</TableCell>
+                        <TableCell>{formatArtworkPrice(aw)}</TableCell>
                         <TableCell>
                           <Badge variant={aw.isForSale ? "default" : "secondary"}>
                             {aw.isForSale ? "Yes" : "No"}

@@ -383,6 +383,57 @@ describe("POST /api/orders", () => {
     expect(res.status).toBe(400);
     expect(res.body.error).toContain("not available");
   });
+
+  it("returns 400 when artwork is price-on-request (issue #668)", async () => {
+    (mockStorage.getArtwork as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...artworkForSale,
+      priceOnRequest: true,
+      price: null,
+    });
+
+    const res = await request(app)
+      .post("/api/orders")
+      .send({
+        artworkId: "a1",
+        buyerName: "John",
+        buyerEmail: "john@example.com",
+        shippingAddress: "123 Main St",
+        totalAmount: "500.00",
+        status: "pending",
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain("price-on-request");
+    expect(mockStorage.createOrder).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /api/artworks/:id/enquire (issue #668)", () => {
+  const validEnquiry = {
+    name: "Jane Doe",
+    email: "jane@example.com",
+    message: "I love this piece — what's the price?",
+  };
+
+  it("returns 400 for an invalid body", async () => {
+    const res = await request(app)
+      .post("/api/artworks/a1/enquire")
+      .send({ name: "", email: "not-an-email", message: "" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeDefined();
+    expect(mockStorage.getArtwork).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 when the artwork does not exist", async () => {
+    (mockStorage.getArtwork as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+
+    const res = await request(app)
+      .post("/api/artworks/nonexistent/enquire")
+      .send(validEnquiry);
+
+    expect(res.status).toBe(404);
+  });
 });
 
 describe("POST /api/blog", () => {

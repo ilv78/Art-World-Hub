@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { formatPrice } from "@/lib/utils";
+import { formatArtworkPrice } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -134,6 +134,7 @@ export default function ArtistDashboard() {
     description: "",
     imageUrl: "",
     price: "",
+    priceOnRequest: true,
     medium: "",
     dimensions: "",
     year: new Date().getFullYear().toString(),
@@ -367,6 +368,7 @@ export default function ArtistDashboard() {
       description: "",
       imageUrl: "",
       price: "",
+      priceOnRequest: true,
       medium: "",
       dimensions: "",
       year: new Date().getFullYear().toString(),
@@ -396,7 +398,8 @@ export default function ArtistDashboard() {
       title: artworkForm.title,
       description: artworkForm.description || "",
       imageUrl: artworkForm.imageUrl,
-      price: artworkForm.price,
+      price: artworkForm.priceOnRequest ? null : artworkForm.price,
+      priceOnRequest: artworkForm.priceOnRequest,
       medium: artworkForm.medium || "",
       dimensions: artworkForm.dimensions || null,
       year: artworkForm.year ? parseInt(artworkForm.year) : null,
@@ -439,7 +442,8 @@ export default function ArtistDashboard() {
       title: artwork.title,
       description: artwork.description || "",
       imageUrl: artwork.imageUrl,
-      price: artwork.price,
+      price: artwork.price ?? "",
+      priceOnRequest: artwork.priceOnRequest ?? false,
       medium: artwork.medium || "",
       dimensions: artwork.dimensions || "",
       year: artwork.year?.toString() || "",
@@ -512,7 +516,7 @@ export default function ArtistDashboard() {
       <CardContent className="p-4">
         <h3 className="font-semibold truncate">{artwork.title}</h3>
         {artwork.isPublished && artwork.isForSale && (
-          <p className="text-sm text-muted-foreground">{formatPrice(artwork.price)}</p>
+          <p className="text-sm text-muted-foreground">{formatArtworkPrice(artwork)}</p>
         )}
       </CardContent>
       <CardFooter className="p-4 pt-0 gap-2 flex-wrap">
@@ -771,14 +775,30 @@ export default function ArtistDashboard() {
                   />
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
-                      <Label htmlFor="price">Price *</Label>
+                      <Label htmlFor="price">
+                        {artworkForm.priceOnRequest ? "Price" : "Price *"}
+                      </Label>
                       <Input
                         id="price"
-                        value={artworkForm.price}
+                        value={artworkForm.priceOnRequest ? "" : artworkForm.price}
                         onChange={(e) => setArtworkForm({ ...artworkForm, price: e.target.value })}
-                        placeholder="1000"
+                        placeholder={artworkForm.priceOnRequest ? "Price on request" : "1000"}
+                        disabled={artworkForm.priceOnRequest}
                         data-testid="input-artwork-price"
                       />
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          id="priceOnRequest"
+                          checked={artworkForm.priceOnRequest}
+                          onCheckedChange={(checked) =>
+                            setArtworkForm({ ...artworkForm, priceOnRequest: checked })
+                          }
+                          data-testid="switch-artwork-price-on-request"
+                        />
+                        <Label htmlFor="priceOnRequest" className="text-sm font-normal">
+                          Price on request
+                        </Label>
+                      </div>
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="year">Year</Label>
@@ -885,7 +905,7 @@ export default function ArtistDashboard() {
                 <DialogFooter>
                   <Button 
                     onClick={handleArtworkSubmit}
-                    disabled={!artworkForm.title || !artworkForm.imageUrl || !artworkForm.price || artworkUploading || createArtworkMutation.isPending || updateArtworkMutation.isPending}
+                    disabled={!artworkForm.title || !artworkForm.imageUrl || (!artworkForm.priceOnRequest && !artworkForm.price) || artworkUploading || createArtworkMutation.isPending || updateArtworkMutation.isPending}
                     data-testid="button-save-artwork"
                   >
                     <Save className="h-4 w-4 mr-2" />

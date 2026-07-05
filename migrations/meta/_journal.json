@@ -92,6 +92,13 @@
       "when": 1777794660670,
       "tag": "0012_add_share_events",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1783278372478,
+      "tag": "0013_price_on_request",
+      "breakpoints": true
     }
   ]
 }

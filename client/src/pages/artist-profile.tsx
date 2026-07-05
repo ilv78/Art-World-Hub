@@ -30,7 +30,7 @@ import { useArtworkModalFromQuery } from "@/hooks/use-modal-from-query";
 import { SiInstagram, SiX, SiFacebook, SiYoutube, SiTiktok, SiBehance, SiDribbble, SiDeviantart, SiPinterest } from "react-icons/si";
 import { FaLinkedin } from "react-icons/fa6";
 import { useCartStore } from "@/lib/cart-store";
-import { formatPrice } from "@/lib/utils";
+import { formatArtworkPrice } from "@/lib/utils";
 import { MazeGallery3D } from "@/components/maze-gallery-3d";
 import { ArtworkCard } from "@/components/artwork-card";
 import { ArtworkDetailDialog } from "@/components/artwork-detail-dialog";
@@ -369,7 +369,7 @@ export default function ArtistProfile() {
                         </Link>
                         <div className="flex items-center justify-between mt-2">
                           {artwork.isForSale && (
-                            <span className="text-lg font-bold text-primary">{formatPrice(artwork.price)}</span>
+                            <span className="text-lg font-bold text-primary">{formatArtworkPrice(artwork)}</span>
                           )}
                           {artwork.year && (
                             <span className="text-sm text-muted-foreground">{artwork.year}</span>

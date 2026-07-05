@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Search, SlidersHorizontal, Grid3X3, LayoutList, X } from "lucide-react";
 import { ArtworkCard } from "@/components/artwork-card";
-import { formatPrice } from "@/lib/utils";
+import { formatArtworkPrice } from "@/lib/utils";
 import { ArtworkDetailDialog } from "@/components/artwork-detail-dialog";
 import { useArtworkModalFromQuery } from "@/hooks/use-modal-from-query";
 import type { ArtworkWithArtist } from "@shared/schema";
@@ -76,11 +76,21 @@ export default function Store() {
           artwork.description.toLowerCase().includes(searchQuery.toLowerCase())
       )
       .sort((a, b) => {
+        // Price-on-request works have no numeric price; sort them to the end
+        // regardless of direction.
+        const priceOf = (p: typeof a) =>
+          p.priceOnRequest || p.price == null ? null : parseFloat(p.price);
+        const pa = priceOf(a);
+        const pb = priceOf(b);
         switch (sortBy) {
           case "price-low":
-            return parseFloat(a.price) - parseFloat(b.price);
+            if (pa == null) return 1;
+            if (pb == null) return -1;
+            return pa - pb;
           case "price-high":
-            return parseFloat(b.price) - parseFloat(a.price);
+            if (pa == null) return 1;
+            if (pb == null) return -1;
+            return pb - pa;
           case "title":
             return a.title.localeCompare(b.title);
           default:
@@ -269,7 +279,7 @@ export default function Store() {
               </div>
               <div className="text-right shrink-0">
                 <p className="font-bold text-primary text-lg">
-                  {formatPrice(artwork.price)}
+                  {formatArtworkPrice(artwork)}
                 </p>
                 <Badge variant="outline" className="mt-2">
                   {artwork.medium}

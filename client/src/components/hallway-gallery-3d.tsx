@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { X, ShoppingCart, Move, Mouse, Keyboard, Maximize2, Minimize2, ZoomIn, Box, Map as MapIcon, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Hand } from "lucide-react";
 import type { ArtworkWithArtist, MazeLayout, MazeCell } from "@shared/schema";
 import { useCartStore } from "@/lib/cart-store";
-import { formatPrice } from "@/lib/utils";
+import { formatArtworkPrice } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { getTemplate } from "@/lib/gallery-templates";
 
@@ -1559,7 +1559,7 @@ export function HallwayGallery3D({ artistRooms, curatorRooms, museumTemplate, is
             <div className="pt-2 border-t space-y-2">
               <div>
                 {selectedArtwork.isForSale && (
-                  <p className="text-lg font-bold text-primary">{formatPrice(selectedArtwork.price)}</p>
+                  <p className="text-lg font-bold text-primary">{formatArtworkPrice(selectedArtwork)}</p>
                 )}
                 {selectedArtwork.dimensions && <p className="text-xs text-muted-foreground">{selectedArtwork.dimensions}</p>}
               </div>
