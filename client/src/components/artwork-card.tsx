@@ -2,11 +2,11 @@ import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Eye } from "lucide-react";
+import { ShoppingCart, Eye, Mail } from "lucide-react";
 import type { ArtworkWithArtist } from "@shared/schema";
 import { useCartStore } from "@/lib/cart-store";
 import { useToast } from "@/hooks/use-toast";
-import { formatPrice } from "@/lib/utils";
+import { formatArtworkPrice } from "@/lib/utils";
 import { ResponsiveImage } from "@/components/responsive-image";
 import { ARTWORK_SIZES } from "@/lib/artwork-image";
 
@@ -24,7 +24,7 @@ export function ArtworkCard({ artwork, onViewDetails, showAddToCart = true }: Ar
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!isInCart && artwork.isForSale) {
+    if (!isInCart && artwork.isForSale && !artwork.priceOnRequest) {
       addItem(artwork);
       toast({
         title: "Added to cart",
@@ -66,7 +66,7 @@ export function ArtworkCard({ artwork, onViewDetails, showAddToCart = true }: Ar
             <Eye className="h-4 w-4 mr-2" />
             View
           </Button>
-          {showAddToCart && artwork.isForSale && (
+          {showAddToCart && artwork.isForSale && !artwork.priceOnRequest && (
             <Button
               size="sm"
               className="flex-1"
@@ -76,6 +76,20 @@ export function ArtworkCard({ artwork, onViewDetails, showAddToCart = true }: Ar
             >
               <ShoppingCart className="h-4 w-4 mr-2" />
               {isInCart ? "In Cart" : "Add"}
+            </Button>
+          )}
+          {showAddToCart && artwork.isForSale && artwork.priceOnRequest && (
+            <Button
+              size="sm"
+              className="flex-1"
+              onClick={(e) => {
+                e.stopPropagation();
+                onViewDetails?.();
+              }}
+              data-testid={`button-enquire-${artwork.id}`}
+            >
+              <Mail className="h-4 w-4 mr-2" />
+              Enquire
             </Button>
           )}
         </div>
@@ -123,7 +137,7 @@ export function ArtworkCard({ artwork, onViewDetails, showAddToCart = true }: Ar
             </Badge>
             {artwork.isForSale && (
               <span className="font-semibold text-primary text-sm truncate" data-testid={`text-price-${artwork.id}`}>
-                {formatPrice(artwork.price)}
+                {formatArtworkPrice(artwork)}
               </span>
             )}
           </div>

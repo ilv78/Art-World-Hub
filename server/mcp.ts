@@ -467,6 +467,9 @@ export function createMcpServer(): McpServer {
         if (!artwork.isForSale) {
           return { content: [{ type: "text", text: "Error: Artwork is not for sale" }], isError: true };
         }
+        if (artwork.priceOnRequest || artwork.price == null) {
+          return { content: [{ type: "text", text: "Error: Artwork is price-on-request; enquire with the artist" }], isError: true };
+        }
         const order = await storage.createOrder({
           artworkId: args.artworkId,
           buyerName: args.buyerName,

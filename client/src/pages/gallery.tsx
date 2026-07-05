@@ -20,7 +20,7 @@ import {
 import { useImmersiveMode } from "@/hooks/use-immersive-mode";
 import type { ArtworkWithArtist } from "@shared/schema";
 import { useCartStore } from "@/lib/cart-store";
-import { formatPrice } from "@/lib/utils";
+import { formatArtworkPrice } from "@/lib/utils";
 import { ResponsiveImage } from "@/components/responsive-image";
 import { ARTWORK_SIZES } from "@/lib/artwork-image";
 import { useToast } from "@/hooks/use-toast";
@@ -381,7 +381,7 @@ export default function Gallery() {
                           <div className="flex items-center justify-between gap-2 mb-4">
                             <span className="text-sm text-muted-foreground">Price</span>
                             <span className="text-2xl font-bold text-primary">
-                              {formatPrice(currentArtwork.price)}
+                              {formatArtworkPrice(currentArtwork)}
                             </span>
                           </div>
                         )}

@@ -11,7 +11,7 @@ import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import type { ArtworkWithArtist, Artist, MazeLayout, MazeCell } from "@shared/schema";
 import { useCartStore } from "@/lib/cart-store";
-import { formatPrice } from "@/lib/utils";
+import { formatArtworkPrice } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { getTemplate, type GalleryTemplate, type TextureSet } from "@/lib/gallery-templates";
 
@@ -1902,7 +1902,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
               <div>
                 {selectedArtwork.isForSale && (
                   <p className="text-lg font-bold text-primary">
-                    {formatPrice(selectedArtwork.price)}
+                    {formatArtworkPrice(selectedArtwork)}
                   </p>
                 )}
                 {selectedArtwork.dimensions && (

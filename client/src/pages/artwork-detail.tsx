@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Helmet } from "react-helmet-async";
 import { Link } from "wouter";
@@ -5,8 +6,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Calendar, Ruler, Palette, Box, ShoppingCart } from "lucide-react";
-import { formatPrice } from "@/lib/utils";
+import { ArrowLeft, Calendar, Ruler, Palette, Box, ShoppingCart, Mail } from "lucide-react";
+import { formatArtworkPrice } from "@/lib/utils";
+import { EnquiryDialog } from "@/components/enquiry-dialog";
 import type { ArtworkWithArtist } from "@shared/schema";
 import { ResponsiveImage } from "@/components/responsive-image";
 import { ARTWORK_SIZES } from "@/lib/artwork-image";
@@ -39,6 +41,7 @@ export default function ArtworkDetail({
   });
   const { addItem, items } = useCartStore();
   const { toast } = useToast();
+  const [enquiryOpen, setEnquiryOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -85,7 +88,7 @@ export default function ArtworkDetail({
   const isInCart = items.some((item) => item.artwork.id === artwork.id);
 
   const handleAddToCart = () => {
-    if (!isInCart && artwork.isForSale) {
+    if (!isInCart && artwork.isForSale && !artwork.priceOnRequest) {
       addItem(artwork);
       toast({
         title: "Added to cart",
@@ -95,6 +98,7 @@ export default function ArtworkDetail({
   };
 
   return (
+    <>
     <div className="min-h-screen">
       <Helmet>
         <title>{`${artwork.title} by ${artwork.artist.name} — Vernis9`}</title>
@@ -196,10 +200,10 @@ export default function ArtworkDetail({
               </div>
             </dl>
 
-            {artwork.isForSale && Number(artwork.price) > 0 && (
+            {artwork.isForSale && (
               <div className="border-t pt-6">
                 <div className="text-3xl font-serif font-bold text-primary">
-                  {formatPrice(artwork.price)}
+                  {formatArtworkPrice(artwork)}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Contact the artist to arrange purchase and shipping.
@@ -208,7 +212,21 @@ export default function ArtworkDetail({
             )}
 
             <div className="space-y-3">
-              {artwork.isForSale ? (
+              {!artwork.isForSale ? (
+                <Button className="w-full" size="lg" disabled>
+                  Sold Out
+                </Button>
+              ) : artwork.priceOnRequest ? (
+                <Button
+                  className="w-full"
+                  size="lg"
+                  onClick={() => setEnquiryOpen(true)}
+                  data-testid="button-detail-page-enquire"
+                >
+                  <Mail className="h-5 w-5 mr-2" />
+                  Enquire
+                </Button>
+              ) : (
                 <Button
                   className="w-full"
                   size="lg"
@@ -218,10 +236,6 @@ export default function ArtworkDetail({
                 >
                   <ShoppingCart className="h-5 w-5 mr-2" />
                   {isInCart ? "Already in Cart" : "Add to Cart"}
-                </Button>
-              ) : (
-                <Button className="w-full" size="lg" disabled>
-                  Sold Out
                 </Button>
               )}
               <div className="flex flex-wrap gap-3">
@@ -285,5 +299,7 @@ export default function ArtworkDetail({
         )}
       </div>
     </div>
+    <EnquiryDialog artwork={artwork} open={enquiryOpen} onOpenChange={setEnquiryOpen} />
+    </>
   );
 }

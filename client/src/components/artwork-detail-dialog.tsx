@@ -9,14 +9,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ShoppingCart, Calendar, Ruler, Palette, MapPin } from "lucide-react";
+import { ShoppingCart, Calendar, Ruler, Palette, MapPin, Mail } from "lucide-react";
 import type { ArtworkWithArtist } from "@shared/schema";
 import { useCartStore } from "@/lib/cart-store";
 import { useToast } from "@/hooks/use-toast";
 import { ResponsiveImage } from "@/components/responsive-image";
 import { ARTWORK_SIZES } from "@/lib/artwork-image";
-import { formatPrice } from "@/lib/utils";
+import { formatArtworkPrice } from "@/lib/utils";
 import { ShareButtons } from "@/components/share-buttons";
+import { EnquiryDialog } from "@/components/enquiry-dialog";
+import { useState } from "react";
 
 // Modal share URL — keep the user on the same parent page (store,
 // gallery, artist profile, curator gallery) but encode the artwork in a
@@ -42,13 +44,14 @@ export function ArtworkDetailDialog({
 }: ArtworkDetailDialogProps) {
   const { addItem, items } = useCartStore();
   const { toast } = useToast();
+  const [enquiryOpen, setEnquiryOpen] = useState(false);
 
   if (!artwork) return null;
 
   const isInCart = items.some((item) => item.artwork.id === artwork.id);
 
   const handleAddToCart = () => {
-    if (!isInCart && artwork.isForSale) {
+    if (!isInCart && artwork.isForSale && !artwork.priceOnRequest) {
       addItem(artwork);
       toast({
         title: "Added to cart",
@@ -58,6 +61,7 @@ export function ArtworkDetailDialog({
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[1200px] lg:max-w-[1400px] max-h-[90vh] overflow-y-auto">
         <div className="grid gap-6 md:grid-cols-2">
@@ -145,12 +149,26 @@ export function ArtworkDetailDialog({
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Price</span>
                   <span className="text-2xl font-bold text-primary" data-testid="text-detail-price">
-                    {formatPrice(artwork.price)}
+                    {formatArtworkPrice(artwork)}
                   </span>
                 </div>
               )}
 
-              {artwork.isForSale ? (
+              {!artwork.isForSale ? (
+                <Button className="w-full" size="lg" disabled>
+                  Sold Out
+                </Button>
+              ) : artwork.priceOnRequest ? (
+                <Button
+                  className="w-full"
+                  size="lg"
+                  onClick={() => setEnquiryOpen(true)}
+                  data-testid="button-detail-enquire"
+                >
+                  <Mail className="h-5 w-5 mr-2" />
+                  Enquire
+                </Button>
+              ) : (
                 <Button
                   className="w-full"
                   size="lg"
@@ -160,10 +178,6 @@ export function ArtworkDetailDialog({
                 >
                   <ShoppingCart className="h-5 w-5 mr-2" />
                   {isInCart ? "Already in Cart" : "Add to Cart"}
-                </Button>
-              ) : (
-                <Button className="w-full" size="lg" disabled>
-                  Sold Out
                 </Button>
               )}
 
@@ -185,5 +199,7 @@ export function ArtworkDetailDialog({
         </div>
       </DialogContent>
     </Dialog>
+    <EnquiryDialog artwork={artwork} open={enquiryOpen} onOpenChange={setEnquiryOpen} />
+    </>
   );
 }

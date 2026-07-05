@@ -39,7 +39,9 @@ export const useCartStore = create<CartStore>()(
       clearCart: () => set({ items: [] }),
       getTotal: () => {
         return get().items.reduce(
-          (total, item) => total + parseFloat(item.artwork.price) * item.quantity,
+          // Price-on-request items can't be added to the cart, so price is
+          // always present here; coerce defensively for the nullable type.
+          (total, item) => total + parseFloat(item.artwork.price ?? "0") * item.quantity,
           0
         );
       },
