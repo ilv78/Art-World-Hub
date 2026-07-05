@@ -8,7 +8,15 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
-_Nothing yet — all recent work included in v3.18.2 below._
+_Nothing yet — all recent work included in v3.19.0 below._
+
+## [3.19.0] - 2026-07-05
+
+### Added
+- Artist can mark artwork price as 'Price on request' ([#668](https://github.com/ilv78/Art-World-Hub/issues/668))
+
+### Fixed
+- Price-on-request: artist portfolio shows 'Add to Cart' instead of 'Enquire' ([#674](https://github.com/ilv78/Art-World-Hub/issues/674))
 
 ## [3.18.2] - 2026-06-14
 
