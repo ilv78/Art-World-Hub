@@ -1,5 +1,27 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Bash(rm -rf:*)",
+      "Bash(sudo rm:*)",
+      "Bash(docker compose down:*)",
+      "Bash(docker-compose down:*)",
+      "Bash(docker volume rm:*)",
+      "Bash(docker volume prune:*)",
+      "Bash(docker system prune:*)",
+      "Bash(npm run db:push:*)",
+      "Bash(drizzle-kit push:*)",
+      "Bash(npx drizzle-kit push:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git branch -D:*)",
+      "Bash(rclone delete:*)",
+      "Bash(rclone purge:*)",
+      "Bash(rclone deletefile:*)"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {
