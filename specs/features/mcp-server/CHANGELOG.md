@@ -1,5 +1,11 @@
 # MCP Server — Changelog
 
+## 2026-07-10 — Per-tool authorization (#681)
+- **Security (critical):** MCP sessions are now bound to the initializing user; tools, resources, and prompts enforce the same ownership/admin checks as the REST API. Previously any logged-in user could mutate any artist's data, read buyer PII, and dump application logs through MCP.
+- `createMcpServer(userId)` signature change; sessions map stores `userId`; cross-user reuse of an `mcp-session-id` returns `403`.
+- `get_logs` is now admin-only (parity with `/api/admin/logs`).
+- New tests: `server/__tests__/mcp-auth.test.ts` (cross-tenant denial, owner/admin allow paths, session binding).
+
 ## 2026-02 (Initial)
 - MCP endpoint at `POST/GET/DELETE /mcp`
 - Streamable HTTP transport with stateful per-session instances

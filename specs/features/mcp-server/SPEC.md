@@ -1,7 +1,7 @@
 # Feature: MCP Server
 
 **Status:** Active
-**Last Updated:** 2026-03-13
+**Last Updated:** 2026-07-10
 **Owner:** Architecture
 
 ## Summary
@@ -29,7 +29,14 @@ As an AI assistant (Claude), I want to access ArtVerse data and perform operatio
 
 - **Protocol:** Streamable HTTP over `POST/GET/DELETE /mcp`
 - **Authentication:** All three MCP routes (`POST`, `GET`, `DELETE /mcp`) require `isAuthenticated` middleware. Unauthenticated requests receive `401 Unauthorized`. This was added as a P0 security fix (2026-03-13, PR #84) — previously the MCP endpoint had no authentication, exposing full CRUD access to anyone.
-- **Session management:** Random UUID per session, stored in memory `Map<sessionId, {transport, server}>`
+- **Authorization (issue #681, 2026-07-10):** Each MCP session is bound to the user who initialized it — `createMcpServer(userId)` — and every tool/resource/prompt handler enforces the same ownership rules as the REST handlers in `routes.ts`:
+  - Mutations (`create_artwork`, `update_artwork`, `delete_artwork`, `update_artist_profile`, `create_blog_post`, `update_blog_post`, `delete_blog_post`, `regenerate_gallery`) require the caller's artist profile (`storage.getArtistByUserId`) to own the target entity; otherwise the tool returns an `isError` result ("Not authorized …").
+  - `update_order_status` requires the order's artwork to belong to the caller's artist.
+  - `get_logs` requires the `admin` role (mirrors `/api/admin/logs`).
+  - The `orders-by-artist` resource and `order_summary` prompt (buyer PII) require the caller to be that artist.
+  - `place_bid`, `create_order`, `search_artworks`, and public read resources remain available to any authenticated user (their REST equivalents are public).
+  - Requests carrying an `mcp-session-id` initialized by a different user receive `403` (session hijack guard).
+- **Session management:** Random UUID per session, stored in memory `Map<sessionId, {transport, server, userId}>`
 - **Headers:** `mcp-session-id` header for subsequent requests after initialization
 - **Lifecycle:** Session created on first POST, cleaned up on DELETE or transport close
 

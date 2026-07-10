@@ -3,17 +3,15 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import type { Express, Request, Response } from "express";
-import { isAuthenticated } from "./replit_integrations/auth";
-import { DatabaseStorage } from "./storage";
+import { isAuthenticated, authStorage } from "./replit_integrations/auth";
+import { storage } from "./storage";
 import { ORDER_TRANSITIONS, ORDER_STATUSES } from "@shared/schema";
 import { normalizeArtworkForCreate, normalizeArtworkForUpdate } from "./publish";
 import { mcpLogger as logger, logFilePath } from "./logger";
 import fs from "fs";
 import readline from "readline";
 
-const storage = new DatabaseStorage();
-
-export function createMcpServer(): McpServer {
+export function createMcpServer(userId: string): McpServer {
   const mcp = new McpServer(
     {
       name: "vernis9-mcp",
@@ -27,6 +25,22 @@ export function createMcpServer(): McpServer {
       },
     }
   );
+
+  // ─── AUTHORIZATION ───────────────────────────────────────────
+  // Mirrors the REST handlers in routes.ts: mutations require the caller's
+  // artist profile to own the target; log access requires the admin role.
+
+  const getCallerArtist = () => storage.getArtistByUserId(userId);
+
+  const isCallerAdmin = async () => {
+    const user = await authStorage.getUser(userId);
+    return user?.role === "admin";
+  };
+
+  const forbidden = (message: string) => ({
+    content: [{ type: "text" as const, text: `Error: ${message}` }],
+    isError: true as const,
+  });
 
   // ─── RESOURCES ───────────────────────────────────────────────
 
@@ -170,6 +184,18 @@ export function createMcpServer(): McpServer {
     new ResourceTemplate("vernis9://artists/{artistId}/orders", { list: undefined }),
     { description: "Get all orders for a specific artist's artworks" },
     async (uri, params) => {
+      const caller = await getCallerArtist();
+      if (!caller || caller.id !== (params.artistId as string)) {
+        return {
+          contents: [
+            {
+              uri: uri.href,
+              mimeType: "application/json",
+              text: JSON.stringify({ error: "Not authorized to view another artist's orders" }),
+            },
+          ],
+        };
+      }
       const orders = await storage.getOrdersByArtist(params.artistId as string);
       return {
         contents: [
@@ -276,6 +302,13 @@ export function createMcpServer(): McpServer {
     },
     async (args) => {
       try {
+        const caller = await getCallerArtist();
+        if (!caller) {
+          return forbidden("Not authorized — no artist profile");
+        }
+        if (args.artistId !== caller.id) {
+          return forbidden("Not authorized to create artworks for another artist");
+        }
         const artist = await storage.getArtist(args.artistId);
         if (!artist) {
           return { content: [{ type: "text", text: "Error: Artist not found" }], isError: true };
@@ -331,9 +364,16 @@ export function createMcpServer(): McpServer {
     async (args) => {
       try {
         const { artworkId, ...updates } = args;
+        const caller = await getCallerArtist();
+        if (!caller) {
+          return forbidden("Not authorized");
+        }
         const existing = await storage.getArtwork(artworkId);
         if (!existing) {
           return { content: [{ type: "text", text: "Error: Artwork not found" }], isError: true };
+        }
+        if (existing.artistId !== caller.id) {
+          return forbidden("Not authorized to edit another artist's artwork");
         }
         const filteredUpdates = Object.fromEntries(
           Object.entries(updates).filter(([_, v]) => v !== undefined)
@@ -361,9 +401,16 @@ export function createMcpServer(): McpServer {
     },
     async (args) => {
       try {
+        const caller = await getCallerArtist();
+        if (!caller) {
+          return forbidden("Not authorized");
+        }
         const existing = await storage.getArtwork(args.artworkId);
         if (!existing) {
           return { content: [{ type: "text", text: "Error: Artwork not found" }], isError: true };
+        }
+        if (existing.artistId !== caller.id) {
+          return forbidden("Not authorized to delete another artist's artwork");
         }
         const deleted = await storage.deleteArtwork(args.artworkId);
         if (deleted && existing.isReadyForExhibition) {
@@ -428,9 +475,17 @@ export function createMcpServer(): McpServer {
     },
     async (args) => {
       try {
+        const caller = await getCallerArtist();
+        if (!caller) {
+          return forbidden("Not authorized");
+        }
         const order = await storage.getOrder(args.orderId);
         if (!order) {
           return { content: [{ type: "text", text: "Error: Order not found" }], isError: true };
+        }
+        const orderArtwork = await storage.getArtwork(order.artworkId);
+        if (!orderArtwork || orderArtwork.artistId !== caller.id) {
+          return forbidden("Not authorized to update this order");
         }
         const allowed = ORDER_TRANSITIONS[order.status];
         if (!allowed || !allowed.includes(args.newStatus)) {
@@ -503,6 +558,10 @@ export function createMcpServer(): McpServer {
     async (args) => {
       try {
         const { artistId, ...updates } = args;
+        const caller = await getCallerArtist();
+        if (!caller || caller.id !== artistId) {
+          return forbidden("Not authorized to edit another artist's profile");
+        }
         const existing = await storage.getArtist(artistId);
         if (!existing) {
           return { content: [{ type: "text", text: "Error: Artist not found" }], isError: true };
@@ -533,6 +592,13 @@ export function createMcpServer(): McpServer {
     },
     async (args) => {
       try {
+        const caller = await getCallerArtist();
+        if (!caller) {
+          return forbidden("Not authorized — no artist profile");
+        }
+        if (args.artistId !== caller.id) {
+          return forbidden("Not authorized to create posts for another artist");
+        }
         const artist = await storage.getArtist(args.artistId);
         if (!artist) {
           return { content: [{ type: "text", text: "Error: Artist not found" }], isError: true };
@@ -568,9 +634,16 @@ export function createMcpServer(): McpServer {
     async (args) => {
       try {
         const { postId, ...updates } = args;
+        const caller = await getCallerArtist();
+        if (!caller) {
+          return forbidden("Not authorized");
+        }
         const existing = await storage.getBlogPost(postId);
         if (!existing) {
           return { content: [{ type: "text", text: "Error: Blog post not found" }], isError: true };
+        }
+        if (existing.artistId !== caller.id) {
+          return forbidden("Not authorized to edit another artist's post");
         }
         const filteredUpdates = Object.fromEntries(
           Object.entries(updates).filter(([_, v]) => v !== undefined)
@@ -593,6 +666,17 @@ export function createMcpServer(): McpServer {
     },
     async (args) => {
       try {
+        const caller = await getCallerArtist();
+        if (!caller) {
+          return forbidden("Not authorized");
+        }
+        const existing = await storage.getBlogPost(args.postId);
+        if (!existing) {
+          return { content: [{ type: "text", text: "Blog post not found" }] };
+        }
+        if (existing.artistId !== caller.id) {
+          return forbidden("Not authorized to delete another artist's post");
+        }
         const deleted = await storage.deleteBlogPost(args.postId);
         return {
           content: [{ type: "text", text: deleted ? "Blog post deleted successfully" : "Blog post not found" }],
@@ -671,6 +755,10 @@ export function createMcpServer(): McpServer {
     },
     async (args) => {
       try {
+        const caller = await getCallerArtist();
+        if (!caller || caller.id !== args.artistId) {
+          return forbidden("Not authorized to regenerate another artist's gallery");
+        }
         const artist = await storage.getArtist(args.artistId);
         if (!artist) {
           return { content: [{ type: "text", text: "Error: Artist not found" }], isError: true };
@@ -697,6 +785,9 @@ export function createMcpServer(): McpServer {
     },
     async (args) => {
       try {
+        if (!(await isCallerAdmin())) {
+          return forbidden("Forbidden — admin access required");
+        }
         const maxEntries = Math.min(args.limit ?? 100, 2000);
         const pinoLevels: Record<string, number> = {
           fatal: 60, error: 50, warn: 40, info: 30, debug: 20, trace: 10,
@@ -813,6 +904,10 @@ Format with a compelling title, and structure with clear paragraphs. Keep it bet
       artistId: z.string().describe("The artist's ID to summarize orders for"),
     },
     async (args) => {
+      const caller = await getCallerArtist();
+      if (!caller || caller.id !== args.artistId) {
+        throw new Error("Not authorized to view another artist's orders");
+      }
       const orders = await storage.getOrdersByArtist(args.artistId);
       const artist = await storage.getArtist(args.artistId);
       return {
@@ -880,14 +975,27 @@ Use third person, present tense. Keep it professional yet warm and engaging.`,
   return mcp;
 }
 
-const sessions = new Map<string, { transport: StreamableHTTPServerTransport; server: McpServer }>();
+const sessions = new Map<string, { transport: StreamableHTTPServerTransport; server: McpServer; userId: string }>();
+
+function getRequestUserId(req: Request): string | undefined {
+  return (req.user as any)?.claims?.sub;
+}
 
 export function registerMcpRoutes(app: Express) {
   app.post("/mcp", isAuthenticated, async (req: Request, res: Response) => {
     const sessionId = req.headers["mcp-session-id"] as string | undefined;
+    const userId = getRequestUserId(req);
+    if (!userId) {
+      res.status(401).json({ jsonrpc: "2.0", error: { code: -32000, message: "Unauthorized" } });
+      return;
+    }
 
     if (sessionId && sessions.has(sessionId)) {
       const session = sessions.get(sessionId)!;
+      if (session.userId !== userId) {
+        res.status(403).json({ jsonrpc: "2.0", error: { code: -32000, message: "Session belongs to another user" } });
+        return;
+      }
       try {
         await session.transport.handleRequest(req, res, req.body);
       } catch (e: any) {
@@ -908,10 +1016,10 @@ export function registerMcpRoutes(app: Express) {
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
         onsessioninitialized: (id: string) => {
-          sessions.set(id, { transport, server: mcpServer });
+          sessions.set(id, { transport, server: mcpServer, userId });
         },
       });
-      const mcpServer = createMcpServer();
+      const mcpServer = createMcpServer(userId);
 
       transport.onclose = () => {
         if (transport.sessionId) {
@@ -935,6 +1043,10 @@ export function registerMcpRoutes(app: Express) {
       res.status(404).json({ jsonrpc: "2.0", error: { code: -32000, message: "Session not found" } });
       return;
     }
+    if (sessions.get(sessionId)!.userId !== getRequestUserId(req)) {
+      res.status(403).json({ jsonrpc: "2.0", error: { code: -32000, message: "Session belongs to another user" } });
+      return;
+    }
     try {
       await sessions.get(sessionId)!.transport.handleRequest(req, res);
     } catch (e: any) {
@@ -949,6 +1061,10 @@ export function registerMcpRoutes(app: Express) {
     const sessionId = req.headers["mcp-session-id"] as string | undefined;
     if (!sessionId || !sessions.has(sessionId)) {
       res.status(404).json({ jsonrpc: "2.0", error: { code: -32000, message: "Session not found" } });
+      return;
+    }
+    if (sessions.get(sessionId)!.userId !== getRequestUserId(req)) {
+      res.status(403).json({ jsonrpc: "2.0", error: { code: -32000, message: "Session belongs to another user" } });
       return;
     }
     try {
