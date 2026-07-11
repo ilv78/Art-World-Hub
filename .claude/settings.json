@@ -32,15 +32,6 @@
       "Bash(git branch -D:*)",
       "Bash(rclone delete:*)",
       "Bash(rclone purge:*)",
-      "Bash(npm run check)",
-      "Bash(npm run check:*)",
-      "Bash(npm test)",
-      "Bash(npm test:*)",
-      "Bash(npx tsc:*)",
-      "Bash(npx vitest:*)",
-      "Bash(node --version)",
-      "Bash(tail:*)",
-      "Bash(head:*)",
       "Bash(rclone deletefile:*)"
     ]
   },
