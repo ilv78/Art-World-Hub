@@ -108,7 +108,7 @@
     "@types/express": "^5.0.0",
     "@types/express-session": "^1.19.0",
     "@types/multer": "^2.2.0",
-    "@types/node": "24.13.1",
+    "@types/node": "26.1.0",
     "@types/passport": "^1.0.17",
     "@types/passport-local": "^1.0.38",
     "@types/pino-http": "^6.1.0",
