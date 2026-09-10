@@ -52,6 +52,36 @@ jobs:
             fi
             docker pull ghcr.io/ilv78/art-world-hub:$IMAGE_TAG
             sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=$IMAGE_TAG/" .env || echo "IMAGE_TAG=$IMAGE_TAG" >> .env
+            # --- Pre-migration safety dump (#682) ---
+            # MUST run before `docker compose up -d`: the app applies migrations on
+            # container start (docker-entrypoint.sh + DB_MIGRATION_MODE=migrate), so a
+            # dump taken after that point is already post-migration and useless.
+            echo "Taking pre-migration database dump..."
+            docker compose up -d db
+            DB_READY=""
+            for i in $(seq 1 30); do
+              if docker compose exec -T db pg_isready -U artverse -d artverse_production >/dev/null 2>&1; then
+                DB_READY=1
+                break
+              fi
+              sleep 1
+            done
+            if [ -z "$DB_READY" ]; then
+              echo "ERROR: db not ready after 30s — aborting before migrations run"
+              exit 1
+            fi
+            mkdir -p ~/backups/pre-deploy
+            DUMP_FILE="$HOME/backups/pre-deploy/$(date -u +%Y%m%dT%H%M%SZ)-${IMAGE_TAG}.dump"
+            docker compose exec -T db pg_dump -U artverse -Fc artverse_production > "$DUMP_FILE"
+            # A dropped stream leaves a truncated file that only fails at restore time.
+            if ! docker compose exec -T db pg_restore --list > /dev/null < "$DUMP_FILE"; then
+              echo "ERROR: pre-migration dump is truncated or unreadable — aborting deploy"
+              rm -f "$DUMP_FILE"
+              exit 1
+            fi
+            echo "Pre-migration dump OK: $DUMP_FILE ($(du -h "$DUMP_FILE" | cut -f1))"
+            # Keep the 10 most recent; the nightly pull to the dev VPS archives them off-box.
+            ls -1t "$HOME"/backups/pre-deploy/*.dump 2>/dev/null | tail -n +11 | xargs -r rm -f
             # Ensure upload subdirs exist on the Docker volume (new subdirs may be missing)
             docker compose run --rm --no-deps --user root --entrypoint sh app -c "mkdir -p /app/uploads/artworks /app/uploads/blog-covers /app/uploads/avatars /app/uploads/og-cards /app/logs && chown -R appuser:appgroup /app/uploads /app/logs"
             docker compose up -d --remove-orphans
