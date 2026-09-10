@@ -1,7 +1,7 @@
 # Vernis9 — Deployment Procedures
 
 **Status:** Active
-**Last Updated:** 2026-03-23
+**Last Updated:** 2026-09-10
 
 ---
 
@@ -80,7 +80,19 @@ sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=<tag>/' .env
 docker compose up -d --remove-orphans
 ```
 
-**Note:** Rollback only affects the app image. If a database migration already ran, you may need to restore from a DB backup for destructive schema changes.
+**Note:** Rollback only affects the app image — it does not touch data. If a database migration already ran and needs undoing, restore from the **pre-migration dump** that every production deploy now takes automatically (see §9), then redeploy:
+
+```bash
+# On the dev VPS — list what production has, newest first
+ssh production 'ls -1t ~/backups/pre-deploy/*.dump | head'
+
+# Dry run first: restore into a throwaway container and check row counts
+scp production:~/backups/pre-deploy/<file>.dump /tmp/
+~/app/deploy/backup/restore.sh --dump /tmp/<file>.dump --target scratch
+
+# Then, if it looks right
+~/app/deploy/backup/restore.sh --dump /tmp/<file>.dump --target production --i-mean-it
+```
 
 ### Database migration mode (security)
 
@@ -88,9 +100,14 @@ Production uses `DB_MIGRATION_MODE=migrate` in `docker-compose.yml`. This means 
 
 ### Database backup (before destructive changes)
 
+Scheduled backups run automatically (§9). For a one-off dump before doing something risky by hand:
+
 ```bash
-ssh -i ~/.ssh/artverse-deploy production@artverse.idata.ro \
-  "cd ~/app && docker compose exec -T db pg_dump -U artverse artverse_production" > backup.sql
+# Preferred — same format and verification as the scheduled job
+~/app/deploy/backup/pull-backup.sh db
+
+# Or a plain SQL dump, ad hoc
+ssh production "cd ~/app && docker compose exec -T db pg_dump -U artverse artverse_production" > backup.sql
 ```
 
 ---
@@ -359,3 +376,103 @@ Deploy notifications are sent to Telegram automatically. You'll receive a messag
 Each notification includes the `@racu8_bot` tag, status, repo name, environment URL, image tag, and who triggered it.
 
 **Setup:** Requires `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` GitHub secrets. If not set, notifications are silently skipped.
+
+---
+
+## 9. Backups & Restore
+
+Added in #682. Before this, the platform had no backups of any kind — a lost Docker volume meant losing every order, user, artist and artwork permanently.
+
+### Topology
+
+Backups are **pulled** by the dev VPS from production and staging over the existing `ssh production` / `ssh staging` aliases.
+
+| | Host | Webdock node |
+|---|---|---|
+| Production + staging | `artverse.idata.ro` | `ilc01node02` |
+| Backup target (dev VPS) | dev box | `ilc01node03` |
+
+Pull, not push, is deliberate: production holds no credentials for the dev VPS and cannot reach or delete the backup history. A compromised or misbehaving production box cannot destroy its own backups.
+
+**Known limitation:** both nodes are Webdock, same account. This protects against a lost volume, a bad migration, a compose mixup or a disk failure on node02 — it does **not** protect against provider-wide failure or account lockout. `pull-backup.sh` has a `BACKUP_REMOTE` hook (rclone) that adds a genuine off-provider copy when we want one; it is unset today.
+
+### What runs, and when
+
+| Job | Schedule (UTC) | Covers |
+|---|---|---|
+| `artverse-backup.sh db` | every 12h (00:00, 12:00) | production DB + staging DB |
+| `artverse-backup.sh uploads` | daily 03:30 | production `uploads` volume |
+| Pre-migration dump | every production deploy | production DB, before migrations apply |
+
+Worst-case data loss (RPO): **12 hours** for the database, 24 hours for uploaded images. Point-in-time recovery (WAL archiving) is deliberately out of scope.
+
+### Where things live
+
+| Path (dev VPS) | Contents |
+|---|---|
+| `~/backups/prod/db/` | production dumps, `pg_dump -Fc` |
+| `~/backups/prod/uploads/current/` | mirror of the live uploads volume |
+| `~/backups/prod/uploads/snapshots/` | dated hardlink snapshots |
+| `~/backups/staging/db/` | staging dumps |
+| `~/backups/logs/backup.log` | cron output |
+| `~/.config/artverse-backup.env` | Telegram credentials + config overrides (chmod 600, never committed) |
+| `~/bin/artverse-backup.sh` | installed copy of `deploy/backup/pull-backup.sh` |
+| `~/backups/pre-deploy/` **on production** | pre-migration dumps, last 10 |
+
+**The cron runs `~/bin/artverse-backup.sh`, not the repo copy.** The repo working tree on the dev VPS changes branch and gets `git reset --mixed HEAD~1` under the `resume` workflow (see MULTI-DEVICE.md) — a cron pointed into it would silently run whatever happened to be checked out. After changing `deploy/backup/pull-backup.sh`, re-copy it:
+
+```bash
+cp ~/app/deploy/backup/pull-backup.sh ~/bin/artverse-backup.sh
+```
+
+### Retention
+
+Grandfather-father-son on the production database: every dump for 30 days, then one per ISO week for 12 weeks, then one per month for 12 months. Uploads keep 30 daily hardlink snapshots; staging keeps 7 dumps.
+
+Measured 2026-09-10: a production dump is **48 KB** (8.8 MB database, `-Fc` compressed) and the uploads volume is **138 MB** across 458 files. Because snapshots are hardlinked, 30 of them cost ~138 MB plus whatever artwork was added — not 30 × 138 MB. Steady state is well under 1 GB against 22 GB free. The script aborts and alerts rather than filling the disk below 5 GB free.
+
+### Failure alerts
+
+`pull-backup.sh` messages Telegram **on failure only**, via the same `@racu8_bot` as CI. Credentials live in `~/.config/artverse-backup.env` on the dev VPS — cron has no access to GitHub Actions secrets. If those are blank, failures are logged but silent.
+
+Every dump is read back with `pg_restore --list` before being kept, and an uploads transfer producing zero files is rejected rather than overwriting the mirror — a dropped SSH stream otherwise leaves a truncated backup that only reveals itself at restore time.
+
+### Restore drill
+
+Restoring into a throwaway container touches nothing real and is safe to run any time:
+
+```bash
+~/app/deploy/backup/restore.sh --dump ~/backups/prod/db/<timestamp>.dump --target scratch
+```
+
+It prints row counts for `users`, `artists`, `artworks`, `orders`, `auctions`, `bids`. Compare against live production:
+
+```bash
+ssh production 'cd ~/app && docker compose exec -T db psql -U artverse -d artverse_production -c "SELECT count(*) FROM artworks;"'
+```
+
+**Drill log** — run one at least every quarter, and record it here:
+
+| Date | Dump | Result |
+|---|---|---|
+| 2026-09-10 | `20260910T191523Z.dump` | Pass — 3 users, 1 artist, 44 artworks, 3 orders; matched live production exactly |
+
+### Restoring for real
+
+```bash
+# Staging — destructive to staging, no extra flag needed
+~/app/deploy/backup/restore.sh --dump <file> --target staging
+
+# Production — requires --i-mean-it AND typing the database name at the prompt.
+# Stops the app container first so nothing writes mid-restore, then restarts it.
+~/app/deploy/backup/restore.sh --dump <file> --target production --i-mean-it
+```
+
+### Restoring uploaded images
+
+The uploads mirror is plain files — copy them straight back into the volume:
+
+```bash
+tar -cf - -C ~/backups/prod/uploads/snapshots/<timestamp> . \
+  | ssh production 'docker run --rm -i -v artverse-production_uploads:/data alpine tar -xf - -C /data'
+```
