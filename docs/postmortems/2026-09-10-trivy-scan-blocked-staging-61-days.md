@@ -23,7 +23,7 @@ incident_state_doc: "None — no live incident document existed; reconstructed f
 
 ## Executive Summary
 
-Between 2026-07-11 and 2026-09-10, every CI run on `main` failed at the `Build & Trivy Container Scan` job. Because the staging deploy depends on that job, **staging did not deploy for 61 days**, and 16 merges to `main` never ran in any environment. Production has not been deployed since 2026-07-05 — **67 days as of this writing** — so a merged security fix closing a mass-IDOR and privilege-escalation hole in the MCP endpoint is **still not in production**.
+Between 2026-07-11 and 2026-09-10, every CI run on `main` failed at the `Build & Trivy Container Scan` job. Because the staging deploy depends on that job, **staging did not deploy for 61 days**, and 16 merges to `main` never ran in any environment. Production had not been deployed since 2026-07-05 — 67 days — so a merged security fix closing a mass-IDOR and privilege-escalation hole in the MCP endpoint reached production only on 2026-09-10 20:51 UTC, in v3.19.1.
 
 No code change caused this. The trigger was external: new CVEs entering Trivy's vulnerability database matched packages the project does not control, in the base image's bundled npm and in a build-time bundler binary. A second, independent cause compounded it three weeks later when five `libgnutls30` suppressions reached their `expired_at` date and lapsed.
 
@@ -40,7 +40,7 @@ The failure alert was not missing. A Telegram notification fired on **every** we
 | Metric | Value |
 |--------|-------|
 | Duration | 61 days (2026-07-11 20:17 UTC → 2026-09-10 20:17 UTC) |
-| Production deploy gap | **67 days and ongoing** — last production deploy 2026-07-05 |
+| Production deploy gap | **67 days** — 2026-07-05 → 2026-09-10 20:51 UTC, closed by v3.19.1 |
 | Users / requests affected | **0** — no user-visible degradation at any point |
 | Features / endpoints affected | None in production |
 | Error rate during incident | N/A — production served normally throughout |
@@ -63,7 +63,7 @@ Production was never degraded. The impact was entirely to the delivery pipeline 
 - **Credentials potentially exposed:** None.
 - **User data at risk:** No direct exposure — but a security fix remains undeployed, see below.
 
-The sharpest consequence is a **security fix that is still not in production**, not an active exposure.
+The sharpest consequence is a **security fix that took 67 days to reach production**, not an active exposure.
 
 [#695](https://github.com/ilv78/Art-World-Hub/pull/695) (merged 2026-07-10, closing [#681](https://github.com/ilv78/Art-World-Hub/issues/681) — "MCP endpoint missing per-tool authorization: mass IDOR + privilege escalation") merged one day before the pipeline broke.
 
@@ -72,9 +72,13 @@ Verified build identity rather than release string:
 | Environment | Build | Last deployed | Contains #695? |
 |---|---|---|---|
 | Staging | 1862 (`41bd3d3`, current `main`) | 2026-09-10 | Yes — reached staging 2026-07-10, in the last green run before the break |
-| Production | 1755 (`v3.19.0`, tagged 2026-07-05) | **2026-07-05 — 67 days ago** | **No** |
+| Production | 1755 (`v3.19.0`, tagged 2026-07-05) | 2026-07-05 | No — **remediated 2026-09-10 20:51 UTC** |
 
-So the fix did reach staging before the pipeline froze. It has **never reached production**, and that remains true at the time of writing. Any user able to authenticate retains the pre-fix ability to act across tenants via `/mcp` in production. Whether that was exercised is **UNKNOWN — `/mcp` access-log review needed before publishing**.
+So the fix did reach staging before the pipeline froze, with one day of margin. It did **not** reach production until 2026-09-10 20:51 UTC, when v3.19.1 (`5f60420`, build 1868) was deployed — closing a **67-day window** during which any authenticated user retained the pre-fix ability to act across tenants via `/mcp` in production.
+
+**Remediated 2026-09-10 20:51 UTC** ([#726](https://github.com/ilv78/Art-World-Hub/issues/726)): production verified on v3.19.1, `26424e2` confirmed as an ancestor of the deployed commit, `POST /mcp` unauthenticated returning 401.
+
+Whether the gap was exercised during that window is **UNKNOWN** — production `/mcp` access-log review across 2026-07-05 → 2026-09-10 20:51 UTC is tracked in [#732](https://github.com/ilv78/Art-World-Hub/issues/732) and must be answered before this document advances to Final.
 
 The container scan did not block production deploys directly — those are `workflow_dispatch` and independent of the staging gate. It blocked them *in effect*: the documented promotion process is "verify on staging, then promote," and with staging frozen there was nothing validated to promote. Issue #710 states this outcome explicitly: "A release cut today would promote a month of unvalidated code or be blocked outright."
 
@@ -247,7 +251,9 @@ None was applied during the 61 days. The pipeline stayed red; work continued to 
 
 Verified on the `main`-push run (`34525511519`), not only PR-side: `Build & Trivy Container Scan: success`, `Deploy to Staging: success`. Staging now runs `41bd3d3`, matching `main` HEAD — confirmed via the deployed `IMAGE_TAG`, not `/api/version`.
 
-**Production remains on the 2026-07-05 build.** Unblocking the pipeline does not deploy it; a production release is still required.
+**Unblocking the pipeline did not deploy production** — production deploys are manual. A release was cut separately the same day: v3.19.1 (`5f60420`) via `release.yml` → PR #734 (23/23 checks green, the first fully clean pipeline in 61 days) → `release-finalize.yml` → `deploy-production.yml`, deployed 2026-09-10 20:51 UTC.
+
+That deploy also exercised the pre-migration database backup added in [#682](https://github.com/ilv78/Art-World-Hub/issues/682) for the first time, writing `~/backups/pre-deploy/20260910T205107Z-5f60420….dump` (45 KB) before migrations applied.
 
 ### What Slowed Recovery
 
@@ -284,7 +290,7 @@ N/A — no credentials were exposed or involved.
 
 ### Where We Got Lucky
 
-- **The still-undeployed fix is for an authenticated-only attack surface.** [#681](https://github.com/ilv78/Art-World-Hub/issues/681) requires a logged-in account to exploit. Had it been unauthenticated, 67 days of production exposure on a live marketplace would have been materially worse.
+- **The late-deployed fix was for an authenticated-only attack surface.** [#681](https://github.com/ilv78/Art-World-Hub/issues/681) requires a logged-in account to exploit. Had it been unauthenticated, 67 days of production exposure on a live marketplace would have been materially worse.
 - **The fix did reach staging** on 2026-07-10, in the last green run before the break — one day of margin. Had the pipeline broken 24 hours earlier, it would have been absent from both environments.
 - **Nothing needed to ship urgently.** The 61-day window fell in a quiet development period. The same freeze during a release or an incident response would have blocked the fix for it.
 - **Production kept running.** The break prevented deploys rather than breaking a deploy. A gate that failed *open* — shipping an unscanned image — would have been the more dangerous failure.
@@ -303,7 +309,7 @@ N/A — no credentials were exposed or involved.
 | 5 | Re-enable scheduled security scans so the advisory database is sampled daily rather than only on push | detect | **P1** | [role] | [#533](https://github.com/ilv78/Art-World-Hub/issues/533) |
 | 6 | Add an environment-freshness check comparing each environment's **deployed commit SHA** against `main`, alerting when an environment falls behind by more than N days. Must not use `/api/version` — that reports the release tag, was identical (`v3.19.0`) on a fresh and a 67-day-stale environment during this incident, and would have shown nothing wrong | detect | **P1** | [role] | [#730](https://github.com/ilv78/Art-World-Hub/issues/730) |
 | 7 | Require that any suppression naming an external fix (e.g. "base-image rebuild") records how the fix was verified as available, and a fallback if upstream has not acted | document | P2 | [role] | [#731](https://github.com/ilv78/Art-World-Hub/issues/731) |
-| 8 | Deploy the MCP per-tool authorization fix ([#695](https://github.com/ilv78/Art-World-Hub/pull/695)) to production — it has been merged and staging-validated since 2026-07-10 and is still absent from production | repair | **P0** | [role] | [#726](https://github.com/ilv78/Art-World-Hub/issues/726) |
+| 8 | Deploy the MCP per-tool authorization fix ([#695](https://github.com/ilv78/Art-World-Hub/pull/695)) to production — **DONE 2026-09-10 20:51 UTC in v3.19.1** | repair | **P0** | [role] | [#726](https://github.com/ilv78/Art-World-Hub/issues/726) ✅ |
 
 ⚠️ **NEEDS DETAIL** on item 1: escalation channel beyond Telegram (the current channel demonstrably did not convert to action) is an open design question for the reviewer.
 
@@ -337,7 +343,7 @@ Not a security incident in the compromise sense — no exposure, no credentials 
 **Open items for the reviewer:**
 
 1. `/mcp` production access-log review is marked `UNKNOWN` in the Data/Security Impact section. Fill in before publishing.
-2. **Action item 8 is live work, not a follow-up.** #695 is still not in production as of 2026-09-10 20:25 UTC — tracked in [#726](https://github.com/ilv78/Art-World-Hub/issues/726).
+2. Action item 8 is **closed** — production deployed to v3.19.1 at 2026-09-10 20:51 UTC and the fix verified live ([#726](https://github.com/ilv78/Art-World-Hub/issues/726)).
 3. Alert history before 2026-08-10 could not be confirmed — GitHub run retention no longer reaches it. The ≥13 alert count is a floor, not a total.
 4. Severity is assessed **P1** on the basis of a 61-day undeployed security fix and a frozen delivery pipeline, despite zero user-visible impact. Downgrade to P2 if the pipeline-only framing is preferred.
 5. Action items 1, 2 and 8 are proposed as P0 because the two prior incidents of this class were each closed by fixing the CVEs alone.
