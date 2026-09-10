@@ -8,7 +8,17 @@ Deployment tags (`release-{run_number}`) are created automatically on every push
 
 ## [Unreleased]
 
-_Nothing yet — all recent work included in v3.19.0 below._
+_Nothing yet — all recent work included in v3.19.1 below._
+
+## [3.19.1] - 2026-09-10
+
+### Security
+- [Security] npm audit red on main — 14 vulns (5 high), `npm audit fix` is a no-op; ranges need bumping ([#722](https://github.com/ilv78/Art-World-Hub/issues/722))
+- [Security] MCP endpoint missing per-tool authorization (mass IDOR + privilege escalation) ([#681](https://github.com/ilv78/Art-World-Hub/issues/681))
+
+### Changed
+- CI: main red since 2026-07-13 — Trivy scan blocks all staging deploys (recurrence of #670) ([#710](https://github.com/ilv78/Art-World-Hub/issues/710))
+- [Reliability] No database backup strategy — total data-loss risk ([#682](https://github.com/ilv78/Art-World-Hub/issues/682))
 
 ## [3.19.0] - 2026-07-05
 
