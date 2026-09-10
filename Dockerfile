@@ -27,6 +27,7 @@ ENV APP_VERSION=$APP_VERSION
 # hadolint ignore=DL3008
 RUN apt-get update \
     && apt-get install -y --no-install-recommends fontconfig \
+    && apt-get install -y --only-upgrade libgnutls30 \
     && rm -rf /var/lib/apt/lists/*
 COPY assets/fonts/PlayfairDisplay-Bold.ttf assets/fonts/Inter-Regular.ttf /usr/share/fonts/truetype/vernis9/
 RUN fc-cache -f
