@@ -29,6 +29,7 @@ A postmortem is required for any of:
 
 | Date | Title | Severity | Trigger | Status |
 |------|-------|----------|---------|--------|
+| 2026-09-10 | [Container scan gate blocked staging deploys for 61 days](./2026-09-10-trivy-scan-blocked-staging-61-days.md) | P1 | Monitoring failure — alert fired repeatedly, unactioned | Action Items Open |
 | 2026-04-13 | [Dependabot auto-merge backlog from strict branch protection](./2026-04-13-dependabot-auto-merge-backlog.md) | P3 | Stakeholder request / monitoring gap | Action Items Open |
 | 2026-03-13 | [Admin section code pushed directly to main](./2026-03-13-issue-8-direct-push-to-main.md) | P2 | On-call intervention (rollback) | Draft |
 
