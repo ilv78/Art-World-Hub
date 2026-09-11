@@ -178,6 +178,8 @@ jobs:
 
     permissions:
       contents: write
+      # Needed to post deploy evidence back to the issue (#744).
+      issues: write
 
     steps:
       - name: Checkout
@@ -263,19 +265,83 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             cd ~/app
+            # Since #738 the active file is `app.<n>.log` — pino-roll inserts the
+            # number before the extension. `app.log` survives only on volumes that
+            # predate that change, so asserting on it passed while reading the
+            # PREVIOUS build's log, and would fail outright on a fresh volume.
+            # Resolve the newest file the same way `logReadPaths()` does: highest
+            # numeric suffix, falling back to the legacy name.
+            LOG_FILE=$(docker compose exec -T app sh -c \
+              'ls -1 /app/logs/app.*.log 2>/dev/null | sort -t. -k2 -n | tail -1' | tr -d "\r")
+            if [ -z "$LOG_FILE" ]; then
+              LOG_FILE=/app/logs/app.log
+            fi
+            echo "Active log file: $LOG_FILE"
             echo "Checking log file exists..."
-            docker compose exec -T app test -f /app/logs/app.log || { echo "FAIL: /app/logs/app.log not found"; exit 1; }
+            docker compose exec -T app test -f "$LOG_FILE" || { echo "FAIL: $LOG_FILE not found"; exit 1; }
             echo "Checking log file has entries..."
-            LOG_LINES=$(docker compose exec -T app wc -l < /app/logs/app.log)
+            LOG_LINES=$(docker compose exec -T app wc -l < "$LOG_FILE")
             if [ "$LOG_LINES" -lt 1 ]; then
               echo "FAIL: log file is empty"
               exit 1
             fi
             echo "Checking logs are valid JSON..."
-            docker compose exec -T app tail -1 /app/logs/app.log | python3 -c "import sys,json; json.load(sys.stdin)" || { echo "FAIL: last log line is not valid JSON"; exit 1; }
+            docker compose exec -T app tail -1 "$LOG_FILE" | python3 -c "import sys,json; json.load(sys.stdin)" || { echo "FAIL: last log line is not valid JSON"; exit 1; }
             echo "Checking startup log entries..."
-            docker compose exec -T app grep -c '"msg":"Server listening"' /app/logs/app.log > /dev/null || { echo "FAIL: no Server listening entry"; exit 1; }
-            echo "Logging smoke test passed — $LOG_LINES log entries, valid JSON"
+            docker compose exec -T app grep -c '"msg":"Server listening"' "$LOG_FILE" > /dev/null || { echo "FAIL: no Server listening entry"; exit 1; }
+            # The audit trail (#738) must actually be wired: /mcp requests reach
+            # pino-http only because autoLogging was widened to cover them.
+            echo "Checking the MCP audit trail is wired..."
+            docker compose exec -T app grep -q '"module":"mcp"' "$LOG_FILE" || { echo "FAIL: no mcp module entries"; exit 1; }
+            echo "Logging smoke test passed — $LOG_LINES entries in $LOG_FILE, valid JSON"
+
+      # Post-deploy evidence (#744). An autonomous pipeline merges its own work,
+      # so the record that a change actually ran has to be written somewhere the
+      # developer reads — the issue — rather than left in a job log nobody opens.
+      # Closes the gap the #732 review hit: CI said "deployed", and answering
+      # "did it work?" still meant SSH-ing to a box.
+      - name: Post deploy evidence to the issue
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+
+          # Squash merges carry "(#123)" for the PR and usually "(#456)" for the
+          # issue; both are worth commenting on, and GitHub silently ignores a
+          # comment on a closed issue.
+          issues=$(printf '%s' "$COMMIT_MESSAGE" | grep -oE '#[0-9]+' | tr -d '#' | sort -u)
+          if [ -z "$issues" ]; then
+            echo "No issue or PR referenced in the commit message; nothing to post."
+            exit 0
+          fi
+
+          version=$(curl --silent --fail "${{ secrets.STAGING_URL }}/api/version" || echo '{}')
+
+          body=$(cat <<EOF
+          ### ✅ Deployed to staging
+
+          | | |
+          |---|---|
+          | Commit | \`${{ github.sha }}\` |
+          | Run | [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |
+          | Version reported by staging | \`$(printf '%s' "$version" | head -c 200)\` |
+
+          Smoke tests passed: health endpoint, version and changelog, and the logging
+          infrastructure (active rotated log file present, valid NDJSON, startup entry,
+          MCP audit entries).
+
+          This confirms the build is **live on staging** — not that this change's own
+          behaviour was exercised. Issue-specific verification belongs in a comment of
+          its own.
+          EOF
+          )
+
+          for issue in $issues; do
+            echo "Commenting on #$issue"
+            gh issue comment "$issue" --body "$body" || echo "Could not comment on #$issue (may be a PR or inaccessible); continuing."
+          done
 
       - name: Tag release in git
         if: success()
