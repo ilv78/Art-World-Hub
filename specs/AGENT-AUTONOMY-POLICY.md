@@ -53,9 +53,11 @@ merge rather than merely reporting. It is required *because* it was proven stabl
 first — a mandatory gate that can crash blocks every merge in the repository, which
 costs the developer far more than it saves.
 
-The check also **guards itself**: `script/gated-paths.mjs` and its workflow are
-gated paths. Without that, an agent could widen its own authority in a single PR,
-which would make every other rule here unenforceable.
+The check also **guards itself**: `script/gated-paths.mjs`, its workflow, and
+`.github/workflows/auto-merge.yml` are gated paths. Without that, an agent could
+widen its own authority in a single PR, which would make every other rule here
+unenforceable. `auto-merge.yml` joined that list when §1a made it load-bearing —
+quietly restoring unconditional auto-merge would re-grant Tier B everywhere at once.
 
 **This file is deliberately not guarded.** §11's write-back rule requires editing it
 every time an escalation is answered; charging a label for each of those is exactly
@@ -65,6 +67,76 @@ in this prose — editing the document cannot widen what CI blocks.
 **Known limit, stated rather than papered over:** an agent acting with the
 developer's own credentials is indistinguishable from the developer. The check
 rejects *bot* accounts, not impersonation.
+
+---
+
+## 1a. Tiers — when the approval step applies at all
+
+§1 says *what* needs a human. This says *when* the plan-approval step before writing
+code applies. An issue is in exactly one tier.
+
+| Tier | Entered by | Plan approval | Merge | Ends at |
+|---|---|---|---|---|
+| **A · Escorted** | the default — any issue without `agent-ready` | **Required.** Post the plan, wait. | Human merges, or applies `agent-review` | wherever the developer says |
+| **B · Autonomous** | `agent-ready`, **human-applied** | **Not required.** The issue text is the spec. | Auto-merges on green | **staging** |
+| **C · Gated** | touching any §1 item, from either tier | — | Blocked until `human-approved` | — |
+
+Tier A is the default because autonomy is opt-in per issue, never opt-out. An agent may
+**never** move its own issue into Tier B: `agent-ready` is human-applied, under the same
+timeline check as `human-approved`. A self-service tier boundary is not a boundary.
+
+**Tier B removes:** plan approval, priority confirmation at issue creation, mid-work
+clarification, merge approval, staging deploy approval.
+**Tier B does not remove:** the decision log, the documentation rules (§8), what "done"
+means (§9), or anything on the gated list.
+
+### The five boundary cases
+
+1. **A gated change discovered mid-run does not stop the run.** Finish everything that
+   does not depend on it (§10.1), open the PR, and let `Gated Path Review` fail. **The
+   failing check is the escalation** — one batched comment with the options, the
+   recommendation, and what happens if no answer arrives. No second ping.
+2. **Scope drift is declared, not escalated.** A deviation the issue text does not cover
+   ships with a declaration in the PR body (#742's precedent). A deviation that changes
+   what the issue is *for* drops to Tier A: post the interpretation, label `agent-stuck`,
+   wait. The test is whether the developer would still recognise this as the thing they
+   filed.
+3. **Three consecutive red CI cycles on one PR ends the run.** Stop, label `agent-failed`,
+   leave the branch and PR intact. No fourth attempt, no force-push, no branch deletion.
+   *Three rather than one because transient CI failures are common and a one-strike rule
+   hands back work a re-run fixes; not five because past three the agent is guessing.*
+4. **Production is in no tier.** Always the developer's `workflow_dispatch` on
+   `deploy-production.yml`, promoted often and in small batches (§7).
+5. **An unlabelled issue is not an invitation.** The absence of `agent-ready` means Tier A.
+   It never means "probably fine".
+
+### Label lifecycle
+
+`agent-ready` → `agent-working` → `agent-review` → `agent-done`, with two exits.
+
+| Label | Meaning | Applied by | Leaves when |
+|---|---|---|---|
+| `agent-ready` | Spec-complete, eligible for Tier B | **human only** | — |
+| `agent-working` | A run has claimed this issue | agent | the PR opens |
+| `agent-review` | PR open — and what permits auto-merge | agent | the PR merges |
+| `agent-done` | Merged and live on staging | agent | terminal, success |
+| `agent-stuck` | An escalation is open. Work is sound and resumable. **Waits silently — it pages nobody.** | agent | the developer answers |
+| `agent-failed` | The run itself is dead. | agent | a human resets it |
+
+`agent-stuck` and `agent-failed` are deliberately distinct. The first means a question is
+outstanding and the work is fine; the second means the attempt failed. Collapsing them
+loses the only signal that says whether a human has to do anything.
+
+### Enforcement
+
+`auto-merge.yml` requires `agent-review` (or `autorelease`, which `release.yml` applies to
+its own PR) before enabling auto-merge. Until now it auto-merged **every** non-draft PR
+opened by the repository owner the moment CI went green — so Tier A's approval step was
+advisory at both ends, and every PR in this issue's own series self-merged. Conditioning
+it is what gives Tier A mechanical meaning.
+
+**Consequence, stated here rather than discovered later:** a human-opened PR no longer
+merges itself. Apply `agent-review` to opt one in, or merge it by hand.
 
 ---
 
@@ -229,6 +301,7 @@ Only for the gated list (§1), or for something genuinely unrecoverable if wrong
 
 | Date | Change |
 |---|---|
+| 2026-09-11 | Tier B activated (§1a): plan approval drops for issues a human labels `agent-ready`. `agent-stuck` created as a state distinct from `agent-failed`; `auto-merge.yml` conditioned on `agent-review` and added to the self-guarded paths. ([#744](https://github.com/ilv78/Art-World-Hub/issues/744)) |
 | 2026-09-11 | Added §9a, the PR contract: every PR must state its issue, its verification, its CI coverage and any deviation. ([#744](https://github.com/ilv78/Art-World-Hub/issues/744)) |
 | 2026-09-11 | `Gated Path Review` made a required status check on `main`; self-guard narrowed to the detector and its workflow — guarding this file fought §11's write-back rule and bought no enforcement. ([#744](https://github.com/ilv78/Art-World-Hub/issues/744)) |
 | 2026-09-11 | Added §1 Enforcement: `gated-paths.yml` + `script/gated-paths.mjs` now enforce items 1 and 3 mechanically, self-guard the gate, and state plainly which items a diff cannot reveal. ([#744](https://github.com/ilv78/Art-World-Hub/issues/744)) |

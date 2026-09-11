@@ -1,8 +1,31 @@
 name: Auto-Merge
 
+# Auto-merge is the merge half of the tier system (AGENT-AUTONOMY-POLICY.md §1a).
+#
+# It used to enable auto-merge on *every* non-draft PR from the repository owner, which
+# meant Tier A's plan-approval step was enforced by nothing at the merge layer: a PR whose
+# plan was never approved merged itself the moment CI went green. Every PR in #744's own
+# series did exactly that.
+#
+# So it now requires a label that says which lane the PR is in:
+#
+#   agent-review — a Tier B run has opened its PR (agents apply this; it is the signal
+#                  that the issue carried the human-applied `agent-ready` label)
+#   autorelease  — the release PR opened by release.yml, which must still merge on its own
+#
+# `labeled` is in the trigger list because the label usually arrives *after* the PR is
+# opened — without it, labelling an existing PR would do nothing.
+#
+# Gated changes are unaffected: `Gated Path Review` is a required status check, and
+# GitHub's native auto-merge waits for required checks, so a gated PR still sits until a
+# human applies `human-approved`.
+#
+# This file is a self-guarded path in script/gated-paths.mjs. Restoring unconditional
+# auto-merge would re-grant Tier B to every PR in one edit, so that edit costs a label.
+
 on:
   pull_request_target:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
 
 permissions:
   contents: write
@@ -14,7 +37,11 @@ jobs:
     runs-on: ubuntu-latest
     if: >-
       github.event.pull_request.draft == false &&
-      github.event.pull_request.user.login == github.repository_owner
+      github.event.pull_request.user.login == github.repository_owner &&
+      (
+        contains(github.event.pull_request.labels.*.name, 'agent-review') ||
+        contains(github.event.pull_request.labels.*.name, 'autorelease')
+      )
 
     steps:
       - name: Enable auto-merge

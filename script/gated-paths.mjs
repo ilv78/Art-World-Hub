@@ -40,6 +40,11 @@ export const APPROVAL_LABEL = "human-approved";
  * authority by editing the detector or the workflow that runs it, which is the one
  * change that makes every other rule unenforceable.
  *
+ * `auto-merge.yml` is on that list for the same reason, since §1a made it load-bearing:
+ * it now enables auto-merge only for a PR labelled `agent-review` (Tier B) or
+ * `autorelease`. Restoring the old unconditional form would re-grant Tier B to every PR
+ * in a single edit, so that edit costs a human label.
+ *
  * `specs/AGENT-AUTONOMY-POLICY.md` is deliberately NOT guarded, though the first
  * version guarded it. The policy's own write-back rule requires that file to be
  * edited every time the developer answers an escalation — guarding it would charge
@@ -55,6 +60,7 @@ export const GATED_PATHS = [
   { pattern: /(^|\/)id_(rsa|ed25519|ecdsa)/, reason: "private SSH key", item: 3 },
   { pattern: /^script\/gated-paths\.mjs$/, reason: "the gate's own detector (self-guard)", item: 0 },
   { pattern: /^\.github\/workflows\/gated-paths\.yml$/, reason: "the gate's own workflow (self-guard)", item: 0 },
+  { pattern: /^\.github\/workflows\/auto-merge\.yml$/, reason: "the tier system's merge condition (self-guard)", item: 0 },
 ];
 
 /**
