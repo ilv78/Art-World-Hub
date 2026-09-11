@@ -10,6 +10,6 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    include: ["server/__tests__/**/*.test.ts"],
+    include: ["server/__tests__/**/*.test.ts", "script/__tests__/**/*.test.ts"],
   },
 });

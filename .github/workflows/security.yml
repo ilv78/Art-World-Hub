@@ -134,11 +134,19 @@ jobs:
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.30.0
         with:
           image-ref: artverse:${{ github.sha }}
-          format: table
+          format: json
+          output: trivy-report.json
           severity: CRITICAL,HIGH
           ignore-unfixed: true
-          exit-code: "1"
+          # exit-code stays 0 on purpose. The pass/fail decision moved to the
+          # partitioner below, which fails only on findings in paths we control.
+          # See #728: a single all-or-nothing gate meant every upstream CVE in
+          # vendored content turned main red with no fix available to us.
+          exit-code: "0"
           trivyignores: .trivyignore.yaml
+
+      - name: Partition findings (block on ours, warn on vendored)
+        run: node script/partition-trivy.mjs trivy-report.json
 
   # ─────────────────────────────────────────────
   # JOB 6 — CUSTOM SECURITY CHECKS

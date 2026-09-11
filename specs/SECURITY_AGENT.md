@@ -212,7 +212,49 @@ Verify and document the status of each item on the production VPS:
 
 ---
 
-### 5. Trivy Ignore File Convention
+### 5. Container Scan: Blocking vs Vendored Findings
+
+The container scan asks two separate questions instead of one (#728).
+
+`.github/trivy-vendored-paths.json` lists path globs for **vendored** content —
+software baked inside something we do not control, where no lockfile bump, npm
+override, or Dockerfile line can change the version:
+
+| Pattern | What it covers |
+|---|---|
+| `usr/local/lib/node_modules/npm/**` | the npm CLI bundled in the `node:25-bookworm-slim` base image |
+| `**/node_modules/drizzle-kit/node_modules/@esbuild/**` | the esbuild Go binary bundled inside `drizzle-kit` |
+
+`script/partition-trivy.mjs` matches each finding's `PkgPath` (falling back to
+`Target`) against these patterns. Vendored findings are reported in the job
+summary and **never fail the build**. Everything else blocks.
+
+**OS packages always block**, whatever their path. They arrive with the base
+image but we can still upgrade them ourselves — this is exactly how the
+`libgnutls30` batch in #710 was fixed for real, with an `apt-get --only-upgrade`
+line in the run stage.
+
+**Adding a pattern is a security decision.** Add one only when the vulnerable
+file is genuinely unreachable by any change we can make, give it a `reason`
+string that says why, and log the decision. If a finding becomes fixable by us,
+remove the pattern so it starts blocking again.
+
+Why this exists: a single all-or-nothing gate could not distinguish "bump the
+lockfile" from "wait for upstream to rebuild its base image". Since the advisory
+database updates continuously and independently of us, the gate reliably went red
+on findings we had no way to fix, and the only available response was to write a
+suppression. See `docs/postmortems/2026-09-10-trivy-scan-blocked-staging-61-days.md`.
+
+---
+
+### 6. Trivy Ignore File Convention
+
+> Scope note: with the vendored/blocking split above, `.trivyignore.yaml` is for
+> per-CVE suppressions of **blocking** findings — a specific CVE in code we do
+> control that we have judged non-exploitable. Whole categories of unfixable
+> vendored content belong in `.github/trivy-vendored-paths.json` instead, as a
+> path pattern, not as one entry per CVE per disclosure.
+
 
 Trivy container scans in `.github/workflows/ci.yml` and `.github/workflows/security.yml`
 load ignore rules from `.trivyignore.yaml` (v2 policy format). The classic

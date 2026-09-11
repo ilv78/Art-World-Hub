@@ -1,7 +1,7 @@
 # Vernis9 — CI/CD Pipeline Specification
 
 **Status:** Active
-**Last Updated:** 2026-05-26
+**Last Updated:** 2026-09-11
 
 ---
 
@@ -44,11 +44,20 @@ The "Lint, Type Check, Test & Build" job also declares a `merge_group` trigger s
 | Setup Docker Buildx | Enables advanced Docker builds |
 | Login to GHCR | Authenticates to GitHub Container Registry |
 | Build image | Multi-stage Docker build; `load: true` for local Trivy scan; `push: true` only on `main`/`redesign/v3` push (not on PRs) |
-| Trivy scan | Runs Trivy vulnerability scanner against the locally-built image; fails on CRITICAL or HIGH severity findings (unfixed ignored via `.trivyignore.yaml`) |
+| Trivy scan | Runs Trivy against the locally-built image and writes `trivy-report.json` (CRITICAL/HIGH, unfixed ignored, suppressions from `.trivyignore.yaml`). `exit-code: 0` — the scanner reports, it does not decide |
+| Partition findings | `node script/partition-trivy.mjs trivy-report.json` splits the report into **blocking** and **vendored** findings and fails the job only on blocking ones (#728) |
 
 - **Runs on PR + push** — gated on `needs.changes.outputs.code == 'true'` so docs-only changes still skip. PRs build locally without pushing to GHCR; push happens only on `main` / `redesign/v3`.
 - **Closes the auto-merge gap (#631)** — previously `scan-image` was main-only. PRs could auto-merge while Trivy was still pending or about to fail on main. Now Trivy is a PR-side required check.
 - Uses the same Trivy action (pinned to SHA) and config as `security.yml::container-scan` (the two are intentionally redundant — both will catch a CVE; deduping deferred).
+- **Two gates, not one (#728).** A finding whose path matches a pattern in
+  `.github/trivy-vendored-paths.json` is *vendored* — it lives inside software we cannot
+  version (the npm CLI bundled in `node:25-bookworm-slim`, the esbuild Go binary inside
+  `drizzle-kit`). Vendored findings are rendered to the job summary as a warning table and
+  never fail the build. Everything else — our lockfile **and** OS packages, which a
+  Dockerfile `--only-upgrade` can fix — blocks. Before the split, every upstream disclosure
+  against vendored content turned `main` red with no remedy but hand-writing a suppression;
+  that happened in #631, #670 and #710, the last blocking staging for 61 days.
 - **Gates staging deploy** — `deploy-staging` depends on this job passing.
 
 **Job 4: `deploy-staging`** — Deploy to Staging
@@ -747,3 +756,4 @@ After the health check passes, both staging (`ci.yml`) and production (`deploy-p
 | 2026-05-09 | Resolved a fresh wave of `npm audit` advisories (`fast-uri` HIGH + `hono` / `@hono/node-server` / `ip-address` moderate) blocking the security gate on every PR since 2026-05-09 19:53 UTC. Bumped `express-rate-limit` to `^8.5.1` and added `npm overrides` for `fast-uri@^3.1.2`, `hono@^4.12.18`, `@hono/node-server@^1.19.13` to coerce `@modelcontextprotocol/sdk@1.29.0` transitives onto patched versions (no upstream MCP SDK release available). No CI workflow changes — `npm audit --audit-level=high` is now clean. ([#595](https://github.com/ilv78/Art-World-Hub/issues/595), PR [#596](https://github.com/ilv78/Art-World-Hub/pull/596)) |
 | 2026-05-09 | Spec catch-up — bumped `Last Updated` header (was 2026-04-20), refreshed §1 Job 4 (Trivy ignore migration to `.trivyignore.yaml`) and §1 Job 5 (upload-subdir bootstrap note covering og-cards), added revision-log entries for #541, #588, and #595. Resolves recurring `ST-004` doc-agent warning from the rolling docs-audit issue (#579). |
 | 2026-05-26 | Closed the auto-merge silent-failure gap (#631): merged `build-image` + `scan-image` into a single `build-and-scan` job that runs on PR + push (push to GHCR only on `main`/`redesign/v3`), so Trivy is now a PR-side required check. Removed the main-only gate on `security.yml::container-scan` and added it to the security `Gate` `needs:` list. Added new `ci-failure-notify.yml` workflow that pings Telegram on any `main`-branch CI/CD or Security workflow failure — the safety net for the case where the existing per-job notifications are silenced by a *skipped* job (the v3.18.0 incident: 6 consecutive main failures with no notification, because `deploy-staging` was skipped not failed). Updated §1 Job 3/4 numbering, §5.3 Auto-Merge, added §5.5 CI Failure Notifier. |
+| 2026-09-11 | Split the container scan into two gates (#728): Trivy now runs with `format: json` + `exit-code: 0`, and `script/partition-trivy.mjs` decides pass/fail — blocking on findings in project-controlled paths (our lockfile **and** OS packages), warning on content vendored inside software we cannot version, declared as path globs in `.github/trivy-vendored-paths.json`. Applied to both `ci.yml::build-and-scan` and `security.yml::container-scan`. Removes the mechanism behind #631 / #670 / #710, where an upstream CVE in the base image's bundled npm or drizzle-kit's esbuild binary turned `main` red with no fix available to us. Updated §1 Job 3. ([#728](https://github.com/ilv78/Art-World-Hub/issues/728)) |
