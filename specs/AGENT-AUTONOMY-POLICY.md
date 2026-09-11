@@ -182,6 +182,29 @@ Therefore:
 
 ---
 
+## 9a. The PR contract
+
+`.github/workflows/pr-contract.yml` checks that every PR *says* four things. It
+enforces declaration, never truth — it cannot tell whether a stated CI gap is real,
+only that the PR does not say.
+
+| Rule | Why |
+|---|---|
+| References an issue (`#123`) | A diff with no recorded intent cannot be read against anything. |
+| Has a `## Verification` section | A reader cannot tell a tested change from an untested one by looking at a green pipeline. |
+| That section mentions CI (code PRs) | #628 shipped behind a fully green pipeline that exercised none of it. |
+| States how it deviates from the issue, or that it does not | #742 deliberately departed from its issue; only a reader of both would have known. |
+
+Documentation consistency is **not** checked here — `specs/DOC-AGENT-SPEC.md` already
+covers it (C-001, C-003, ST-001/004/005), and a duplicated rule means two places to
+change when it turns out to be wrong.
+
+**The judgement half is missing on purpose.** A model-based reviewer reading the diff
+against the issue needs an API key and a budget — items 3 and 4 of the gated list —
+so it is the developer's decision, not an agent's.
+
+---
+
 ## 10. When you must escalate
 
 Only for the gated list (§1), or for something genuinely unrecoverable if wrong. When you do:
@@ -206,6 +229,7 @@ Only for the gated list (§1), or for something genuinely unrecoverable if wrong
 
 | Date | Change |
 |---|---|
+| 2026-09-11 | Added §9a, the PR contract: every PR must state its issue, its verification, its CI coverage and any deviation. ([#744](https://github.com/ilv78/Art-World-Hub/issues/744)) |
 | 2026-09-11 | `Gated Path Review` made a required status check on `main`; self-guard narrowed to the detector and its workflow — guarding this file fought §11's write-back rule and bought no enforcement. ([#744](https://github.com/ilv78/Art-World-Hub/issues/744)) |
 | 2026-09-11 | Added §1 Enforcement: `gated-paths.yml` + `script/gated-paths.mjs` now enforce items 1 and 3 mechanically, self-guard the gate, and state plainly which items a diff cannot reveal. ([#744](https://github.com/ilv78/Art-World-Hub/issues/744)) |
 | 2026-09-11 | Created. Harvested from rules already scattered across `CLAUDE.md`, `specs/SECURITY_AGENT.md` §6, the `.trivyignore.yaml` header, `specs/decisions/DECISION-LOG.md`, and the developer preferences held in session memory. Sources: #513, #543, #550, #710, #722, #728, #738, #739, #741. ([#744](https://github.com/ilv78/Art-World-Hub/issues/744)) |
