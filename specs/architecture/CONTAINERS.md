@@ -198,7 +198,8 @@ Setup is automated by `deploy/server-setup.sh`.
            |
            v
   +------------------+
-  | Trivy Scan       |  CRITICAL/HIGH vuln check
+  | Trivy Scan       |  CRITICAL/HIGH vuln check; blocks on project-controlled
+  |                  |  paths, warns on vendored content (#728)
   +--------+---------+
            |
      +-----+-----+

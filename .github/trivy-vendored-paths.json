@@ -1,0 +1,25 @@
+{
+  "$comment": [
+    "Paths in the container image whose vulnerabilities we cannot remediate.",
+    "A finding matched here is reported as a WARNING and never fails the build;",
+    "everything else blocks. See issue #728 and the postmortem",
+    "docs/postmortems/2026-09-10-trivy-scan-blocked-staging-61-days.md.",
+    "",
+    "Add an entry ONLY when the vulnerable file is vendored inside something we",
+    "do not control — i.e. no lockfile bump, npm override, or Dockerfile line can",
+    "change its version. Anything we can upgrade belongs in the blocking set.",
+    "",
+    "Patterns are globs matched against Trivy's PkgPath (falling back to Target).",
+    "'**' crosses directory separators, '*' does not. A leading '/' is optional."
+  ],
+  "vendored": [
+    {
+      "pattern": "usr/local/lib/node_modules/npm/**",
+      "reason": "npm CLI bundled inside the node:25-bookworm-slim base image. Not in our lockfile; fixable only by an upstream Node base-image rebuild."
+    },
+    {
+      "pattern": "**/node_modules/drizzle-kit/node_modules/@esbuild/**",
+      "reason": "esbuild Go binary bundled inside drizzle-kit. Build/migration-time only, no runtime network surface; fixable only when drizzle-kit bumps its esbuild range."
+    }
+  ]
+}
