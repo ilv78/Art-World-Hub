@@ -1,0 +1,76 @@
+name: Gated Path Review
+
+# Mechanical enforcement of specs/AGENT-AUTONOMY-POLICY.md §1 (#744).
+#
+# The autonomy policy lets agents merge without plan approval. That is only safe
+# because a short list of genuinely irreversible changes still needs a human, and
+# agents are not trusted to self-assess which list they are on.
+#
+# This lives in its own workflow rather than as a job in ci.yml for one reason:
+# it must re-run when the approval label is applied. Adding `types: [labeled]` to
+# ci.yml's trigger would re-run the full Docker build and two Trivy scans every
+# time anyone touched a label.
+
+on:
+  pull_request:
+    branches: [main, redesign/v3]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  gated-paths:
+    name: Gated Path Review
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Needs the merge base to diff against, so shallow-fetch both sides.
+          fetch-depth: 0
+
+      - name: List changed files
+        run: |
+          git diff --name-only \
+            "${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}" \
+            > changed-files.txt
+          echo "Changed files:"
+          cat changed-files.txt
+
+      # The label alone is not enough: an agent with a token can apply a label.
+      # Reading the timeline tells us *who* applied it, so a bot-applied approval
+      # can be rejected. A human PAT driven by an agent is indistinguishable from
+      # a human — documented as a known limit rather than papered over.
+      - name: Determine whether a human approved
+        id: approval
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          approver=$(gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/timeline" \
+            --paginate \
+            --jq '[.[] | select(.event == "labeled" and .label.name == "human-approved")] | last | .actor.login // empty')
+          approver_type=$(gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/timeline" \
+            --paginate \
+            --jq '[.[] | select(.event == "labeled" and .label.name == "human-approved")] | last | .actor.type // empty')
+
+          if [ -z "$approver" ]; then
+            echo "No human-approved label applied."
+            echo "labels=" >> "$GITHUB_OUTPUT"
+          elif [ "$approver_type" = "Bot" ]; then
+            echo "::warning::human-approved was applied by a bot ($approver) — not accepted."
+            echo "labels=" >> "$GITHUB_OUTPUT"
+          else
+            echo "human-approved applied by $approver ($approver_type)."
+            echo "labels=human-approved" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check gated paths
+        run: |
+          node script/gated-paths.mjs \
+            --files changed-files.txt \
+            --labels "${{ steps.approval.outputs.labels }}"
