@@ -1,0 +1,53 @@
+name: PR Contract
+
+# The mechanical half of the reviewer step in the autonomy pipeline (#744).
+#
+# An autonomous agent merges its own work, so what a human reviewer would have
+# caught has to be caught elsewhere. This catches one specific class: a PR that
+# does not say what a reader needs — which issue it serves, how it was verified,
+# what CI does not cover, and how it departs from the issue.
+#
+# It enforces declaration, not truth. The judgement half needs a model, an API key
+# and a budget — all on the policy's gated list, so that is the developer's call.
+#
+# Not a required status check yet, deliberately: #746/#747 showed the cost of
+# treating an unproven gate as authoritative, and the lesson from making
+# Gated Path Review required was to prove stability on real PRs first.
+
+on:
+  pull_request:
+    branches: [main, redesign/v3]
+    # `edited` matters: fixing the PR body is how an author satisfies this check,
+    # and without it they would have to push an empty commit to re-run.
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  pr-contract:
+    name: PR Contract
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Body and file list both come from the API rather than the git tree: the
+      # body is not in the repository at all, and sourcing the file list from
+      # `git diff` is what broke the gated-path check on re-runs (#747).
+      - name: Fetch PR body and changed files
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}" \
+            --jq '.body // ""' > pr-body.md
+          gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --paginate --jq '.[].filename' > changed-files.txt
+          echo "Changed files:"
+          cat changed-files.txt
+
+      - name: Check the PR contract
+        run: node script/pr-contract.mjs --body pr-body.md --files changed-files.txt
