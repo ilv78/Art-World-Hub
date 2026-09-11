@@ -28,15 +28,22 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          # Needs the merge base to diff against, so shallow-fetch both sides.
-          fetch-depth: 0
 
+      # The file list comes from the API, not from `git diff`.
+      #
+      # The first version diffed base...head. That works while a PR is open and
+      # breaks the moment it is not: re-running after the PR merged and its branch
+      # was deleted gave `fatal: Invalid symmetric difference expression`, because
+      # the head commit was no longer reachable from the checked-out merge ref.
+      # Re-runs are exactly when this check matters — applying the approval label
+      # triggers one — so it cannot depend on which objects happen to be local.
       - name: List changed files
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          git diff --name-only \
-            "${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}" \
-            > changed-files.txt
+          set -euo pipefail
+          gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --paginate --jq '.[].filename' > changed-files.txt
           echo "Changed files:"
           cat changed-files.txt
 
@@ -51,12 +58,13 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
-          approver=$(gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/timeline" \
+          # One call, so login and type cannot come from different reads.
+          actor=$(gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/timeline" \
             --paginate \
-            --jq '[.[] | select(.event == "labeled" and .label.name == "human-approved")] | last | .actor.login // empty')
-          approver_type=$(gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/timeline" \
-            --paginate \
-            --jq '[.[] | select(.event == "labeled" and .label.name == "human-approved")] | last | .actor.type // empty')
+            --jq '[.[] | select(.event == "labeled" and .label.name == "human-approved")] | last
+                  | if . == null then "" else "\(.actor.login) \(.actor.type)" end')
+          approver="${actor%% *}"
+          approver_type="${actor##* }"
 
           if [ -z "$approver" ]; then
             echo "No human-approved label applied."
