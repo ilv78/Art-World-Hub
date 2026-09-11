@@ -12,6 +12,22 @@ Every piece of work MUST follow this sequence — no exceptions, even for "small
 4. **Work the issue.** Update the issue with progress as needed.
 5. **Tag with `release: next`** when done.
 
+## Agent Autonomy Policy
+
+`specs/AGENT-AUTONOMY-POLICY.md` holds the standing answers to questions an agent
+would otherwise ask the developer — the vulnerability escalation order, what may
+be logged, how staging's `push` mode changes migrations, what "done" means, and
+the five things that genuinely need a human.
+
+**Read it before asking the developer anything.** If the answer is there, act on
+it. If it is not, pick the most reversible option, do it, record it in the
+decision log, and add the rule to that file so the question is never asked twice.
+
+The Work Workflow below still applies as written. The autonomous tiers proposed
+in #744 take effect only once the gated-path CI check exists — removing the
+approval step before its mechanical replacement is in place would leave no gate
+at all.
+
 ## Project Overview
 
 ArtVerse — a full-stack art gallery platform with a 3D virtual museum, marketplace, auction system, and artist dashboards. Monolithic architecture with React frontend, Express backend, and PostgreSQL.
