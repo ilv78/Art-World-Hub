@@ -70,6 +70,8 @@ vi.mock("../logger", () => {
     logger: noopLogger,
     mcpLogger: noopLogger,
     logFilePath: `${testLogDir}/app.log`,
+    logReadPaths: () => [`${testLogDir}/app.log`],
+    LOG_ROTATION: { size: "10m", limit: { count: 9 } },
     LOG_DIR: testLogDir,
   };
 });

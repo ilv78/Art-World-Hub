@@ -80,3 +80,68 @@ describe("Logger output format", () => {
     expect(entry.host).toBe("0.0.0.0");
   });
 });
+
+/**
+ * Log rotation (#738).
+ *
+ * `app.log` grew without bound until per-call MCP audit logging made a steady
+ * writer of it. These cover the two things that can silently break: the bridge
+ * that carries writes into the asynchronously-created rolling destination, and
+ * the ordering of the retained files that `/api/admin/logs` and `get_logs` read
+ * back.
+ */
+describe("Log rotation", () => {
+  const rotationDir = path.join(os.tmpdir(), `artverse-rotation-test-${process.pid}`);
+  let loggerModule: typeof import("../logger");
+
+  beforeAll(async () => {
+    fs.mkdirSync(rotationDir, { recursive: true });
+    process.env.LOG_DIR = rotationDir;
+    loggerModule = await import("../logger");
+  });
+
+  afterAll(() => {
+    delete process.env.LOG_DIR;
+    fs.rmSync(rotationDir, { recursive: true, force: true });
+  });
+
+  it("keeps a bounded number of files of bounded size", () => {
+    // 10 MB x (1 active + 9 rotated) — a ~100 MB ceiling on the volume.
+    expect(loggerModule.LOG_ROTATION.size).toBe("10m");
+    expect(loggerModule.LOG_ROTATION.limit.count).toBe(9);
+  });
+
+  it("writes through the bridge into a rolling destination", async () => {
+    loggerModule.logger.info({ probe: "rotation" }, "rotation probe");
+
+    // pino-roll resolves asynchronously; the bridge buffers until it does.
+    const deadline = Date.now() + 3000;
+    let written = "";
+    while (Date.now() < deadline && !written.includes("rotation probe")) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      written = loggerModule
+        .logReadPaths()
+        .filter((file) => fs.existsSync(file))
+        .map((file) => fs.readFileSync(file, "utf-8"))
+        .join("");
+    }
+
+    expect(written).toContain("rotation probe");
+  }, 10000);
+
+  it("orders retained files numerically, not lexicographically", () => {
+    // pino-roll writes `app.1.log`, not `app.log.1` — matching the wrong shape
+    // makes the readers find nothing at all. And a plain string sort puts
+    // app.10.log before app.2.log, handing back history out of order.
+    for (const n of [2, 10, 11]) {
+      fs.writeFileSync(path.join(rotationDir, `app.${n}.log`), `{"n":${n}}\n`);
+    }
+
+    const ordered = loggerModule
+      .logReadPaths()
+      .map((file) => path.basename(file))
+      .filter((name) => /^app\.\d+\.log$/.test(name));
+
+    expect(ordered).toEqual(["app.1.log", "app.2.log", "app.10.log", "app.11.log"]);
+  });
+});

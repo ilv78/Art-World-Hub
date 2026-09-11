@@ -30,8 +30,24 @@ Structured JSON logging using [pino](https://github.com/pinojs/pino), replacing 
 
 - **Root logger** — `pino` with ISO timestamps and `pino.multistream` for dual output
 - **Child loggers** — each adds a `module` field (e.g., `"module": "auth"`) for filtering
-- **pino-http middleware** — automatic request/response logging on `/api/*` routes with method, URL, status code, and response time
+- **pino-http middleware** — automatic request/response logging on `/api/*` **and `/mcp`** routes with method, URL, status code, and response time. `/mcp` was added in #738 so requests rejected before reaching a tool handler (unauthenticated probes, session-binding 403s) still leave a trace; before that they appeared only in nginx logs, which rotate away.
 - **No worker threads** — uses `pino.multistream()` (not `pino.transport()`) for esbuild bundle compatibility
+
+### Rotation (#738)
+
+The file is rolled by `pino-roll`, **used as a stream rather than a `pino.transport()`** — transports spawn worker threads that cannot resolve modules inside the single-file CJS bundle, the same constraint that shaped the multistream setup.
+
+| Setting | Value |
+|---|---|
+| Max size per file | 10 MB |
+| Files retained | 10 (1 active + 9 rotated) |
+| Ceiling on the volume | ~100 MB |
+
+**File names are `app.1.log`, `app.2.log`, …** — pino-roll inserts the number *before* the extension, so `logs/app.log` itself exists only on a pre-#738 volume. Never open that path directly: use `logReadPaths()` from `server/logger.ts`, which returns the retained files oldest-first, sorted **numerically** (a string sort puts `app.10.log` before `app.2.log`).
+
+`pino-roll` resolves asynchronously and the logger is built at import time, in a CJS bundle with no top-level await. Writes therefore pass through a `PassThrough` that is piped into the rolling destination once it is ready — a startup window of milliseconds, buffered rather than dropped. If rotation cannot be initialised, the logger falls back to a single unbounded file and writes a warning to stderr: losing rotation is recoverable, losing file logging is not.
+
+**Trade-off:** the trail is bounded by size, not by time, so a burst of traffic shortens the window it covers.
 
 ### Log Entry Format (NDJSON)
 
@@ -66,6 +82,10 @@ Each line in the log file is a standalone JSON object:
 ---
 
 ## Access Methods
+
+> All three read paths below read **across the retained rotated files**, oldest
+> first (#738). Reading only the active file would silently shorten history to
+> whatever had accumulated since the last roll.
 
 ### 1. Admin API — `GET /api/admin/logs`
 
