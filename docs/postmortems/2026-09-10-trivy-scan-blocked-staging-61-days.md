@@ -78,7 +78,17 @@ So the fix did reach staging before the pipeline froze, with one day of margin. 
 
 **Remediated 2026-09-10 20:51 UTC** ([#726](https://github.com/ilv78/Art-World-Hub/issues/726)): production verified on v3.19.1, `26424e2` confirmed as an ancestor of the deployed commit, `POST /mcp` unauthenticated returning 401.
 
-Whether the gap was exercised during that window is **UNKNOWN** — production `/mcp` access-log review across 2026-07-05 → 2026-09-10 20:51 UTC is tracked in [#732](https://github.com/ilv78/Art-World-Hub/issues/732) and must be answered before this document advances to Final.
+**The gap was not exercised.** Reviewed 2026-09-11 under [#732](https://github.com/ilv78/Art-World-Hub/issues/732); confidence high. The finding is structural rather than log-derived, which is what makes it hold across the whole window:
+
+- **There was no second tenant.** Production holds **one artist profile**. #681 is a cross-tenant vulnerability — it requires an authenticated user acting on a *different* artist's artworks, blog posts, orders or profile. With a single artist profile the mass-IDOR class is unexercisable.
+- **No account existed that was not the operator's own.** All three production accounts were created on 2026-03-19, three and a half months before the window, with roles `admin`, `curator` and `user`. Self-registration is open — part of what made #681 severe — but **zero accounts were registered between 2026-07-05 and 2026-09-10**, so no third party held credentials at any point in the window.
+- **`app.log` covers the full window and records no MCP activity.** The `artverse-production_logs` Docker volume is not rotated and survives redeploys; the log spans 2026-03-16 → 2026-09-11. All 48 `module:"mcp"` entries are the `MCP server registered at /mcp` startup line. There are no MCP error lines at all. Alone this is weak — a *successful* cross-tenant call throws nothing — but it rules out the failed-attempt and probe-error patterns across all 67 days.
+- **No authenticated `/mcp` traffic in retained nginx logs.** Retention reaches back only to 2026-08-28 00:04 UTC (logrotate keeps 14 days). Within it, nine `/mcp`-ish requests, none reaching a tool handler: six bot probes for the `/mcp.json` and `/mcp_config.json` discovery files (ChatGPT-User, OAI-SearchBot, Bytespider, TelegramBot), two scanner `GET /mcp` hits returning 410, and one `POST /mcp` from `python-httpx/0.28.1` at 2026-09-11 11:41 UTC — after the fix shipped — rejected with 400 before dispatch.
+- **No buyer PII was created in the window.** Three orders exist, all predating 2026-07-05; zero were created during the window, so the `orders-by-artist` read path had nothing new to expose.
+
+**Coverage limitation.** Nginx access logs for 2026-07-05 → 2026-08-28 (~54 days) have rotated away and are unrecoverable, so that period has no request-level record. This does not change the verdict: the first three points above cover the full window and none of them depend on nginx.
+
+**Underlying gap this review exposed.** The question was hard to answer because `/mcp` has **no audit trail** — `pino-http` is configured to log only URLs beginning with `/api` (`server/index.ts`), and `server/mcp.ts` logs errors alone, with no caller identity. That is still true after #695. Tracked separately.
 
 The container scan did not block production deploys directly — those are `workflow_dispatch` and independent of the staging gate. It blocked them *in effect*: the documented promotion process is "verify on staging, then promote," and with staging frozen there was nothing validated to promote. Issue #710 states this outcome explicitly: "A release cut today would promote a month of unvalidated code or be blocked outright."
 
@@ -302,7 +312,7 @@ N/A — no credentials were exposed or involved.
 
 | # | Action Item | Type | Priority | Owner | Issue |
 |---|-------------|------|----------|-------|-------|
-| 1 | Make "main is red" a persistent, escalating signal: track consecutive-failure count and escalate distinctly at N≥2 (e.g. daily reminder while red, message states "failing for X days"), so a repeating alert is visibly different from a first alert | detect | **P0** | [role] | [#727](https://github.com/ilv78/Art-World-Hub/issues/727) |
+| 1 | Make "main is red" a persistent, escalating signal: track consecutive-failure count and escalate distinctly at N≥2 (e.g. daily reminder while red, message states "failing for X days"), so a repeating alert is visibly different from a first alert — **CLOSED 2026-09-11, accepted as working as intended**: the detector fired correctly every time and the Telegram channel is adequate; the gap was the decision to act on it, which is owned by the operator and not automated away | detect | **P0** | [role] | [#727](https://github.com/ilv78/Art-World-Hub/issues/727) ✅ |
 | 2 | Split the container scan into two gates: findings in project-controlled dependencies fail the build; findings in vendored content (base-image bundled npm, build-time binaries) report as warnings on a separate non-blocking check | prevent | **P0** | [role] | [#728](https://github.com/ilv78/Art-World-Hub/issues/728) |
 | 3 | Make the container scan a required status check in branch protection so merging cannot outpace a gate that blocks deployment — closes the gap this incident demonstrated | prevent | **P1** | [role] | [#641](https://github.com/ilv78/Art-World-Hub/issues/641) |
 | 4 | Add a weekly job that fails when any `.trivyignore.yaml` entry is within 14 days of `expired_at`, so expiry surfaces as a warning before it becomes a build failure | detect | **P1** | [role] | [#729](https://github.com/ilv78/Art-World-Hub/issues/729) |
@@ -311,7 +321,7 @@ N/A — no credentials were exposed or involved.
 | 7 | Require that any suppression naming an external fix (e.g. "base-image rebuild") records how the fix was verified as available, and a fallback if upstream has not acted | document | P2 | [role] | [#731](https://github.com/ilv78/Art-World-Hub/issues/731) |
 | 8 | Deploy the MCP per-tool authorization fix ([#695](https://github.com/ilv78/Art-World-Hub/pull/695)) to production — **DONE 2026-09-10 20:51 UTC in v3.19.1** | repair | **P0** | [role] | [#726](https://github.com/ilv78/Art-World-Hub/issues/726) ✅ |
 
-⚠️ **NEEDS DETAIL** on item 1: escalation channel beyond Telegram (the current channel demonstrably did not convert to action) is an open design question for the reviewer.
+Resolved on item 1 (2026-09-11): the escalation channel was reviewed and kept as-is. Telegram is the only push channel configured, it delivered every alert correctly, and replacing it would have addressed the wrong half of the failure. The remaining detection value sits in [#730](https://github.com/ilv78/Art-World-Hub/issues/730) — alerting on a *stale environment*, which is the consequence that actually went unnoticed, and a different signal from a red `main`.
 
 ---
 
@@ -321,7 +331,7 @@ Not a security incident in the compromise sense — no exposure, no credentials 
 
 | # | Action Item | Type | Priority | Owner | Issue |
 |---|-------------|------|----------|-------|-------|
-| 1 | Review production `/mcp` access logs from 2026-07-05 to the date #695 actually reaches production, for cross-tenant tool calls, to confirm the pre-#695 authorization gap was not exercised | detect | **P1** | [role] | [#732](https://github.com/ilv78/Art-World-Hub/issues/732) |
+| 1 | Review production `/mcp` access logs from 2026-07-05 to the date #695 actually reaches production, for cross-tenant tool calls, to confirm the pre-#695 authorization gap was not exercised — **DONE 2026-09-11: not exercised**, see Data / Security Impact | detect | **P1** | [role] | [#732](https://github.com/ilv78/Art-World-Hub/issues/732) ✅ |
 
 ---
 
@@ -342,7 +352,7 @@ Not a security incident in the compromise sense — no exposure, no credentials 
 
 **Open items for the reviewer:**
 
-1. `/mcp` production access-log review is marked `UNKNOWN` in the Data/Security Impact section. Fill in before publishing.
+1. ~~`/mcp` production access-log review is marked `UNKNOWN`~~ — **answered 2026-09-11 ([#732](https://github.com/ilv78/Art-World-Hub/issues/732)): the gap was not exercised.** Recorded in Data / Security Impact, with the nginx coverage gap stated. Status stays `Action Items Open` — items 3, 4, 5, 6 and 7 remain open.
 2. Action item 8 is **closed** — production deployed to v3.19.1 at 2026-09-10 20:51 UTC and the fix verified live ([#726](https://github.com/ilv78/Art-World-Hub/issues/726)).
 3. Alert history before 2026-08-10 could not be confirmed — GitHub run retention no longer reaches it. The ≥13 alert count is a floor, not a total.
 4. Severity is assessed **P1** on the basis of a 61-day undeployed security fix and a frozen delivery pipeline, despite zero user-visible impact. Downgrade to P2 if the pipeline-only framing is preferred.
