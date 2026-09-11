@@ -254,6 +254,13 @@ suppression. See `docs/postmortems/2026-09-10-trivy-scan-blocked-staging-61-days
 > control that we have judged non-exploitable. Whole categories of unfixable
 > vendored content belong in `.github/trivy-vendored-paths.json` instead, as a
 > path pattern, not as one entry per CVE per disclosure.
+>
+> **The file is currently empty (#739).** All 50 accumulated entries were pruned
+> once the partitioner was shown to classify the same findings: 32 were covered
+> by a vendored path pattern, 18 suppressed findings the gate no longer sees.
+> Reach for a suppression only after both cheaper options fail — upgrade it
+> (lockfile bump, npm `override`, Dockerfile `--only-upgrade`), or declare the
+> path vendored. An entry here means "we can fix this and are choosing not to."
 
 
 Trivy container scans in `.github/workflows/ci.yml` and `.github/workflows/security.yml`
