@@ -31,7 +31,30 @@ Work is gated by **what it costs to undo**, not by how sensitive it looks. Exact
 
 Explicitly **not** gated, because all of it is revertible: auth and authorization code, order and payment *code paths*, PII-adjacent logging, nginx config, security suppressions, CI changes, refactors, features, dependency bumps.
 
-Enforcement is mechanical. A PR touching a gated path fails CI unless a human has applied the approval label — agents are not trusted to self-assess this.
+### Enforcement
+
+`.github/workflows/gated-paths.yml` runs `script/gated-paths.mjs` on every PR. A PR
+carrying a gated change fails until the developer applies the **`human-approved`**
+label. **An agent must never apply that label to its own PR** — the check reads the
+GitHub timeline to see who applied it and rejects a bot.
+
+**What the check actually covers.** Only items **1** and **3** are visible in a diff:
+
+| Item | Enforced how |
+|---|---|
+| 1 · destructive schema/data | **Mechanically.** Migration SQL is split into statements and matched on the leading keyword — `DROP TABLE`, `TRUNCATE`, `DROP COLUMN`, `RENAME`, `ALTER COLUMN … SET NOT NULL`, and statements beginning `UPDATE` / `DELETE FROM` / `INSERT INTO`. Matching leading keywords rather than searching the text is essential: every additive Drizzle migration contains `ON DELETE no action ON UPDATE no action` inside its foreign keys. |
+| 3 · secrets | **Mechanically**, by path shape (`.env` but not `.env.example`, `secrets/`, `*.pem`, `*.key`, SSH keys). |
+| 2 · production promotion | Not a PR. Gated by `deploy-production.yml` being `workflow_dispatch`. |
+| 4 · money / third parties | **Not inferable from a diff.** Stays a policy rule, enforced by the reviewer agent and the PR's own declaration. |
+| 5 · deleting things not in git | **Not in the diff by definition.** A runtime rule. |
+
+The check also **guards itself**: `script/gated-paths.mjs`, its workflow, and this
+policy file are gated paths. Without that, an agent could widen its own authority in
+a single PR, which would make every other rule here unenforceable.
+
+**Known limit, stated rather than papered over:** an agent acting with the
+developer's own credentials is indistinguishable from the developer. The check
+rejects *bot* accounts, not impersonation.
 
 ---
 
@@ -173,4 +196,5 @@ Only for the gated list (§1), or for something genuinely unrecoverable if wrong
 
 | Date | Change |
 |---|---|
+| 2026-09-11 | Added §1 Enforcement: `gated-paths.yml` + `script/gated-paths.mjs` now enforce items 1 and 3 mechanically, self-guard the gate, and state plainly which items a diff cannot reveal. ([#744](https://github.com/ilv78/Art-World-Hub/issues/744)) |
 | 2026-09-11 | Created. Harvested from rules already scattered across `CLAUDE.md`, `specs/SECURITY_AGENT.md` §6, the `.trivyignore.yaml` header, `specs/decisions/DECISION-LOG.md`, and the developer preferences held in session memory. Sources: #513, #543, #550, #710, #722, #728, #738, #739, #741. ([#744](https://github.com/ilv78/Art-World-Hub/issues/744)) |
