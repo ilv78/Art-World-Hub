@@ -1,332 +1,44 @@
 # Trivy v2 policy-format ignore file.
 # Supersedes the legacy classic `.trivyignore`, which has been removed.
-# Trivy's --ignorefile accepts a single file, so we unify here. Entries
-# without a `paths` field suppress the CVE globally (same as the classic
-# file did); entries with `paths` are scoped to that binary / file.
+# Trivy's --ignorefile accepts a single file, so we unify here.
 #
-# Convention: new entries SHOULD include `paths` unless the CVE genuinely
-# affects every copy of the vulnerable library in the image. Every entry
-# MUST have a `statement` and `expired_at` so review is forced.
+# Last reviewed: 2026-09-11 (issue #739) — EMPTY ON PURPOSE.
 #
-# Last reviewed: 2026-09-10 (issue #710)
+# ─── Why this file is empty ─────────────────────────────────────────
+# It held 50 hand-written suppressions, accumulated over #540, #612,
+# #635, #649, #670 and #710. All 50 were pruned in #739 after a scan of
+# the production image with this file not applied showed that every one
+# of them was redundant:
+#
+#   * 32 are now classified as vendored by `script/partition-trivy.mjs`
+#     (#728) — 10 in the npm CLI bundled in the base image, 22 in the
+#     esbuild Go binary bundled inside drizzle-kit. The partitioner
+#     reports these as warnings and never fails the build, so a
+#     suppression adds nothing but an expiry date to forget.
+#   * 18 were dead entries suppressing findings the gate no longer sees:
+#     12 no longer present in the image at any severity (the base image's
+#     npm bundle moved on; top-level esbuild is 0.28.2, past the
+#     GHSA-gv7w-rqvm-qjhr range), and 6 still present but rated MEDIUM,
+#     below the CRITICAL/HIGH threshold the scan runs at — and on the
+#     drizzle-kit binary, so vendored if they are ever re-rated.
+#
+# ─── Before adding anything here, read this ─────────────────────────
+# This file is the last resort, not the first. In order:
+#
+#   1. Can we upgrade it? Bump the lockfile, add an npm `override`, or
+#      add an `--only-upgrade` to the Dockerfile (how libgnutls30 was
+#      actually fixed in #710). Do that instead.
+#   2. Is it vendored inside something we cannot version? Add a path
+#      glob to `.github/trivy-vendored-paths.json` — one pattern covers
+#      every future disclosure against that path, with no expiry date.
+#      That is what the 32 entries above were replaced by.
+#   3. Only if neither applies — a CVE in code we control that we have
+#      judged non-exploitable — add an entry here, with `paths:`, a
+#      `statement`, and an `expired_at`. Expect to justify it.
+#
+# An entry here means "we can fix this and are choosing not to, for now."
+# It should be rare enough to be uncomfortable. See
+# `specs/SECURITY_AGENT.md` §6 and the postmortem
+# `docs/postmortems/2026-09-10-trivy-scan-blocked-staging-61-days.md`.
 
-vulnerabilities:
-  # ─── npm bundled dependencies (node:25-bookworm-slim) ───────────
-  # These live inside the Node.js base image's built-in npm, not in
-  # our project lockfile. Our lockfile already pins fixed versions;
-  # these scans hit the *bundled* copies under
-  # /usr/local/lib/node_modules/npm/... Nothing we can do until the
-  # upstream Node base image rebuilds its npm bundle.
-  # Global suppression mirrors the pre-migration classic file.
-
-  - id: CVE-2024-21538
-    statement: "cross-spawn 7.0.3 bundled inside npm base image (our lockfile: 7.0.6)."
-    expired_at: 2026-10-23
-
-  - id: CVE-2025-64756
-    statement: "glob 10.4.2 bundled inside npm base image (our lockfile: 10.5.0)."
-    expired_at: 2026-10-23
-
-  - id: CVE-2026-26996
-    statement: "minimatch 9.0.5 bundled inside npm base image (our lockfile: 9.0.9)."
-    expired_at: 2026-10-23
-  - id: CVE-2026-27903
-    statement: "minimatch 9.0.5 bundled inside npm base image (our lockfile: 9.0.9)."
-    expired_at: 2026-10-23
-  - id: CVE-2026-27904
-    statement: "minimatch 9.0.5 bundled inside npm base image (our lockfile: 9.0.9)."
-    expired_at: 2026-10-23
-
-  - id: CVE-2026-33671
-    statement: "picomatch 4.0.3 via tinyglobby bundled inside npm base image (our lockfile: 4.0.4)."
-    expired_at: 2026-10-23
-
-  - id: CVE-2026-23745
-    statement: "tar 6.2.1 bundled inside npm base image; not used by our project directly."
-    expired_at: 2026-10-23
-  - id: CVE-2026-23950
-    statement: "tar 6.2.1 bundled inside npm base image; not used by our project directly."
-    expired_at: 2026-10-23
-  - id: CVE-2026-24842
-    statement: "tar 6.2.1 bundled inside npm base image; not used by our project directly."
-    expired_at: 2026-10-23
-  - id: CVE-2026-26960
-    statement: "tar 6.2.1 bundled inside npm base image; not used by our project directly."
-    expired_at: 2026-10-23
-  - id: CVE-2026-29786
-    statement: "tar 6.2.1 bundled inside npm base image; not used by our project directly."
-    expired_at: 2026-10-23
-  - id: CVE-2026-31802
-    statement: "tar 6.2.1 bundled inside npm base image; not used by our project directly."
-    expired_at: 2026-10-23
-
-  # ─── esbuild Go binary stdlib CVEs (pre-existing globals) ────────
-  # These were already globally suppressed in the classic file because
-  # the vulnerabilities sit in esbuild's Go stdlib and only esbuild
-  # maintainers can fix them by recompiling on a newer Go. Kept global
-  # here pending a wider audit — see follow-up task to path-scope them.
-
-  - id: CVE-2025-68121
-    statement: "esbuild Go stdlib — upstream fix blocked on esbuild rebuild."
-    expired_at: 2026-10-23
-  - id: CVE-2025-58183
-    statement: "esbuild Go stdlib — upstream fix blocked on esbuild rebuild."
-    expired_at: 2026-10-23
-  - id: CVE-2025-61726
-    statement: "esbuild Go stdlib — upstream fix blocked on esbuild rebuild."
-    expired_at: 2026-10-23
-  - id: CVE-2025-61728
-    statement: "esbuild Go stdlib — upstream fix blocked on esbuild rebuild."
-    expired_at: 2026-10-23
-  - id: CVE-2025-61729
-    statement: "esbuild Go stdlib — upstream fix blocked on esbuild rebuild."
-    expired_at: 2026-10-23
-  - id: CVE-2026-25679
-    statement: "esbuild Go stdlib — upstream fix blocked on esbuild rebuild."
-    expired_at: 2026-10-23
-  - id: CVE-2026-32280
-    statement: "esbuild Go stdlib — upstream fix blocked on esbuild rebuild."
-    expired_at: 2026-10-23
-  - id: CVE-2026-32282
-    statement: "esbuild Go stdlib — upstream fix blocked on esbuild rebuild."
-    expired_at: 2026-10-23
-
-  # ─── NEW: drizzle-kit bundled esbuild Go stdlib (issue #540) ─────
-  # Path-scoped because these specific CVEs only surface in the
-  # drizzle-kit-nested esbuild (Go 1.23.12). Our top-level esbuild
-  # 0.28.0 runs on Go 1.26.1 and is not flagged. drizzle-kit pins
-  # esbuild ^0.25.x, so we cannot remediate until drizzle-kit bumps
-  # its esbuild range to >= 0.26.
-  #
-  # The binary is drizzle-kit's internal JS bundler, invoked only at
-  # build / migration time. It does not listen on any port, does not
-  # handle user input, and is not reachable from request-path code.
-  # Both CVEs are DoS vectors requiring an attacker-controlled TLS
-  # peer — no such surface exists for this binary in our image.
-  #
-  # Revisit when drizzle-kit bumps esbuild >= 0.26.
-
-  - id: CVE-2026-32281
-    paths:
-      - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
-    statement: "Not runtime-reachable: drizzle-kit internal build tool, no TLS surface. Fix requires drizzle-kit to bump esbuild >= 0.26."
-    expired_at: 2026-10-23
-
-  - id: CVE-2026-32283
-    paths:
-      - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
-    statement: "Not runtime-reachable: drizzle-kit internal build tool, no TLS surface. Fix requires drizzle-kit to bump esbuild >= 0.26."
-    expired_at: 2026-10-23
-
-  # ─── NEW: Go 1.23.12 stdlib batch in drizzle-kit esbuild (issue #612) ─
-  # Five HIGH CVEs disclosed against Go 1.23.12 between 2026-04-23 and
-  # 2026-05-13, all flagged on the same drizzle-kit-bundled esbuild
-  # binary. Same reachability argument as the #540 entries above: this
-  # binary is invoked only at build / migration time, has no inbound
-  # network surface, parses no attacker-controlled email/DNS/HTTP input,
-  # and runs only on Linux. Suppressions are path-scoped, time-boxed,
-  # and revisited together with the #540 batch when drizzle-kit bumps
-  # esbuild >= 0.26.
-
-  - id: CVE-2026-33811
-    paths:
-      - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
-    statement: "Not runtime-reachable: drizzle-kit internal build tool, no DNS surface. Fix requires drizzle-kit to bump esbuild >= 0.26."
-    expired_at: 2026-10-23
-
-  - id: CVE-2026-33814
-    paths:
-      - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
-    statement: "Not runtime-reachable: drizzle-kit internal build tool, no HTTP/2 surface. Fix requires drizzle-kit to bump esbuild >= 0.26."
-    expired_at: 2026-10-23
-
-  - id: CVE-2026-39820
-    paths:
-      - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
-    statement: "Not runtime-reachable: drizzle-kit internal build tool, no mail-parser surface. Fix requires drizzle-kit to bump esbuild >= 0.26."
-    expired_at: 2026-10-23
-
-  - id: CVE-2026-39836
-    paths:
-      - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
-    statement: "Not runtime-reachable: Linux-only image (Windows-specific Dial/LookupPort panic) and drizzle-kit internal build tool has no attacker-controlled hostname input. Fix requires drizzle-kit to bump esbuild >= 0.26."
-    expired_at: 2026-10-23
-
-  - id: CVE-2026-42499
-    paths:
-      - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
-    statement: "Not runtime-reachable: drizzle-kit internal build tool, no mail-parser surface. Fix requires drizzle-kit to bump esbuild >= 0.26."
-    expired_at: 2026-10-23
-
-  # ─── NEW: Go 1.23.12 stdlib batch in drizzle-kit esbuild (issue #635) ─
-  # Three HIGH CVEs disclosed into the Trivy DB after 2026-05-25, all on
-  # the same drizzle-kit-bundled esbuild binary (Go 1.23.12). Identical
-  # reachability argument to the #540 / #612 batches above: build/migration-
-  # time bundler only, no inbound network surface, no attacker-controlled
-  # input, Linux-only. Path-scoped, time-boxed, revisited with the other
-  # drizzle-kit batches when drizzle-kit bumps esbuild >= 0.26.
-
-  - id: CVE-2026-39823
-    paths:
-      - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
-    statement: "Not runtime-reachable: drizzle-kit internal build tool, no HTTP/URL-parsing surface. Fix requires drizzle-kit to bump esbuild >= 0.26."
-    expired_at: 2026-10-23
-
-  - id: CVE-2026-39825
-    paths:
-      - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
-    statement: "Not runtime-reachable: drizzle-kit internal build tool, no ReverseProxy/HTTP surface. Fix requires drizzle-kit to bump esbuild >= 0.26."
-    expired_at: 2026-10-23
-
-  - id: CVE-2026-39826
-    paths:
-      - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
-    statement: "Not runtime-reachable: drizzle-kit internal build tool, no html/template rendering surface. Fix requires drizzle-kit to bump esbuild >= 0.26."
-    expired_at: 2026-10-23
-
-  # ─── NEW: Go 1.23.12 stdlib in drizzle-kit esbuild (issue #649) ──
-  # One HIGH (Go stdlib MIME-header DoS) disclosed into the Trivy DB
-  # after 2026-05-31, on the same drizzle-kit-bundled esbuild binary
-  # (Go 1.23.12). Identical reachability argument to the #540 / #612 /
-  # #635 batches above: build/migration-time bundler only, no inbound
-  # network surface, parses no attacker-controlled MIME input, Linux-only.
-  # Path-scoped, time-boxed, revisited with the other drizzle-kit batches
-  # when drizzle-kit bumps esbuild >= 0.26.
-
-  - id: CVE-2026-42504
-    paths:
-      - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
-    statement: "Not runtime-reachable: drizzle-kit internal build tool, no MIME-header-parsing surface. Fix requires drizzle-kit to bump esbuild >= 0.26 (rebuilt on Go >= 1.25.11)."
-    expired_at: 2026-10-23
-
-  # ─── NEW: esbuild Deno binary-integrity advisory (issue #649) ────
-  # GHSA-gv7w-rqvm-qjhr: esbuild's install-time binary integrity check
-  # is bypassable specifically when running under the Deno runtime.
-  # Flagged on every esbuild copy in the image (<0.28.1): top-level
-  # 0.28.0, drizzle-kit's 0.25.12, and esm-loader/tsx's 0.27.4 — hence
-  # global rather than path-scoped (genuinely affects every copy).
-  #
-  # Reachability: our image ships no Deno runtime; esbuild is invoked
-  # only at build time via Node. The Deno-specific code path does not
-  # execute. Revisit when esbuild >= 0.28.1 lands across the tree
-  # (top-level + drizzle-kit + tsx transitive copies).
-
-  - id: GHSA-gv7w-rqvm-qjhr
-    statement: "Deno-specific esbuild install integrity bypass. Not reachable: image has no Deno runtime, esbuild runs at build time via Node. Affects all esbuild copies <0.28.1. Revisit when esbuild >= 0.28.1 lands across the tree."
-    expired_at: 2026-10-23
-
-  # ─── REMOVED 2026-09-10 (#710): libgnutls30 suppressions ────────
-  # The five libgnutls30 entries that lived here (CVE-2026-33845,
-  # CVE-2026-42010, CVE-2026-33846, CVE-2026-3833, CVE-2026-42009) expired on
-  # 2026-07-25 and are now fixed for real rather than re-suppressed: the run
-  # stage of the Dockerfile upgrades libgnutls30 to 3.7.9-2+deb12u7 from the
-  # bookworm repo.
-  #
-  # The "base-image rebuild" fix those entries pointed at (#629) does not
-  # work on its own — as of 2026-09-10 the current node:25-bookworm-slim
-  # still ships 3.7.9-2+deb12u6, so the targeted --only-upgrade is required.
-  # It becomes a harmless no-op once upstream rebuilds.
-
-  # ── July 2026 (#670): new advisories that surfaced while main sat idle ──
-  # hono CVE-2026-54290 and multer CVE-2026-5079 are NOT here — they are fixed
-  # by bumping our lockfile (hono 4.12.27, multer 2.2.0). Only the two
-  # non-fixable-by-us findings below are suppressed.
-  - id: CVE-2026-27145
-    statement: "Go crypto/x509 stdlib DoS in the drizzle-kit/esbuild build-time Go binary. Same non-reachable build-tool class as #540/#635/#649; fix blocked on upstream esbuild rebuilding its Go toolchain. Build-time only, no network surface at runtime."
-    expired_at: 2026-10-23
-  - id: CVE-2026-48815
-    statement: "sigstore 4.1.0 bundled inside the npm CLI in the node base image (provenance tooling); not a project dependency (absent from our lockfile). Same npm-base-image-bundled class as the cross-spawn/glob/tar entries above."
-    expired_at: 2026-10-23
-
-  # ─── NEW: npm-CLI-bundled CVEs in node:25-bookworm-slim (issue #710) ─
-  # Same class as the cross-spawn/glob/minimatch/picomatch/tar entries at the
-  # top of this file: these copies live under the base image's bundled npm
-  # (/usr/local/lib/node_modules/npm/...), not in our lockfile. Verified
-  # against the tree on 2026-09-10 — `tar` and `pacote` are not in our
-  # dependency tree at all, and our own copies of the other two are already
-  # newer than the versions Trivy reports. Nothing we can do until the
-  # upstream Node base image rebuilds its npm bundle.
-
-  - id: CVE-2026-59873
-    statement: "tar 7.5.11 bundled inside the npm CLI in the node base image (CRITICAL). Not in our dependency tree at all — verified 2026-09-10."
-    expired_at: 2026-10-23
-  - id: CVE-2026-59874
-    statement: "tar 7.5.11 bundled inside the npm CLI in the node base image. Not in our dependency tree at all — verified 2026-09-10."
-    expired_at: 2026-10-23
-  - id: CVE-2026-73566
-    statement: "tar 7.5.11 bundled inside the npm CLI in the node base image. Not in our dependency tree at all — verified 2026-09-10."
-    expired_at: 2026-10-23
-
-  - id: CVE-2026-9496
-    statement: "pacote 21.5.0 bundled inside the npm CLI in the node base image. Not in our dependency tree at all — verified 2026-09-10."
-    expired_at: 2026-10-23
-
-  - id: CVE-2026-13149
-    statement: "brace-expansion 5.0.4 bundled inside the npm CLI in the node base image (our lockfile: 5.0.9 via override, #722)."
-    expired_at: 2026-10-23
-  - id: CVE-2026-14257
-    statement: "brace-expansion 5.0.4 bundled inside the npm CLI in the node base image (our lockfile: 5.0.9 via override, #722)."
-    expired_at: 2026-10-23
-  - id: CVE-2026-69152
-    statement: "brace-expansion 5.0.4 bundled inside the npm CLI in the node base image (our lockfile: 5.0.9 via override, #722)."
-    expired_at: 2026-10-23
-
-  - id: CVE-2026-69192
-    statement: "ip-address 10.1.0 bundled inside the npm CLI in the node base image (our lockfile: 10.7.0 via override, #722)."
-    expired_at: 2026-10-23
-
-  # ─── NEW: Go stdlib batch in drizzle-kit esbuild (issue #710) ────
-  # Fifth recurrence of the #540/#612/#635/#649/#670 pattern: Go stdlib CVEs
-  # in the drizzle-kit-bundled esbuild binary (Go v1.23.12). Build-time
-  # bundler only — it never runs in the request path, has no network surface,
-  # and parses no attacker-controlled input at runtime. Path-scoped and
-  # time-boxed, matching the existing entries. Fix stays blocked on upstream
-  # esbuild rebuilding its Go toolchain.
-
-  - id: CVE-2026-33818
-    paths:
-      - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
-    statement: "Go stdlib encoding/asn1 DoS via excessive recursion in Unmarshal in the drizzle-kit/esbuild build-time Go binary. Not runtime-reachable: build tool only, no network surface. Fix requires upstream esbuild to rebuild on a patched Go toolchain."
-    expired_at: 2026-10-23
-
-  - id: CVE-2026-39821
-    paths:
-      - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
-    statement: "Go stdlib golang.org/x/net/idna privilege escalation via Punycode label processing in the drizzle-kit/esbuild build-time Go binary. Not runtime-reachable: build tool only, no network surface. Fix requires upstream esbuild to rebuild on a patched Go toolchain."
-    expired_at: 2026-10-23
-
-  - id: CVE-2026-39822
-    paths:
-      - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
-    statement: "Go stdlib os.Root symlink-following directory traversal in the drizzle-kit/esbuild build-time Go binary. Not runtime-reachable: build tool only, no network surface. Fix requires upstream esbuild to rebuild on a patched Go toolchain."
-    expired_at: 2026-10-23
-
-  - id: CVE-2026-56853
-    paths:
-      - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
-    statement: "Go stdlib net/http unencrypted HTTP/2 DoS in the drizzle-kit/esbuild build-time Go binary. Not runtime-reachable: build tool only, no network surface. Fix requires upstream esbuild to rebuild on a patched Go toolchain."
-    expired_at: 2026-10-23
-
-  - id: CVE-2026-56858
-    paths:
-      - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
-    statement: "Go stdlib html/template XSS via pathological input in the drizzle-kit/esbuild build-time Go binary. Not runtime-reachable: build tool only, no network surface. Fix requires upstream esbuild to rebuild on a patched Go toolchain."
-    expired_at: 2026-10-23
-
-  - id: CVE-2026-56859
-    paths:
-      - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
-    statement: "Go stdlib encoding/xml DoS via decoding recursion depth in the drizzle-kit/esbuild build-time Go binary. Not runtime-reachable: build tool only, no network surface. Fix requires upstream esbuild to rebuild on a patched Go toolchain."
-    expired_at: 2026-10-23
-
-  - id: CVE-2026-56860
-    paths:
-      - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
-    statement: "Go stdlib net/url DoS via quadratic complexity in path handling in the drizzle-kit/esbuild build-time Go binary. Not runtime-reachable: build tool only, no network surface. Fix requires upstream esbuild to rebuild on a patched Go toolchain."
-    expired_at: 2026-10-23
-
-  - id: CVE-2026-56862
-    paths:
-      - "app/node_modules/drizzle-kit/node_modules/@esbuild/linux-x64/bin/esbuild"
-    statement: "Go stdlib crypto/tls DoS via indefinite KeyUpdate messages in the drizzle-kit/esbuild build-time Go binary. Not runtime-reachable: build tool only, no network surface. Fix requires upstream esbuild to rebuild on a patched Go toolchain."
-    expired_at: 2026-10-23
+vulnerabilities: []
