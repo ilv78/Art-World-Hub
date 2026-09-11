@@ -7,11 +7,12 @@ import { isAuthenticated, authStorage } from "./replit_integrations/auth";
 import { storage } from "./storage";
 import { ORDER_TRANSITIONS, ORDER_STATUSES } from "@shared/schema";
 import { normalizeArtworkForCreate, normalizeArtworkForUpdate } from "./publish";
-import { mcpLogger as logger, logFilePath } from "./logger";
+import { mcpLogger as logger, logReadPaths } from "./logger";
+import { installAuditLogging, recordDenial, type SessionRef } from "./mcp-audit";
 import fs from "fs";
 import readline from "readline";
 
-export function createMcpServer(userId: string): McpServer {
+export function createMcpServer(userId: string, session: SessionRef = {}): McpServer {
   const mcp = new McpServer(
     {
       name: "vernis9-mcp",
@@ -26,6 +27,10 @@ export function createMcpServer(userId: string): McpServer {
     }
   );
 
+  // ─── AUDIT TRAIL (#738) ──────────────────────────────────────
+  // Installed before any registration so every handler below is wrapped.
+  installAuditLogging(mcp, userId, session);
+
   // ─── AUTHORIZATION ───────────────────────────────────────────
   // Mirrors the REST handlers in routes.ts: mutations require the caller's
   // artist profile to own the target; log access requires the admin role.
@@ -38,7 +43,7 @@ export function createMcpServer(userId: string): McpServer {
   };
 
   const forbidden = (message: string) => ({
-    content: [{ type: "text" as const, text: `Error: ${message}` }],
+    content: [{ type: "text" as const, text: `Error: ${recordDenial(message)}` }],
     isError: true as const,
   });
 
@@ -191,7 +196,7 @@ export function createMcpServer(userId: string): McpServer {
             {
               uri: uri.href,
               mimeType: "application/json",
-              text: JSON.stringify({ error: "Not authorized to view another artist's orders" }),
+              text: JSON.stringify({ error: recordDenial("Not authorized to view another artist's orders") }),
             },
           ],
         };
@@ -795,25 +800,31 @@ export function createMcpServer(userId: string): McpServer {
         const minLevel = args.level ? (pinoLevels[args.level] ?? 0) : 0;
         const sinceMs = args.since ? new Date(args.since).getTime() : 0;
 
-        if (!fs.existsSync(logFilePath)) {
+        // Read across the retained rotated files, oldest first (#738), so the
+        // history does not shorten to whatever accumulated since the last roll.
+        const paths = logReadPaths();
+        if (paths.length === 0) {
           return { content: [{ type: "text", text: JSON.stringify({ entries: [], total: 0 }) }] };
         }
 
         const entries: object[] = [];
-        const fileStream = fs.createReadStream(logFilePath, { encoding: "utf-8" });
-        const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
+        for (const filePath of paths) {
+          if (!fs.existsSync(filePath)) continue;
+          const fileStream = fs.createReadStream(filePath, { encoding: "utf-8" });
+          const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
 
-        for await (const line of rl) {
-          if (!line.trim()) continue;
-          try {
-            const entry = JSON.parse(line);
-            if (minLevel && (entry.level ?? 0) < minLevel) continue;
-            if (args.module && entry.module !== args.module) continue;
-            if (sinceMs && new Date(entry.time).getTime() < sinceMs) continue;
-            if (args.search && !line.toLowerCase().includes(args.search.toLowerCase())) continue;
-            entries.push(entry);
-          } catch {
-            // skip malformed lines
+          for await (const line of rl) {
+            if (!line.trim()) continue;
+            try {
+              const entry = JSON.parse(line);
+              if (minLevel && (entry.level ?? 0) < minLevel) continue;
+              if (args.module && entry.module !== args.module) continue;
+              if (sinceMs && new Date(entry.time).getTime() < sinceMs) continue;
+              if (args.search && !line.toLowerCase().includes(args.search.toLowerCase())) continue;
+              entries.push(entry);
+            } catch {
+              // skip malformed lines
+            }
           }
         }
 
@@ -906,7 +917,7 @@ Format with a compelling title, and structure with clear paragraphs. Keep it bet
     async (args) => {
       const caller = await getCallerArtist();
       if (!caller || caller.id !== args.artistId) {
-        throw new Error("Not authorized to view another artist's orders");
+        throw new Error(recordDenial("Not authorized to view another artist's orders"));
       }
       const orders = await storage.getOrdersByArtist(args.artistId);
       const artist = await storage.getArtist(args.artistId);
@@ -1013,13 +1024,15 @@ export function registerMcpRoutes(app: Express) {
     }
 
     try {
+      const session: SessionRef = {};
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
         onsessioninitialized: (id: string) => {
+          session.id = id;
           sessions.set(id, { transport, server: mcpServer, userId });
         },
       });
-      const mcpServer = createMcpServer(userId);
+      const mcpServer = createMcpServer(userId, session);
 
       transport.onclose = () => {
         if (transport.sessionId) {

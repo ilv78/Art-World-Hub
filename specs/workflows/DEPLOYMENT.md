@@ -346,7 +346,7 @@ The image creates these directories at build time. Docker-compose mounts named v
 | Volume mount | Directories inside |
 |---|---|
 | `uploads:/app/uploads` | `artworks/`, `blog-covers/`, `avatars/` |
-| `logs:/app/logs` | Structured pino log files |
+| `logs:/app/logs` | Structured pino log files — rotated since #738: `app.1.log`, `app.2.log`, … 10 MB each, 10 kept (~100 MB ceiling). `app.log` without a number is a pre-#738 file; an operator tailing logs wants the highest-numbered one. |
 
 ---
 

@@ -27,6 +27,7 @@ const allowlist = [
   "pg",
   "pino",
   "pino-http",
+  "pino-roll",
   "resend",
   "stripe",
   "uuid",

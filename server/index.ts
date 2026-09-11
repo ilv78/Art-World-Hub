@@ -84,9 +84,13 @@ app.use(
     logger,
     autoLogging: {
       ignore: (req) => {
-        // Only log API requests; skip static assets, health checks, etc.
+        // Only log API and MCP requests; skip static assets, health checks, etc.
+        // /mcp is included (#738) so requests rejected before they reach a tool
+        // handler — unauthenticated probes, session-binding 403s — still leave a
+        // trace. The #732 review had to fall back to nginx logs for exactly
+        // this, and those had already rotated away for most of the window.
         const url = (req as Request).originalUrl || req.url || "";
-        return !url.startsWith("/api");
+        return !url.startsWith("/api") && !url.startsWith("/mcp");
       },
     },
     serializers: {

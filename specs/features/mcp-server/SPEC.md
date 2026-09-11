@@ -84,6 +84,25 @@ As an AI assistant (Claude), I want to access ArtVerse data and perform operatio
 | `order_summary` | artistId | Analyze orders and provide sales insights |
 | `artist_bio` | name, specialization?, country?, existingBio?, highlights? | Write/improve artist biography |
 
+### Audit Trail (#738)
+
+Every tool, resource and prompt invocation emits one line through `mcpLogger`:
+
+| Field | Meaning |
+|---|---|
+| `userId` | The caller — the user the session is bound to (#695) |
+| `sessionId` | MCP session, absent for calls made before initialisation completes |
+| `kind` / `name` | `tool` / `resource` / `prompt`, and which one |
+| `targetId` | The record acted on (`artworkId`, `artistId`, `orderId`, `postId`, `auctionId`), or the resource URI when no argument names a record |
+| `outcome` | `ok` (info) · `denied` (warn, with `reason`) · `error` (error) |
+| `durationMs` | Wall-clock time in the handler |
+
+**Identifiers only — never argument values.** `/api/admin/logs` and the `get_logs` MCP tool both surface `app.log` to admins, so a value logged here is readable back through the app; logging `create_order` arguments would put buyer contact details in a file `get_logs` hands out. `server/__tests__/mcp-audit.test.ts` enforces this with a sentinel-value assertion rather than leaving it to care.
+
+**Denials matter more than successes** — a burst of them is the signal that a cross-tenant attempt happened at all, which is what was unavailable for the #732 review.
+
+Instrumentation lives in `server/mcp-audit.ts` and is installed by **patching the registration methods**, not by editing each handler, so a tool added later is audited by construction. Every refusal path routes through `recordDenial()`: the `forbidden()` helper for tools, plus the two handlers that shape their own refusal (the `orders-by-artist` resource, which returns an error document, and the `order_summary` prompt, which throws). No handler can deny silently.
+
 ### Known Issues
 
 3 MCP `tool()` calls have `@ts-expect-error` comments due to deep type instantiation errors in the MCP SDK during CI type checking. Functionality is unaffected.

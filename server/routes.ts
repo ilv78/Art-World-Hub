@@ -14,7 +14,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
-import { logger, logFilePath } from "./logger";
+import { logger, logReadPaths } from "./logger";
 import sharp from "sharp";
 import { generateArtworkVariants } from "./lib/artwork-image";
 import readline from "readline";
@@ -1406,27 +1406,33 @@ export async function registerRoutes(
       const minLevel = level ? (pinoLevels[level] ?? 0) : 0;
       const sinceMs = since ? new Date(since).getTime() : 0;
 
-      if (!fs.existsSync(logFilePath)) {
+      // Read across the retained rotated files, oldest first (#738), so the
+      // history does not shorten to whatever accumulated since the last roll.
+      const logPaths = logReadPaths();
+      if (logPaths.length === 0) {
         return res.json({ entries: [], total: 0 });
       }
 
       // Read log file lines (NDJSON) — collect all then return the last `limit`
       const entries: object[] = [];
-      const fileStream = fs.createReadStream(logFilePath, { encoding: "utf-8" });
-      const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
+      for (const filePath of logPaths) {
+        if (!fs.existsSync(filePath)) continue;
+        const fileStream = fs.createReadStream(filePath, { encoding: "utf-8" });
+        const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
 
-      for await (const line of rl) {
-        if (!line.trim()) continue;
-        try {
-          const entry = JSON.parse(line);
-          // Apply filters
-          if (minLevel && (entry.level ?? 0) < minLevel) continue;
-          if (module && entry.module !== module) continue;
-          if (sinceMs && new Date(entry.time).getTime() < sinceMs) continue;
-          if (search && !line.toLowerCase().includes(search.toLowerCase())) continue;
-          entries.push(entry);
-        } catch {
-          // skip malformed lines
+        for await (const line of rl) {
+          if (!line.trim()) continue;
+          try {
+            const entry = JSON.parse(line);
+            // Apply filters
+            if (minLevel && (entry.level ?? 0) < minLevel) continue;
+            if (module && entry.module !== module) continue;
+            if (sinceMs && new Date(entry.time).getTime() < sinceMs) continue;
+            if (search && !line.toLowerCase().includes(search.toLowerCase())) continue;
+            entries.push(entry);
+          } catch {
+            // skip malformed lines
+          }
         }
       }
 
