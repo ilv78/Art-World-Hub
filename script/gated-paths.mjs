@@ -45,6 +45,11 @@ export const APPROVAL_LABEL = "human-approved";
  * `autorelease`. Restoring the old unconditional form would re-grant Tier B to every PR
  * in a single edit, so that edit costs a human label.
  *
+ * `agent-dispatch.yml` is the strongest case on the list (#753). It decides what starts
+ * an unattended agent run — its label filter, its human-applied check, its concurrency
+ * group and its spend ceiling. An agent that could edit it could remove every one of
+ * those guards, in one PR, with nobody watching.
+ *
  * `specs/AGENT-AUTONOMY-POLICY.md` is deliberately NOT guarded, though the first
  * version guarded it. The policy's own write-back rule requires that file to be
  * edited every time the developer answers an escalation — guarding it would charge
@@ -61,6 +66,7 @@ export const GATED_PATHS = [
   { pattern: /^script\/gated-paths\.mjs$/, reason: "the gate's own detector (self-guard)", item: 0 },
   { pattern: /^\.github\/workflows\/gated-paths\.yml$/, reason: "the gate's own workflow (self-guard)", item: 0 },
   { pattern: /^\.github\/workflows\/auto-merge\.yml$/, reason: "the tier system's merge condition (self-guard)", item: 0 },
+  { pattern: /^\.github\/workflows\/agent-dispatch\.yml$/, reason: "what starts an unattended agent run (self-guard)", item: 0 },
 ];
 
 /**

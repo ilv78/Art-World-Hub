@@ -25,6 +25,38 @@ There is no tier in which an agent applies `agent-ready` to an issue, including 
 
 ---
 
+## 1a. How a run starts
+
+`.github/workflows/agent-dispatch.yml` triggers on `issues: labeled`. Applying
+`agent-ready` starts a run; nobody has to be present.
+
+Four guards decide whether it proceeds, and each exists because of a specific failure:
+
+| Guard | Refuses when | Why |
+|---|---|---|
+| Label filter | the label is not `agent-ready` | — |
+| Human-applied | `sender.type` is a bot | An agent that can self-label grants itself Tier B, and the tier boundary becomes decorative |
+| Not already claimed | the issue carries `agent-working` or `agent-done` | §3: stop, do not race another run |
+| Daily ceiling | more than `MAX_RUNS_PER_DAY` (10) runs today | A runaway loop plus an unbounded dispatcher is an invoice, not an incident |
+
+Two properties of the run itself matter as much as the guards:
+
+- **`concurrency: agent-run`, never cancelling.** One run at a time repository-wide.
+  Concurrent runs collide on `DECISION-LOG.md` and `package-lock.json` every time — #744
+  predicted it and #749/#750/#751 delivered it.
+- **The PAT, not `GITHUB_TOKEN`.** A PR opened with `GITHUB_TOKEN` does not trigger
+  `pull_request` workflows, so `Gated Path Review` and `PR Contract` would never run on
+  agent PRs. The gate would be permanently absent on exactly the PRs it exists for.
+
+**A dispatch that never starts leaves `agent-ready` in place**, so the retry is a
+re-label rather than an investigation. The ceiling refusal says so on the issue.
+
+**Known limit:** an agent acting with the developer's own credentials is
+indistinguishable from the developer. The human-applied guard rejects bot accounts, not
+impersonation — the same limit the gated-path check documents.
+
+---
+
 ## 2. A Tier B run, start to finish
 
 1. **Claim.** Add `agent-working`. If it is already there, another run holds the issue —
@@ -93,6 +125,7 @@ checks are present, not merely that nothing is red.**
 | Only Tier B PRs merge themselves | `auto-merge.yml`, conditioned on `agent-review` / `autorelease` |
 | The gate cannot be widened quietly | `script/gated-paths.mjs`, its workflow, and `auto-merge.yml` are self-guarded paths |
 | Production is never automatic | `deploy-production.yml` is `workflow_dispatch` only |
+| Only a human starts a run, one at a time, within a spend ceiling | `agent-dispatch.yml` — label filter, `sender.type` check, `concurrency: agent-run`, `MAX_RUNS_PER_DAY` |
 | Documentation is not optional | Documentation Agent on every PR |
 | A PR says what it did and did not verify | `pr-contract.yml`, a **required** check since #752 — declaration only; it cannot check that the claim is true. Dependabot and `autorelease` PRs are exempt and report *skipped*. |
 | The change survives a real environment | Staging deploy + smoke tests, evidence posted to the issue |

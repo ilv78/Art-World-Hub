@@ -138,6 +138,13 @@ it is what gives Tier A mechanical meaning.
 **Consequence, stated here rather than discovered later:** a human-opened PR no longer
 merges itself. Apply `agent-review` to opt one in, or merge it by hand.
 
+**Tier B starts itself as of #753.** `.github/workflows/agent-dispatch.yml` triggers on
+`issues: labeled` and begins a run when a human applies `agent-ready` — one at a time,
+within a daily ceiling, opening its PR with a PAT so the gates actually run on it.
+`specs/workflows/AGENT-PIPELINE.md` §1a holds the guards. Until then Tier B removed the
+approval step but not the session: a human still had to start every run, which is most of
+the cost the policy exists to remove.
+
 ---
 
 ## 2. The prime directive: default and document
@@ -319,6 +326,7 @@ Only for the gated list (§1), or for something genuinely unrecoverable if wrong
 
 | Date | Change |
 |---|---|
+| 2026-09-12 | Tier B now starts itself: `agent-dispatch.yml` begins a run when a human applies `agent-ready`, serialised repository-wide and bounded by a daily ceiling. ([#753](https://github.com/ilv78/Art-World-Hub/issues/753)) |
 | 2026-09-12 | §9a: `PR Contract` made a required status check, with Dependabot and `autorelease` exempted first — a required check those PRs could never satisfy would have blocked every dependency update and every release. ([#752](https://github.com/ilv78/Art-World-Hub/issues/752)) |
 | 2026-09-11 | Tier B activated (§1a): plan approval drops for issues a human labels `agent-ready`. `agent-stuck` created as a state distinct from `agent-failed`; `auto-merge.yml` conditioned on `agent-review` and added to the self-guarded paths. ([#744](https://github.com/ilv78/Art-World-Hub/issues/744)) |
 | 2026-09-11 | Added §9a, the PR contract: every PR must state its issue, its verification, its CI coverage and any deviation. ([#744](https://github.com/ilv78/Art-World-Hub/issues/744)) |

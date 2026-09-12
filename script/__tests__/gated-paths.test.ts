@@ -137,6 +137,15 @@ describe("gated path matching", () => {
     expect(findings[0].reason).toContain("self-guard");
   });
 
+  it("guards the dispatcher, which decides what starts an unattended run", () => {
+    // #753. The dispatcher holds the label filter, the human-applied check, the
+    // concurrency group and the spend ceiling. An agent able to edit it could remove
+    // all four in one PR with nobody watching — the strongest self-guard case here.
+    const findings = findGatedChanges([".github/workflows/agent-dispatch.yml"], noFiles);
+    expect(findings).toHaveLength(1);
+    expect(findings[0].reason).toContain("self-guard");
+  });
+
   it("does not guard the policy document itself", () => {
     // The write-back rule requires editing the policy every time an escalation is
     // answered. Charging a label for each of those is the cost the policy exists to

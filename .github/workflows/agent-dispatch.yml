@@ -1,0 +1,141 @@
+name: Agent Dispatch
+
+# Applying `agent-ready` to an issue starts an autonomous run (#753).
+#
+# #744 removed the plan-approval step; it did not remove the need for a human to
+# start the session. This is that trigger. Without it the developer still spends a
+# session per issue no matter how good the policy file gets, which is the cost the
+# whole policy exists to remove.
+#
+# WHAT DECIDES WHETHER THIS RUNS. Four guards, each from a specific failure:
+#
+#   1. the label must be `agent-ready`             — event filter
+#   2. a *human* must have applied it              — an agent that can self-label
+#                                                    grants itself Tier B, and the
+#                                                    tier boundary becomes decorative
+#   3. the issue must not already be claimed       — AGENT-PIPELINE.md §3: stop, do
+#                                                    not race another run
+#   4. the daily ceiling must not be reached       — a runaway loop plus an unbounded
+#                                                    dispatcher is an invoice
+#
+# Known limit, the same one the gated-path check documents: an agent acting with the
+# developer's own credentials is indistinguishable from the developer. Guard 2 rejects
+# *bot* accounts, not impersonation.
+#
+# This file is a self-guarded path in script/gated-paths.mjs. It is the most
+# authority-granting file in the repository — editing it changes what starts an
+# unattended agent — so changing it costs a human label.
+
+on:
+  issues:
+    types: [labeled]
+
+# One agent run at a time, repository-wide, and never cancel one that is mid-flight.
+#
+# #744 predicted that concurrent runs collide on `DECISION-LOG.md` (append-only) and
+# `package-lock.json` (regenerated) every time. #749 and #750 then merged underneath
+# #751 and conflicted it for real — which also silently skipped its required checks,
+# because a conflicted PR runs no `pull_request` workflows at all (#752).
+concurrency:
+  group: agent-run
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+env:
+  MAX_RUNS_PER_DAY: 10
+
+jobs:
+  dispatch:
+    name: Work the issue
+    if: >-
+      github.event.label.name == 'agent-ready' &&
+      github.event.sender.type == 'User' &&
+      !contains(github.event.issue.labels.*.name, 'agent-working') &&
+      !contains(github.event.issue.labels.*.name, 'agent-done')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check the daily ceiling
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          ISSUE: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+          TODAY=$(date -u +%Y-%m-%d)
+          COUNT=$(gh api \
+            "repos/$REPO/actions/workflows/agent-dispatch.yml/runs?created=>=$TODAY&per_page=1" \
+            --jq '.total_count')
+
+          echo "Dispatch runs today (including this one): $COUNT / $MAX_RUNS_PER_DAY"
+          if [ "$COUNT" -gt "$MAX_RUNS_PER_DAY" ]; then
+            gh issue comment "$ISSUE" --body "Dispatch refused: $COUNT runs today, ceiling is $MAX_RUNS_PER_DAY. Re-apply \`agent-ready\` tomorrow, or raise \`MAX_RUNS_PER_DAY\` in \`.github/workflows/agent-dispatch.yml\` if the ceiling is wrong."
+            exit 1
+          fi
+
+      # Claim before working, so guard 3 means something for the next event and a
+      # human can see the issue is taken.
+      - name: Claim the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+        run: gh issue edit "$ISSUE" --repo "$REPO" --add-label agent-working
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          # The PAT, not GITHUB_TOKEN. A PR opened with GITHUB_TOKEN does not trigger
+          # `pull_request` workflows, so `Gated Path Review` and `PR Contract` would
+          # never run on agent PRs — the gate silently absent on exactly the PRs it
+          # exists for. Same class as the #752 finding, and worse, because here it
+          # would be permanent rather than conflict-dependent.
+          token: ${{ secrets.RELEASE_PAT }}
+
+      - name: Work the issue
+        uses: anthropics/claude-code-action@d75b94d5ad426cb8546e6628b6f5f19b84e5cce1 # v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.RELEASE_PAT }}
+          branch_prefix: feature/
+          claude_args: --max-turns 80
+          prompt: |
+            Work GitHub issue #${{ github.event.issue.number }} in this repository,
+            autonomously, to completion.
+
+            Read `CLAUDE.md` first, then `specs/AGENT-AUTONOMY-POLICY.md` and
+            `specs/workflows/AGENT-PIPELINE.md`. They are the contract for this run;
+            everything below is a summary of them, and they win wherever this prompt
+            is thinner.
+
+            This issue carries `agent-ready`, so it is **Tier B**: do not post a plan
+            and do not wait for approval. Nobody is watching this run. There is no one
+            to answer a question, so do not ask one.
+
+            - Branch `feature/issue-${{ github.event.issue.number }}-<slug>` off `main`.
+              Never commit to `main`.
+            - Where the policy is silent, take the most reversible option, ship it, and
+              record it in `specs/decisions/DECISION-LOG.md` in the same PR. Write any
+              new standing rule back into the policy file.
+            - Documentation is part of the change, not a follow-up.
+            - Open the PR, label it `agent-review` (this is what permits auto-merge),
+              and remove `agent-working`. The PR body must satisfy the PR contract:
+              the issue reference, a `## Verification` section saying what CI does
+              **and does not** cover, and a deviation statement.
+            - Before calling CI green, confirm the required checks are **present**, not
+              merely that nothing is red. A conflicted PR runs no `pull_request`
+              workflows at all.
+            - If the change touches the gated list, finish everything that does not
+              depend on it, let `Gated Path Review` fail, post one batched comment with
+              the options and your recommendation, and label the issue `agent-stuck`.
+              That is the escalation — do not add a second one.
+            - If CI is red three cycles running on the same PR, stop and label the
+              issue `agent-failed`. Never force-push, never delete a branch.
+
+            Post what you did to the issue when the PR is open.
