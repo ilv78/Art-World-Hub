@@ -4,13 +4,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Work Workflow
 
-Every piece of work MUST follow this sequence — no exceptions, even for "small" fixes or doc updates:
+Which steps apply depends on the issue's **tier** (`specs/AGENT-AUTONOMY-POLICY.md` §1a).
+**Tier A is the default.** An issue is Tier B only when it carries the `agent-ready`
+label — which only a human applies. **Never apply `agent-ready` to an issue yourself.**
+
+**Tier A — escorted (default, no label).** Every step, no exceptions, even for "small"
+fixes or doc updates:
 
 1. **Check for a GitHub issue.** If none exists, propose creating one (with suggested priority and labels) and wait for approval before proceeding.
 2. **Post a plan as a comment on the issue.** Describe what will change, which files, and why.
 3. **Wait for the developer to approve the plan.** Do not start modifying files until explicitly told to proceed.
 4. **Work the issue.** Update the issue with progress as needed.
 5. **Tag with `release: next`** when done.
+
+**Tier B — autonomous to staging (`agent-ready`).** Steps 2 and 3 do not apply. Claim the
+issue with `agent-working`, work it, open the PR and label it `agent-review` (which is
+also what lets auto-merge act), merge on green, confirm it reached staging, then
+`agent-done` + `release: next`. The issue and the PR are the record.
+
+Both tiers stop at the same two places: the §1 gated list blocks the merge until a human
+applies `human-approved`, and production promotion is always the developer's call.
 
 ## Agent Autonomy Policy
 
@@ -23,10 +36,14 @@ the five things that genuinely need a human.
 it. If it is not, pick the most reversible option, do it, record it in the
 decision log, and add the rule to that file so the question is never asked twice.
 
-The Work Workflow below still applies as written. The autonomous tiers proposed
-in #744 take effect only once the gated-path CI check exists — removing the
-approval step before its mechanical replacement is in place would leave no gate
-at all.
+`specs/workflows/AGENT-PIPELINE.md` is the operational companion: the label lifecycle,
+the order a run executes in, and what to do when something goes wrong.
+
+§1a defines the tiers and §1 the five gated items. Both are enforced mechanically:
+`Gated Path Review` is a required status check on `main`, and `auto-merge.yml` acts
+only on a PR labelled `agent-review` or `autorelease`. The tiers took effect once
+that enforcement existed — dropping the approval step before its mechanical
+replacement was in place would have left no gate at all.
 
 ## Project Overview
 

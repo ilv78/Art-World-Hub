@@ -127,6 +127,16 @@ describe("gated path matching", () => {
     expect(findGatedChanges(selfGuarded, noFiles)).toHaveLength(2);
   });
 
+  it("guards auto-merge, which decides whether a PR merges itself", () => {
+    // AGENT-AUTONOMY-POLICY §1a: auto-merge now acts only on a PR labelled
+    // `agent-review` or `autorelease`. Restoring the old unconditional form would
+    // re-grant Tier B to every PR in a single edit — the same self-widening shape
+    // the detector's own guard exists to stop.
+    const findings = findGatedChanges([".github/workflows/auto-merge.yml"], noFiles);
+    expect(findings).toHaveLength(1);
+    expect(findings[0].reason).toContain("self-guard");
+  });
+
   it("does not guard the policy document itself", () => {
     // The write-back rule requires editing the policy every time an escalation is
     // answered. Charging a label for each of those is the cost the policy exists to
