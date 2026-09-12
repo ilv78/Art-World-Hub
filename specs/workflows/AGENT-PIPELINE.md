@@ -60,9 +60,28 @@ There is no tier in which an agent applies `agent-ready` to an issue, including 
 | CI red three cycles running on the same PR | Stop. Leave branch and PR intact. No fourth attempt, no force-push, no branch deletion. | `agent-failed` |
 | Another run already holds the issue | Stop. Do not race. | — |
 | Merge conflict on `DECISION-LOG.md` or `package-lock.json` | Rebase and retry — these conflict by design (append-only log, regenerated lockfile). Not an escalation. | — |
+| **Required checks missing from the list entirely** | The PR is conflicted. Rebase — do not investigate the checks. | — |
 
 `agent-stuck` waits silently and pages nobody. `agent-failed` is terminal and needs a human
 to reset it. They are different states; do not use one for the other.
+
+### Checks that are absent are not checks that passed
+
+`pull_request` workflows run against the merge ref (`refs/pull/N/merge`). GitHub cannot
+build that ref while a PR has conflicts, so those workflows **do not run at all** — they
+do not fail, they do not queue, they are simply missing from the checks list.
+`pull_request_target` and `push` workflows are unaffected, which is what makes it
+deceptive: the summary is green and busy, and only the two checks that matter are gone.
+
+Observed on #751 after #749 and #750 merged underneath it: `Gated Path Review` and
+`PR Contract` were both absent while 23 other checks passed. It took
+`gh run list --workflow=gated-paths.yml` to notice.
+
+This is **not** a merge bypass — a required check that never reports leaves the PR
+blocked on *Expected — waiting for status to be reported*, and a conflicted PR cannot
+merge anyway. The cost is that an agent reading a green summary will report work as
+verified when the gate never ran. **Before calling a PR green, check that the required
+checks are present, not merely that nothing is red.**
 
 ---
 
@@ -75,7 +94,7 @@ to reset it. They are different states; do not use one for the other.
 | The gate cannot be widened quietly | `script/gated-paths.mjs`, its workflow, and `auto-merge.yml` are self-guarded paths |
 | Production is never automatic | `deploy-production.yml` is `workflow_dispatch` only |
 | Documentation is not optional | Documentation Agent on every PR |
-| A PR says what it did and did not verify | `pr-contract.yml` — declaration only; it cannot check that the claim is true |
+| A PR says what it did and did not verify | `pr-contract.yml`, a **required** check since #752 — declaration only; it cannot check that the claim is true. Dependabot and `autorelease` PRs are exempt and report *skipped*. |
 | The change survives a real environment | Staging deploy + smoke tests, evidence posted to the issue |
 
 **Not enforced by machinery, and honest about it:** spending money or reaching a third

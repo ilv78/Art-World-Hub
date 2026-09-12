@@ -29,6 +29,7 @@
  * Plain .mjs, node builtins only — the job runs before any `npm ci`.
  *
  * Usage: node script/pr-contract.mjs --body <file> --files <file-list>
+ *                                    [--author <login>] [--labels a,b]
  */
 
 import { appendFileSync, readFileSync } from "node:fs";
@@ -62,6 +63,41 @@ export function section(body, headingPattern) {
   });
 
   return (end === -1 ? rest : rest.slice(0, end)).join("\n").trim();
+}
+
+/**
+ * Authors and labels whose PRs the contract cannot apply to.
+ *
+ * This exists because the check is about to become a *required* status check, and a
+ * required check that a PR can never satisfy is not a gate — it is a permanent block.
+ *
+ *   - Dependabot writes its own body (a dependency table and release notes) and cannot
+ *     be asked to add a Verification section. Failing it would stall every dependency
+ *     update, and `dependabot-auto-merge.yml` with it.
+ *   - `release.yml` generates the release PR body from the changelog. Its only issue
+ *     references live inside an HTML comment, which `prose()` strips by design.
+ *
+ * Both are machine-authored against a recorded intent that already exists elsewhere —
+ * the dependency manifest and the changelog. The contract's purpose is to stop a
+ * *human or agent* from merging work whose intent is unrecorded; neither of these is
+ * that. Exempting them narrows the check to where it bites, and is the difference
+ * between making it required and leaving it advisory forever.
+ */
+export const EXEMPT_AUTHORS = ["dependabot[bot]", "dependabot-preview[bot]"];
+export const EXEMPT_LABELS = ["autorelease"];
+
+/** Why this PR is exempt, or null when the contract applies. */
+export function exemption({ author = "", labels = [] } = {}) {
+  if (EXEMPT_AUTHORS.includes(author)) {
+    return `authored by ${author} — its body is machine-generated from the dependency manifest`;
+  }
+
+  const label = labels.find((name) => EXEMPT_LABELS.includes(name));
+  if (label) {
+    return `labelled \`${label}\` — its body is machine-generated from the changelog`;
+  }
+
+  return null;
 }
 
 export function checkContract(body, changedFiles) {
@@ -102,8 +138,13 @@ export function checkContract(body, changedFiles) {
   return failures;
 }
 
-export function renderReport(failures) {
+export function renderReport(failures, exempt = null) {
   const lines = ["## PR contract"];
+
+  if (exempt) {
+    lines.push("", `⏭️ Skipped — this PR is ${exempt}.`);
+    return `${lines.join("\n")}\n`;
+  }
 
   if (failures.length === 0) {
     lines.push("", "✅ The PR states its issue, its verification, its CI coverage and any deviation.");
@@ -133,8 +174,27 @@ function main(argv) {
   const bodyPath = valueOf("--body");
   const filesPath = valueOf("--files");
   if (!bodyPath || !filesPath) {
-    console.error("usage: node script/pr-contract.mjs --body <file> --files <file-list>");
+    console.error(
+      "usage: node script/pr-contract.mjs --body <file> --files <file-list> [--author <login>] [--labels a,b]",
+    );
     return 2;
+  }
+
+  const exempt = exemption({
+    author: valueOf("--author") ?? "",
+    labels: (valueOf("--labels") ?? "")
+      .split(",")
+      .map((name) => name.trim())
+      .filter(Boolean),
+  });
+
+  if (exempt) {
+    const report = renderReport([], exempt);
+    console.log(report);
+    if (process.env.GITHUB_STEP_SUMMARY) {
+      appendFileSync(process.env.GITHUB_STEP_SUMMARY, report);
+    }
+    return 0;
   }
 
   const body = readFileSync(bodyPath, "utf8");
