@@ -275,6 +275,24 @@ change when it turns out to be wrong.
 against the issue needs an API key and a budget — items 3 and 4 of the gated list —
 so it is the developer's decision, not an agent's.
 
+**Required status check as of #752**, after five runs across three PRs with no crashes
+and no false failures. It was advisory first on purpose — the #746/#747 lesson is that a
+gate nothing consumes is decoration, and the #748 lesson is that making one required
+before it is stable blocks every merge in the repository.
+
+**Two exemptions, and they are the reason it could become required at all.** A required
+check a PR can never satisfy is a permanent block rather than a gate:
+
+| Exempt | Why it cannot comply |
+|---|---|
+| `dependabot[bot]` | Writes its own body from the dependency manifest. Failing it would stall every dependency update and `dependabot-auto-merge.yml` with it. |
+| PRs labelled `autorelease` | `release.yml` generates the body from the changelog, and its only issue references sit inside an HTML comment that the checker strips by design. |
+
+Both are machine-authored against an intent recorded elsewhere — the manifest and the
+changelog. The contract exists to stop a human or an agent merging work whose intent is
+unrecorded; neither of these is that. An exempt PR reports **skipped**, never a green
+tick: a required check must not look like a review it did not perform.
+
 ---
 
 ## 10. When you must escalate
@@ -301,6 +319,7 @@ Only for the gated list (§1), or for something genuinely unrecoverable if wrong
 
 | Date | Change |
 |---|---|
+| 2026-09-12 | §9a: `PR Contract` made a required status check, with Dependabot and `autorelease` exempted first — a required check those PRs could never satisfy would have blocked every dependency update and every release. ([#752](https://github.com/ilv78/Art-World-Hub/issues/752)) |
 | 2026-09-11 | Tier B activated (§1a): plan approval drops for issues a human labels `agent-ready`. `agent-stuck` created as a state distinct from `agent-failed`; `auto-merge.yml` conditioned on `agent-review` and added to the self-guarded paths. ([#744](https://github.com/ilv78/Art-World-Hub/issues/744)) |
 | 2026-09-11 | Added §9a, the PR contract: every PR must state its issue, its verification, its CI coverage and any deviation. ([#744](https://github.com/ilv78/Art-World-Hub/issues/744)) |
 | 2026-09-11 | `Gated Path Review` made a required status check on `main`; self-guard narrowed to the detector and its workflow — guarding this file fought §11's write-back rule and bought no enforcement. ([#744](https://github.com/ilv78/Art-World-Hub/issues/744)) |

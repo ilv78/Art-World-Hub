@@ -10,16 +10,26 @@ name: PR Contract
 # It enforces declaration, not truth. The judgement half needs a model, an API key
 # and a budget — all on the policy's gated list, so that is the developer's call.
 #
-# Not a required status check yet, deliberately: #746/#747 showed the cost of
-# treating an unproven gate as authoritative, and the lesson from making
-# Gated Path Review required was to prove stability on real PRs first.
+# A required status check as of #752. It was deliberately advisory first: #746/#747
+# showed the cost of treating an unproven gate as authoritative, and the lesson from
+# making Gated Path Review required was to prove stability on real PRs before
+# depending on it. Five runs across three PRs, no crashes, and its only failures were
+# correct verdicts.
+#
+# Making it required forced one change first. A required check a PR can never satisfy
+# is not a gate, it is a permanent block — and Dependabot writes its own body, while
+# release.yml generates the release PR's. Both are now exempt (see script/pr-contract.mjs),
+# because otherwise every dependency update and every release would have stalled the
+# moment this became required.
 
 on:
   pull_request:
     branches: [main, redesign/v3]
     # `edited` matters: fixing the PR body is how an author satisfies this check,
-    # and without it they would have to push an empty commit to re-run.
-    types: [opened, edited, synchronize, reopened]
+    # and without it they would have to push an empty commit to re-run. `labeled`
+    # and `unlabeled` matter now that a label can exempt a PR — the job is cheap
+    # (no build, no scan), so re-running it on a label change costs nothing.
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled]
 
 permissions:
   contents: read
@@ -49,5 +59,16 @@ jobs:
           echo "Changed files:"
           cat changed-files.txt
 
+      # Author and labels come from the event payload rather than another API call:
+      # they decide only whether the check applies at all, and the payload already
+      # carries both.
       - name: Check the PR contract
-        run: node script/pr-contract.mjs --body pr-body.md --files changed-files.txt
+        env:
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: |
+          node script/pr-contract.mjs \
+            --body pr-body.md \
+            --files changed-files.txt \
+            --author "$PR_AUTHOR" \
+            --labels "$PR_LABELS"

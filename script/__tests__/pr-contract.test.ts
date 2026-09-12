@@ -8,7 +8,7 @@
  * a green contract check for a review.
  */
 import { describe, it, expect } from "vitest";
-import { checkContract, isCodeChange, renderReport, section } from "../pr-contract.mjs";
+import { checkContract, exemption, isCodeChange, renderReport, section } from "../pr-contract.mjs";
 
 const rules = (body: string, files: string[] = ["server/routes.ts"]) =>
   checkContract(body, files).map((failure: { rule: string }) => failure.rule);
@@ -120,5 +120,42 @@ describe("report", () => {
 
   it("passes cleanly", () => {
     expect(renderReport([])).toContain("✅");
+  });
+
+  it("says a skipped PR was skipped, not that it passed", () => {
+    // A required check reads as authoritative. An exempt PR must not look reviewed.
+    const report = renderReport([], "authored by dependabot[bot] — machine-generated");
+    expect(report).toContain("Skipped");
+    expect(report).not.toContain("✅");
+  });
+});
+
+describe("exemptions", () => {
+  // This check is a *required* status check (#752). A required check a PR can never
+  // satisfy is a permanent block, not a gate — and neither Dependabot nor release.yml
+  // can be asked to rewrite the body they generate.
+
+  it("exempts Dependabot, which cannot add a Verification section", () => {
+    expect(exemption({ author: "dependabot[bot]" })).toContain("dependabot[bot]");
+  });
+
+  it("exempts the release PR, whose issue refs live in a stripped HTML comment", () => {
+    expect(exemption({ author: "ilv78", labels: ["autorelease"] })).toContain("labelled `autorelease`");
+  });
+
+  it("does not exempt an ordinary PR, including one with other labels", () => {
+    expect(exemption({ author: "ilv78", labels: ["agent-review", "devops"] })).toBeNull();
+    expect(exemption({})).toBeNull();
+  });
+
+  it("does not exempt a human PR that merely mentions dependabot", () => {
+    // The author field is the identity; the body is not.
+    expect(exemption({ author: "not-dependabot[bot]" })).toBeNull();
+  });
+
+  it("a real Dependabot body would fail the contract without the exemption", () => {
+    // The reason the exemption exists, pinned so nobody removes it as redundant.
+    const body = "Bumps the npm-minor-and-patch group with 21 updates in the / directory:";
+    expect(rules(body).length).toBeGreaterThan(0);
   });
 });
