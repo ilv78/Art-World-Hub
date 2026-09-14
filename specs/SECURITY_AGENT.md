@@ -283,6 +283,15 @@ single file and cannot mix formats, so all entries live in the yaml file.
   vulnerability is not reachable in our deployment (e.g. "build-tool binary,
   not runtime-reachable", "bundled inside npm base image, lockfile pins fixed
   version").
+- **An external fix must be verified, not assumed.** If `statement` names
+  someone else's future action as the real fix ("upstream will patch",
+  "fixed once the base image rebuilds", "the real fix is issue #NNN"), it
+  must also record (a) how you confirmed that fix is available *right now*
+  — the exact upstream version and where you checked it — and (b) a
+  concrete fallback if upstream still hasn't acted by `expired_at`. #731 —
+  five `libgnutls30` entries named #629 ("base-image rebuild") as the fix;
+  it never shipped, and nobody had a documented next step. The working fix
+  (a targeted `apt-get --only-upgrade`) was available the whole time.
 - **Link the decision.** Add a one-line row to `specs/decisions/DECISION-LOG.md`
   when introducing the first entry for a new library or when changing scope.
 
