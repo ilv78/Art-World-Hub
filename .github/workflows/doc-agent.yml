@@ -19,11 +19,38 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Check for API key
+      - name: Check for credentials
         id: check-key
         env:
           HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
-        run: echo "has_key=$HAS_KEY" >> "$GITHUB_OUTPUT"
+          IS_FORK: ${{ github.event.pull_request.head.repo.fork }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          echo "has_key=$HAS_KEY" >> "$GITHUB_OUTPUT"
+
+          if [ "$HAS_KEY" = "true" ]; then
+            exit 0
+          fi
+
+          # No credential. Two cases, and only one of them is a mistake.
+          #
+          # Fork PRs and Dependabot cannot read repository secrets at all — GitHub
+          # withholds them from untrusted heads, and Dependabot runs against its own
+          # separate store. Failing those would block every external contribution and
+          # every dependency bump. Note that Dependabot needs its own check: its
+          # branches are same-repo, so head.repo.fork is false and the fork test
+          # alone does not cover it.
+          if [ "$IS_FORK" = "true" ] || [ "$ACTOR" = "dependabot[bot]" ]; then
+            echo "::notice::Secrets unavailable for this PR source. Documentation rules are enforced by the audit job after merge."
+            exit 0
+          fi
+
+          # Same-repo PR with no credential is a misconfiguration, and this check
+          # used to pass anyway (#760). A check that reports success without running
+          # is worse than no check.
+          echo "::error::CLAUDE_CODE_OAUTH_TOKEN is not set. The Documentation Agent cannot run, and will not report success without running (#760)."
+          exit 1
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: steps.check-key.outputs.has_key == 'true'
@@ -74,10 +101,6 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           use_sticky_comment: true
-
-      - name: Skip notice
-        if: steps.check-key.outputs.has_key != 'true'
-        run: echo "⏭️ Skipping doc agent enforce — ANTHROPIC_API_KEY not configured."
 
   # --- AUDIT MODE: Runs on push to main, weekly schedule, or manual trigger ---
   audit:
