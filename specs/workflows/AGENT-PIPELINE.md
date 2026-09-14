@@ -79,6 +79,25 @@ impersonation — the same limit the gated-path check documents.
 8. **Close out.** `agent-done` + `release: next`. Wait for **every** pipeline triggered by
    the merge — CI/CD, Security, Documentation Agent — before calling it done (policy §9.4).
 
+**Known limit: `RELEASE_PAT` cannot write to issues (#731).** Steps 1, 5 and 8 all assume the
+agent's own credential can label and comment on the *issue*. As of #731 that is false:
+`RELEASE_PAT` has `Contents: write` and `Pull requests: write` — checkout, push, PR open,
+PR labels, PR comments all work — but every issue-side write (`addLabelsToLabelable`,
+`removeLabelsFromLabelable`, `addComment`, `closeIssue`) returns
+`403 Resource not accessible by personal access token`, on both the GraphQL and REST paths.
+Issue *creation* succeeds, which is what makes this easy to miss — it looks like `Issues`
+scope is present until a label or comment is attempted against an existing one. Step 1
+("Claim") still works because it runs as a separate workflow step authenticated with
+`${{ github.token }}` (job `permissions: issues: write`), not `RELEASE_PAT` — only the
+agent's own session, steps 5 and 8, are affected.
+
+**Until the PAT's scope is widened** (a credential change — gated list item 3, needs a
+human with access to the PAT's GitHub settings): the agent cannot drop `agent-working` or
+post its summary to the issue. Post the run's status as a **PR comment** instead (PR-side
+writes work) and say so explicitly, so the gap is visible rather than silently skipped.
+A human must then manually clear `agent-working` on merge and apply `agent-done` +
+`release: next` after staging verification, until the scope is fixed.
+
 ---
 
 ## 3. When it goes wrong

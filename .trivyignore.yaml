@@ -40,5 +40,28 @@
 # It should be rare enough to be uncomfortable. See
 # `specs/SECURITY_AGENT.md` §6 and the postmortem
 # `docs/postmortems/2026-09-10-trivy-scan-blocked-staging-61-days.md`.
+#
+# ─── If `statement` names an external fix, prove it ─────────────────
+# "Fixed once X rebuilds" / "waiting on upstream" / "the real fix is
+# issue #NNN" is a promise about someone else's future action, and #731
+# is what happens when that promise is never checked: five libgnutls30
+# entries named #629 ("base-image rebuild") as the fix, and it never
+# shipped. `node:25-bookworm-slim` was still on `3.7.9-2+deb12u6` months
+# after `3.7.9-2+deb12u7` was available in Debian bookworm. Anyone who
+# picked up #629 would have rebuilt, seen no change, and had no
+# documented next step — the working fix, a targeted
+# `apt-get install --only-upgrade`, was available the entire time.
+#
+# So a `statement` that names an external fix as the reason an entry is
+# temporary must also say, in the statement text itself:
+#
+#   1. How you confirmed the fix is available *right now* — the exact
+#      upstream version, and where you checked it (package repo,
+#      changelog, release page) — not "should be out by now."
+#   2. The fallback if upstream still hasn't shipped by `expired_at` —
+#      a concrete alternative action, not "re-review and extend."
+#
+# A statement that names the external fix and nothing else is
+# incomplete. See `specs/SECURITY_AGENT.md` §6.
 
 vulnerabilities: []
