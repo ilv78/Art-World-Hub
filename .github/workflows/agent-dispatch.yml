@@ -104,7 +104,16 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.RELEASE_PAT }}
           branch_prefix: feature/
-          claude_args: --max-turns 80
+          # The action supplies the base GitHub tools and nothing else; every other
+          # tool must be named here (its docs/configuration.md, "base GitHub tools are
+          # always included"). Without this the agent is told to branch, commit and
+          # open a PR while the harness denies every call that would do it — 12 denials
+          # over 20 turns on the first real run, no output, job green (#765).
+          #
+          # Deliberately a list rather than --permission-mode bypassPermissions: the
+          # blast radius should stay set by RELEASE_PAT and the gated-path check, not
+          # by removing the tool boundary. Widen only on an observed denial.
+          claude_args: --max-turns 80 --allowedTools "Edit,Write,Read,Glob,Grep,Bash(git:*),Bash(gh:*),Bash(npm:*),Bash(npx:*)"
           prompt: |
             Work GitHub issue #${{ github.event.issue.number }} in this repository,
             autonomously, to completion.
@@ -139,3 +148,68 @@ jobs:
               issue `agent-failed`. Never force-push, never delete a branch.
 
             Post what you did to the issue when the PR is open.
+
+      # A run that produces nothing must not report success, and must not strand the
+      # issue behind its own claim.
+      #
+      # The first real dispatch (#688, run 34844602177) exited 0 after 20 turns and 12
+      # permission denials, having produced no branch, no PR and no comment — and left
+      # `agent-working` behind, so guard 3 refused every retry until a human cleared the
+      # label by hand. `Work the issue` was the last meaningful step; nothing asserted a
+      # work product existed.
+      #
+      # The pre-#753 VPS runner had this check — the failure comments on #691 and #692
+      # read "no commits were produced". It did not survive the move to Actions. This
+      # restores it.
+      #
+      # `always()` so it also fires when the Claude step fails: releasing the claim
+      # matters more on the failure path than the success one.
+      #
+      # KNOWN LIMIT: an agent that correctly concludes no change is needed is
+      # indistinguishable here from one that was denied every tool, and both are labelled
+      # `agent-failed`. Fixing that needs a signal from the agent rather than an inference
+      # from a missing PR (#765).
+      - name: Confirm the run produced work
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+          ISSUE: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+
+          # Head branch only, deliberately. Matching the PR *body* for "#<issue>" looks
+          # more forgiving and is wrong: #762's body discusses the failed #688 run at
+          # length, so a body match reports that #688 produced work when it produced
+          # nothing. Tested against the live PR list before shipping — body matching
+          # returned 1 for #688, branch matching returns 0.
+          #
+          # The branch name is the contract: the prompt mandates
+          # feature/issue-<n>-<slug> and branch_prefix pins the prefix. A misnamed
+          # branch therefore reads as failure — a loud false negative, which is the
+          # safe direction when the alternative is a silent false positive.
+          COUNT=$(gh pr list --repo "$REPO" --state all --limit 100 \
+            --json number,headRefName \
+            | jq --arg n "$ISSUE" '[.[] | select(
+                .headRefName | startswith("feature/issue-" + $n + "-")
+              )] | length')
+
+          if [ "$COUNT" -gt 0 ]; then
+            echo "Found $COUNT PR(s) for issue #$ISSUE; the run produced work."
+            exit 0
+          fi
+
+          gh issue edit "$ISSUE" --repo "$REPO" \
+            --remove-label agent-working --add-label agent-failed
+
+          gh issue comment "$ISSUE" --repo "$REPO" --body "Agent run produced no PR and no branch.
+
+          The \`agent-working\` claim has been released and \`agent-failed\` applied, so this issue will **not** retry automatically. Remove \`agent-failed\` and re-apply \`agent-ready\` once the cause is understood.
+
+          Run: $RUN_URL
+
+          If the agent concluded that no change was needed, that is currently indistinguishable from a failed run — see #765."
+
+          echo "::error::Run produced no PR for issue #$ISSUE. Claim released, agent-failed applied."
+          exit 1
