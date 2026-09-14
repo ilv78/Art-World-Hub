@@ -68,19 +68,35 @@ jobs:
         run: |
           set -euo pipefail
           TODAY=$(date -u +%Y-%m-%d)
-          COUNT=$(gh api \
-            "repos/$REPO/actions/workflows/agent-dispatch.yml/runs?created=>=$TODAY&per_page=1" \
-            --jq '.total_count')
 
-          echo "Dispatch runs today (including this one): $COUNT / $MAX_RUNS_PER_DAY"
+          # `total_count` counts every *invocation*, and this workflow is invoked on
+          # every `issues: labeled` event in the repository — most of which the job-level
+          # `if` then skips. On 2026-09-14 that read 13/10 and refused a dispatch while
+          # exactly one run had done any work: 9 skipped, 2 cancelled, 1 success,
+          # 1 refused. Filing three issues had spent the agent budget.
+          #
+          # The ceiling exists to bound spend, and a skipped run spends nothing. Count
+          # only runs that reached the agent. In-progress runs carry a null conclusion
+          # and are counted, which keeps "including this one" true.
+          COUNT=$(gh api --paginate \
+            "repos/$REPO/actions/workflows/agent-dispatch.yml/runs?created=>=$TODAY&per_page=100" \
+            --jq '[.workflow_runs[] | select(.conclusion != "skipped" and .conclusion != "cancelled")] | length' \
+            | awk '{total += $1} END {print total + 0}')
+
+          echo "Dispatch runs today that reached the agent (including this one): $COUNT / $MAX_RUNS_PER_DAY"
           if [ "$COUNT" -gt "$MAX_RUNS_PER_DAY" ]; then
-            gh issue comment "$ISSUE" --body "Dispatch refused: $COUNT runs today, ceiling is $MAX_RUNS_PER_DAY. Re-apply \`agent-ready\` tomorrow, or raise \`MAX_RUNS_PER_DAY\` in \`.github/workflows/agent-dispatch.yml\` if the ceiling is wrong."
+            # --repo is required: this step runs before checkout, so `gh` has no git
+            # remote to infer from. Without it the refusal failed with "not a git
+            # repository", the comment never posted, and the developer saw a label
+            # that silently did nothing.
+            gh issue comment "$ISSUE" --repo "$REPO" --body "Dispatch refused: $COUNT runs reached the agent today, ceiling is $MAX_RUNS_PER_DAY. Re-apply \`agent-ready\` tomorrow, or raise \`MAX_RUNS_PER_DAY\` in \`.github/workflows/agent-dispatch.yml\` if the ceiling is wrong."
             exit 1
           fi
 
       # Claim before working, so guard 3 means something for the next event and a
       # human can see the issue is taken.
       - name: Claim the issue
+        id: claim
         env:
           GH_TOKEN: ${{ github.token }}
           ISSUE: ${{ github.event.issue.number }}
@@ -169,10 +185,18 @@ jobs:
       # indistinguishable here from one that was denied every tool, and both are labelled
       # `agent-failed`. Fixing that needs a signal from the agent rather than an inference
       # from a missing PR (#765).
+      # `always()` alone fired this after the ceiling refused a dispatch: it tried to
+      # release a claim that was never made and mark an untouched issue `agent-failed`.
+      # Gate on the claim having actually succeeded.
+      #
+      # GITHUB_TOKEN, not RELEASE_PAT. The PAT cannot write labels — the first run of
+      # this step failed with "Resource not accessible by personal access token
+      # (addLabelsToLabelable)" — so the whole failure path was inert. The job already
+      # declares `issues: write`, and the claim step uses this token successfully.
       - name: Confirm the run produced work
-        if: always()
+        if: always() && steps.claim.outcome == 'success'
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+          GH_TOKEN: ${{ github.token }}
           ISSUE: ${{ github.event.issue.number }}
           REPO: ${{ github.repository }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
