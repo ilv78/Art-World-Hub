@@ -22,7 +22,7 @@ jobs:
       - name: Check for credentials
         id: check-key
         env:
-          HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+          HAS_KEY: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}
           IS_FORK: ${{ github.event.pull_request.head.repo.fork }}
           ACTOR: ${{ github.actor }}
         run: |
@@ -98,7 +98,7 @@ jobs:
             If no issues found, just say:
             ## 📋 Documentation Agent Report
             ✅ All documentation rules pass. No issues found.
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           use_sticky_comment: true
 
