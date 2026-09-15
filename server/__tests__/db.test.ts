@@ -12,7 +12,11 @@ describe("db pool configuration", () => {
   let dbModule: typeof import("../db");
 
   beforeAll(async () => {
-    process.env.DATABASE_URL = "postgres://user:pass@localhost:5432/testdb";
+    // No embedded credentials: the pool is never actually connected in this
+    // test, and a `user:pass@` shape here trips the repo's hardcoded-secret
+    // scan (.github/scripts/security-checks.sh), which can't tell a real
+    // credential from a test fixture.
+    process.env.DATABASE_URL = "postgres://localhost:5432/testdb";
     dbModule = await import("../db");
   });
 
