@@ -139,11 +139,24 @@ fi
 # ─────────────────────────────────────────────
 section "Database Secret Hygiene"
 
-if grep -rqE "postgres://[^\$\{].*:[^\$\{].*@" "$SERVER_DIR" "$SCHEMA_DIR" --include="*.ts" --include="*.js" 2>/dev/null; then
+# Test fixtures are excluded. A connection string in `__tests__` is a fixture the
+# suite needs in order to run, not a credential that ships anywhere — #774 failed
+# this check on `postgres://user:pass@localhost:5432/testdb`, which is exactly what
+# a pg test is supposed to contain. Real secret detection is `Secret Scanning
+# (gitleaks)`, which scans every file including tests and is not narrowed here.
+#
+# The exclusion is by directory, not by "looks fake": a check that tried to judge
+# whether a credential is real would be guessing, and would eventually guess wrong
+# in the permissive direction.
+DB_URL_PATTERN="postgres://[^\$\{].*:[^\$\{].*@"
+
+if grep -rqE "$DB_URL_PATTERN" "$SERVER_DIR" "$SCHEMA_DIR" \
+     --include="*.ts" --include="*.js" --exclude-dir="__tests__" 2>/dev/null; then
   fail "Potential hardcoded DATABASE_URL detected — use process.env.DATABASE_URL"
-  grep -rnE "postgres://[^\$\{].*:[^\$\{].*@" "$SERVER_DIR" "$SCHEMA_DIR" --include="*.ts" --include="*.js" 2>/dev/null || true
+  grep -rnE "$DB_URL_PATTERN" "$SERVER_DIR" "$SCHEMA_DIR" \
+    --include="*.ts" --include="*.js" --exclude-dir="__tests__" 2>/dev/null || true
 else
-  pass "No hardcoded DATABASE_URL detected"
+  pass "No hardcoded DATABASE_URL detected (test fixtures excluded)"
 fi
 
 # ─────────────────────────────────────────────
