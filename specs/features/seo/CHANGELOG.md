@@ -1,5 +1,10 @@
 # SEO Feature Changelog
 
+## 2026-09-15 — Fix stored XSS via unescaped JSON-LD in SSR HTML (#683)
+- `JSON.stringify` does not escape `<`, `>` or `&`. The JSON-LD `<script>` block built from it embeds attacker-controllable DB fields (artist name/bio, artwork title, gallery name, blog title) unescaped — a bio of `</script><script>...` closed the tag early and executed for every visitor of that artist/artwork/blog page. Every other meta-tag replacement already went through `escapeHtml()`; JSON-LD was the one gap.
+- Added `escapeJsonForScript()` in `server/meta.ts`, applied to the `JSON.stringify(ld)` output before embedding: unicode-escapes `<` `>` `&` plus the ` `/` ` line separators (valid JSON, invalid raw script-context text). Representational only — a JSON parser reads the escaped payload back to the identical object.
+- Regression tests in `server/__tests__/meta.test.ts` cover a literal `</script><script>` breakout payload and bare `&`/`>` characters.
+
 ## 2026-04-23 — Artist slug URLs `/artists/:slug` with UUID→slug + retired-slug 301 (#537)
 - Added `slug` column to `artists` with unique index (migration `0010_nappy_psynapse.sql`, three-step pattern mirroring `0008` for artworks). Backfilled for existing rows; generated server-side on insert + regenerated on rename via `shared/artist-slug.ts`.
 - New `artist_slug_history` table (migration `0011_real_loki.sql`) keyed on the retired slug with `ON DELETE CASCADE` back to `artists`. On `updateArtist` rename, the old slug is inserted into history in the same transaction — old URLs 301-redirect to the current slug forever (no-op when the rename yields the same slug).

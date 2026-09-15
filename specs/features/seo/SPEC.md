@@ -344,6 +344,19 @@ The URL scheme is `/artworks/<slugified-title>-<first-8-chars-of-uuid>` (e.g. `/
 - [x] Google Rich Results Test validates the structured data
 - [x] JSON-LD is present in the raw HTML (not injected by JavaScript)
 
+**Security — script-context escaping (#683):** several of the objects above embed
+attacker-controllable DB fields — artist `name`/`bio`, artwork `title`, gallery
+`name`, blog `title`. `JSON.stringify` does not escape `<`, `>` or `&`, so a value
+like an artist bio of `</script><script>...` would close the JSON-LD `<script>` tag
+early and inject a sibling script that runs for every visitor of that page — stored
+XSS. `injectMetaTags` in `server/meta.ts` unicode-escapes `<` `>` `&` (plus the
+` `/` ` line separators, valid in JSON but not in raw script-context text)
+after `JSON.stringify` and before embedding the payload — `escapeJsonForScript()`.
+This is representational only: a JSON parser reads the escaped payload back to the
+identical object. The other meta-tag replacements (title, description, OG fields)
+already went through `escapeHtml()`; JSON-LD was the one gap. Regression coverage:
+`server/__tests__/meta.test.ts` — "injectMetaTags — JSON-LD script-context escaping".
+
 ---
 
 ### 5. Image Lazy Loading
