@@ -545,7 +545,7 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
 
 export function injectMetaTags(html: string, meta: MetaTags): string {
   const jsonLdScripts = meta.jsonLd
-    .map((ld) => `<script type="application/ld+json">${JSON.stringify(ld)}</script>`)
+    .map((ld) => `<script type="application/ld+json">${escapeJsonForScript(JSON.stringify(ld))}</script>`)
     .join("\n    ");
 
   // For artwork heroes (#564 variants), preload via imagesrcset so the browser
@@ -591,6 +591,23 @@ function extractSameAs(socialLinks: unknown): string[] {
     if (/^https?:\/\//i.test(trimmed)) out.push(trimmed);
   }
   return out;
+}
+
+// JSON.stringify does not escape `<`, `>` or `&`, so a JSON-LD payload built
+// from attacker-controllable DB fields (artist bio, artwork title, ...) can
+// break out of the surrounding <script type="application/ld+json"> tag —
+// e.g. a bio of `</script><script>...` executes for every visitor of that
+// page. Unicode-escaping the three characters that can form a tag delimiter
+// (plus the two line separators that are valid JSON but invalid raw
+// JS/HTML-script-context text) keeps the JSON semantically identical while
+// making it inert as markup. (#683)
+function escapeJsonForScript(json: string): string {
+  return json
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026")
+    .replace(/[\u2028]/g, "\\u2028")
+    .replace(/[\u2029]/g, "\\u2029");
 }
 
 function escapeHtml(str: string): string {

