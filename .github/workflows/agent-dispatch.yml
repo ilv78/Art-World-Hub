@@ -129,7 +129,17 @@ jobs:
           # Deliberately a list rather than --permission-mode bypassPermissions: the
           # blast radius should stay set by RELEASE_PAT and the gated-path check, not
           # by removing the tool boundary. Widen only on an observed denial.
-          claude_args: --max-turns 80 --allowedTools "Edit,Write,Read,Glob,Grep,Bash(git:*),Bash(gh:*),Bash(npm:*),Bash(npx:*)"
+          # 80 was guessed before any run had reached the agent, and both runs that
+          # ever have overran it: #731 (documentation, the deliberately easy trial) used
+          # 82, #684 (server code plus a test) used 81 and ended `is_error: true`. A cap
+          # that truncates every real run is not a bound, it is a defect — #684's
+          # truncation landed mid-wrap-up.
+          #
+          # The real bound is `timeout-minutes: 45` above, plus MAX_RUNS_PER_DAY, both of
+          # which cap spend directly. Those two runs used 16 and 8 minutes, so turns were
+          # binding long before time was. 200 keeps a backstop against a tight loop
+          # without truncating ordinary work; the timeout still catches a true runaway.
+          claude_args: --max-turns 200 --allowedTools "Edit,Write,Read,Glob,Grep,Bash(git:*),Bash(gh:*),Bash(npm:*),Bash(npx:*)"
           prompt: |
             Work GitHub issue #${{ github.event.issue.number }} in this repository,
             autonomously, to completion.
@@ -149,21 +159,26 @@ jobs:
               record it in `specs/decisions/DECISION-LOG.md` in the same PR. Write any
               new standing rule back into the policy file.
             - Documentation is part of the change, not a follow-up.
-            - Open the PR, label it `agent-review` (this is what permits auto-merge),
-              and remove `agent-working`. The PR body must satisfy the PR contract:
-              the issue reference, a `## Verification` section saying what CI does
-              **and does not** cover, and a deviation statement.
+            - **You cannot write to the issue. Do not try.** Your credential 403s on
+              every issue label, comment and close. Labels you apply to the **PR** are
+              mirrored onto the issue by this workflow after you finish, and the claim
+              is released for you on every path. Anything you want a human to read goes
+              in a PR comment.
+            - Open the PR and label it `agent-review` (this is what permits auto-merge).
+              The PR body must satisfy the PR contract: the issue reference, a
+              `## Verification` section saying what CI does **and does not** cover, and
+              a deviation statement.
             - Before calling CI green, confirm the required checks are **present**, not
               merely that nothing is red. A conflicted PR runs no `pull_request`
               workflows at all.
             - If the change touches the gated list, finish everything that does not
               depend on it, let `Gated Path Review` fail, post one batched comment with
-              the options and your recommendation, and label the issue `agent-stuck`.
+              the options and your recommendation, and label the **PR** `agent-stuck`.
               That is the escalation — do not add a second one.
             - If CI is red three cycles running on the same PR, stop and label the
-              issue `agent-failed`. Never force-push, never delete a branch.
+              **PR** `agent-failed`. Never force-push, never delete a branch.
 
-            Post what you did to the issue when the PR is open.
+            Post what you did as a PR comment when the PR is open.
 
       # A run that produces nothing must not report success, and must not strand the
       # issue behind its own claim.
