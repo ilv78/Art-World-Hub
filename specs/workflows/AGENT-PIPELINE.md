@@ -130,13 +130,28 @@ onto the issue after the run (§2) — the agent's credential cannot write to is
 | Deviation the issue text does not cover | Ship it with the deviation declared in the PR body. | — |
 | Deviation that changes what the issue is *for* | Drop to Tier A: post the interpretation and wait. | `agent-stuck` |
 | CI red three cycles running on the same PR | Stop. Leave branch and PR intact. No fourth attempt, no force-push, no branch deletion. | `agent-failed` |
+| The issue needs **no change** — already fixed, duplicate, or a mistaken premise | Do not open a PR and do not invent work to avoid an empty run. Write `no-change-needed` plus one paragraph of reasoning to `$GITHUB_WORKSPACE/.agent-outcome` and stop. | `agent-no-change` (issue, applied by the workflow) |
 | Another run already holds the issue | Stop. Do not race. | — |
 | Merge conflict on `DECISION-LOG.md` or `package-lock.json` | Rebase and retry — these conflict by design (append-only log, regenerated lockfile). Not an escalation. | — |
 | **Required checks missing from the list entirely** | The PR is conflicted. Rebase — do not investigate the checks. | — |
 
-`agent-stuck` waits silently and pages nobody. `agent-failed` is terminal and needs a human
-to reset it. They are different states; do not use one for the other. If both somehow land
-on a PR, the mirror applies `agent-failed` — over-escalating is the safe direction.
+Three outcomes, three states, and they are not interchangeable. `agent-stuck` waits
+silently and pages nobody — work is sound and resumable. `agent-failed` is terminal and
+needs a human to reset it. `agent-no-change` means the run succeeded and concluded there is
+nothing to do: nothing is blocked, nothing broke, and nothing shipped. If `agent-stuck` and
+`agent-failed` both somehow land on a PR, the mirror applies `agent-failed` —
+over-escalating is the safe direction.
+
+`agent-no-change` is the one outcome that does not travel on a PR label, because there is no
+PR. It travels in `.agent-outcome`, read by the dispatcher in the same workspace. **Absence
+of that file means failure**: a denied, crashed or truncated run writes nothing and is
+recorded `agent-failed`, and a file whose first line is not exactly `no-change-needed` is
+treated the same way. The new outcome costs a positive act by the agent; the old one is
+still the default.
+
+**The agent never closes an issue.** Whether an issue was valid is the developer's
+judgement. `agent-no-change` and the reasoning comment put it in front of them; they close
+it, or remove the label and re-apply `agent-ready` if they disagree.
 
 ### Checks that are absent are not checks that passed
 

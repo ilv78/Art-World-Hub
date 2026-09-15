@@ -178,6 +178,17 @@ jobs:
             - If CI is red three cycles running on the same PR, stop and label the
               **PR** `agent-failed`. Never force-push, never delete a branch.
 
+            - If after investigating the issue needs **no change** — already fixed,
+              duplicate, or based on a mistaken premise — do not open a PR. Write your
+              reasoning to `$GITHUB_WORKSPACE/.agent-outcome` and stop:
+
+                  no-change-needed
+                  <one paragraph on what you found and why nothing should change>
+
+              This is a real outcome, not a failure. **Do not invent work to avoid it.**
+              Without that file a run with no PR is recorded as failed, so write it
+              before you finish.
+
             Post what you did as a PR comment when the PR is open.
 
       # A run that produces nothing must not report success, and must not strand the
@@ -245,8 +256,46 @@ jobs:
                 .headRefName | startswith("feature/issue-" + $n + "-")
               )] | first // empty')
 
-          # No PR and no branch: the run produced nothing. Terminal, needs a human.
+          # No PR. Two very different reasons, and #779 exists because they used to be
+          # one: a run that was denied every tool, and a run that correctly concluded the
+          # issue needs no change. The agent distinguishes them by writing a marker into
+          # the workspace — same job, same runner, so no credential is involved and there
+          # is nothing that can 403 the way every issue-side write does (#771).
+          #
+          # Absence is the safe default. A denied, crashed or truncated run writes nothing
+          # and takes the `agent-failed` path exactly as before; the new outcome requires a
+          # positive act by the agent.
           if [ -z "$PR" ]; then
+            OUTCOME_FILE="$GITHUB_WORKSPACE/.agent-outcome"
+            OUTCOME=""
+            if [ -f "$OUTCOME_FILE" ]; then
+              # Bounded read, exact first-line match. A malformed or partially written
+              # file must fall through to agent-failed rather than be read generously —
+              # this branch decides whether a human is paged, so it errs terminal.
+              OUTCOME=$(head -c 4096 "$OUTCOME_FILE" | head -n 1 | tr -d '\r' | xargs || true)
+            fi
+
+            if [ "$OUTCOME" = "no-change-needed" ]; then
+              REASON=$(head -c 4096 "$OUTCOME_FILE" | tail -n +2)
+              [ -n "$REASON" ] || REASON="_The agent gave no reason, which is itself worth a look._"
+
+              gh issue edit "$ISSUE" --repo "$REPO" \
+                --remove-label agent-working --add-label agent-no-change
+
+              gh issue comment "$ISSUE" --repo "$REPO" --body "### Agent found no change was needed
+
+          $REASON
+
+          ---
+
+          No PR was opened, and this is **not** a failed run. The agent does not close issues — whether this one was valid is your call. Close it, or remove \`agent-no-change\` and re-apply \`agent-ready\` if you disagree with the reasoning.
+
+          Run: $RUN_URL"
+
+              echo "Issue #$ISSUE needs no change per the agent; claim released, agent-no-change applied."
+              exit 0
+            fi
+
             gh issue edit "$ISSUE" --repo "$REPO" \
               --remove-label agent-working --add-label agent-failed
 
