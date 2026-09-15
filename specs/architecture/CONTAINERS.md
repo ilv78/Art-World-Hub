@@ -1,7 +1,7 @@
 # ArtVerse — Container Architecture
 
 **Status:** Active
-**Last Updated:** 2026-04-02
+**Last Updated:** 2026-09-15
 **Owner:** Architecture
 
 ---
@@ -70,7 +70,8 @@ Each environment runs an identical two-service Docker Compose stack:
 | User | `appuser:appgroup` (non-root) |
 | Entrypoint | `docker-entrypoint.sh` (runs DB migrations, then `node dist/index.cjs`) |
 | Volumes | `uploads` (`/app/uploads` — artworks, blog-covers, avatars), `logs` (`/app/logs`) |
-| Health check | `GET /health` (HTTP 200) |
+| Health check | Compose `healthcheck:` hits `GET /health` via `node -e` (no `curl` in the base image), 10s interval, 5s timeout, 5 retries, 15s start period (#686) |
+| Shutdown | `SIGTERM`/`SIGINT` handler in `server/shutdown.ts`: stops accepting new connections, drains in-flight requests, closes the DB pool, exits — with a 10s forced-exit fallback (#686) |
 
 ### `db` — PostgreSQL
 
@@ -82,6 +83,8 @@ Each environment runs an identical two-service Docker Compose stack:
 | Health check | `pg_isready` (5s interval, 3s timeout, 20 retries) |
 
 The `app` container depends on `db` with `condition: service_healthy` — it will not start until PostgreSQL is ready.
+
+**Known limit (#686):** each environment is a single `app` container, and `docker-entrypoint.sh` runs `drizzle-kit push`/`migrate` before `node` starts — so there is still a window between the old container stopping and the new one passing its health check where nginx has nothing healthy to proxy to. The graceful-shutdown handler above stops the *old* container from dropping in-flight requests, but does not by itself close that window; doing so needs a two-container (blue-green) flip so the old container keeps serving until the new one is verified healthy. That is deliberately out of scope here — see the issue for the follow-up.
 
 ---
 
