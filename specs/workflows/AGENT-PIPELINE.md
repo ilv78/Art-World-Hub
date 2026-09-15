@@ -66,7 +66,10 @@ impersonation — the same limit the gated-path check documents.
    option and declare it (policy §2) rather than asking.
 4. **Document in the same commit** — spec, data model, decision-log row, and any new
    standing rule (policy §8). Not a follow-up PR.
-5. **Open the PR**, label it `agent-review`, drop `agent-working`. The body must satisfy
+5. **Open the PR and label it.** `agent-review` for normal completion; `agent-stuck` or
+   `agent-failed` instead when §3 says so. **The PR label is the signal** — the workflow
+   reads it and writes the corresponding label onto the issue. Do not attempt to label the
+   issue directly; that credential cannot (see the note below). The body must satisfy
    the PR contract (policy §9a, checked by `pr-contract.yml`): the issue reference, a
    `## Verification` section naming what CI does **not** cover, and any deviation from the
    issue stated outright.
@@ -76,11 +79,13 @@ impersonation — the same limit the gated-path check documents.
    smoke-test results on every issue referenced in the merge commit. Where the change's own
    behaviour is observable on staging, exercise it and post that too — the build being live
    is not the same claim as the feature working.
-8. **Close out.** `agent-done` + `release: next`. Wait for **every** pipeline triggered by
-   the merge — CI/CD, Security, Documentation Agent — before calling it done (policy §9.4).
+8. **Close out — the workflow does this, not the agent.** The staging deploy job applies
+   `agent-done` + `release: next` to every `agent-ready` issue in the merge commit, once
+   the smoke tests pass. `agent-done` therefore means the build is live, which is the only
+   point at which that claim is true. Nothing is left for the developer to clear.
 
-**Known limit: `RELEASE_PAT` cannot write to issues (#731).** Steps 1, 5 and 8 all assume the
-agent's own credential can label and comment on the *issue*. As of #731 that is false:
+**Why the agent never touches the issue (#731, #771).** `RELEASE_PAT` cannot write to
+issues at all:
 `RELEASE_PAT` has `Contents: write` and `Pull requests: write` — checkout, push, PR open,
 PR labels, PR comments all work — but every issue-side write (`addLabelsToLabelable`,
 `removeLabelsFromLabelable`, `addComment`, `closeIssue`) returns
@@ -91,18 +96,34 @@ scope is present until a label or comment is attempted against an existing one. 
 `${{ github.token }}` (job `permissions: issues: write`), not `RELEASE_PAT` — only the
 agent's own session, steps 5 and 8, are affected.
 
-**Until the PAT's scope is widened** (a credential change — gated list item 3, needs a
-human with access to the PAT's GitHub settings): the agent cannot drop `agent-working` or
-post its summary to the issue. Post the run's status as a **PR comment** instead (PR-side
-writes work) and say so explicitly, so the gap is visible rather than silently skipped.
-A human must then manually clear `agent-working` on merge and apply `agent-done` +
-`release: next` after staging verification, until the scope is fixed.
+**The scope was not widened; the lifecycle moved instead (#771).** Widening the PAT would
+have been a credential change — gated list item 3, a human decision for that token forever
+— and it would have kept the weaker design, where an agent declares its own outcome and a
+run that *cannot* declare looks identical to one that chose not to.
+
+So every issue-side write now happens in the workflow, under `${{ github.token }}`:
+
+| Who | Writes | When |
+|---|---|---|
+| `agent-dispatch.yml`, step 1 | `agent-working` | on claim |
+| `agent-dispatch.yml`, final step | drops `agent-working`; mirrors `agent-stuck` / `agent-failed` from the PR's labels; applies `agent-failed` if no PR exists at all | after the run, on every path |
+| `ci.yml`, staging deploy | removes `agent-ready`, applies `agent-done` + `release: next` | after smoke tests pass |
+
+The agent's half is to label the **PR**, which its credential can do. Status it wants a
+human to read goes in a PR comment.
+
+**There is no path that leaves an issue stranded.** The claim is released whether the run
+succeeds, fails, or produces nothing — the failure that cost #688 three manual label
+clearances before #771.
 
 ---
 
 ## 3. When it goes wrong
 
-| Situation | Action | Label |
+Labels in this table go on the **PR**, not the issue. `agent-dispatch.yml` mirrors them
+onto the issue after the run (§2) — the agent's credential cannot write to issues.
+
+| Situation | Action | PR label |
 |---|---|---|
 | The PR needs a gated change (§1) | Finish everything else, open the PR, let `Gated Path Review` fail. One batched comment: options, recommendation, what happens with no answer. | `agent-stuck` |
 | Ambiguity the policy does not cover | Do **not** ask. Most reversible option, declared in the PR, written back into the policy. | — |
@@ -114,7 +135,8 @@ A human must then manually clear `agent-working` on merge and apply `agent-done`
 | **Required checks missing from the list entirely** | The PR is conflicted. Rebase — do not investigate the checks. | — |
 
 `agent-stuck` waits silently and pages nobody. `agent-failed` is terminal and needs a human
-to reset it. They are different states; do not use one for the other.
+to reset it. They are different states; do not use one for the other. If both somehow land
+on a PR, the mirror applies `agent-failed` — over-escalating is the safe direction.
 
 ### Checks that are absent are not checks that passed
 

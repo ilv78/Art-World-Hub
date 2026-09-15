@@ -213,21 +213,29 @@ jobs:
           # feature/issue-<n>-<slug> and branch_prefix pins the prefix. A misnamed
           # branch therefore reads as failure — a loud false negative, which is the
           # safe direction when the alternative is a silent false positive.
-          COUNT=$(gh pr list --repo "$REPO" --state all --limit 100 \
-            --json number,headRefName \
-            | jq --arg n "$ISSUE" '[.[] | select(
+          # The agent cannot write to issues at all — RELEASE_PAT 403s on every
+          # issue-side call, GraphQL and REST (#771). It *can* label PRs; it applied
+          # `agent-review` to #769 unaided. So the agent signals on the PR and this
+          # step mirrors that onto the issue using GITHUB_TOKEN, which the claim step
+          # already proves can write issue labels.
+          #
+          # Head branch only, deliberately. Matching the PR *body* for "#<issue>" looks
+          # more forgiving and is wrong: #762's body discusses the failed #688 run at
+          # length, so a body match reports that #688 produced work when it produced
+          # nothing. Tested against the live PR list before shipping — body matching
+          # returned 1 for #688, branch matching returns 0.
+          PR=$(gh pr list --repo "$REPO" --state all --limit 100 \
+            --json number,headRefName,labels \
+            | jq -c --arg n "$ISSUE" '[.[] | select(
                 .headRefName | startswith("feature/issue-" + $n + "-")
-              )] | length')
+              )] | first // empty')
 
-          if [ "$COUNT" -gt 0 ]; then
-            echo "Found $COUNT PR(s) for issue #$ISSUE; the run produced work."
-            exit 0
-          fi
+          # No PR and no branch: the run produced nothing. Terminal, needs a human.
+          if [ -z "$PR" ]; then
+            gh issue edit "$ISSUE" --repo "$REPO" \
+              --remove-label agent-working --add-label agent-failed
 
-          gh issue edit "$ISSUE" --repo "$REPO" \
-            --remove-label agent-working --add-label agent-failed
-
-          gh issue comment "$ISSUE" --repo "$REPO" --body "Agent run produced no PR and no branch.
+            gh issue comment "$ISSUE" --repo "$REPO" --body "Agent run produced no PR and no branch.
 
           The \`agent-working\` claim has been released and \`agent-failed\` applied, so this issue will **not** retry automatically. Remove \`agent-failed\` and re-apply \`agent-ready\` once the cause is understood.
 
@@ -235,5 +243,32 @@ jobs:
 
           If the agent concluded that no change was needed, that is currently indistinguishable from a failed run — see #765."
 
-          echo "::error::Run produced no PR for issue #$ISSUE. Claim released, agent-failed applied."
-          exit 1
+            echo "::error::Run produced no PR for issue #$ISSUE. Claim released, agent-failed applied."
+            exit 1
+          fi
+
+          PR_NUM=$(printf '%s' "$PR" | jq -r '.number')
+
+          # `agent-failed` wins over `agent-stuck` if somehow both are present: failed is
+          # terminal and stuck is not, and over-escalating is the safe direction.
+          SIGNAL=$(printf '%s' "$PR" | jq -r '
+            [.labels[].name]
+            | if index("agent-failed") then "agent-failed"
+              elif index("agent-stuck") then "agent-stuck"
+              else "" end')
+
+          # The claim is released on every path through this step. There is no route
+          # that leaves an issue stranded behind its own `agent-working` — that is the
+          # whole point of moving the lifecycle here (#771).
+          gh issue edit "$ISSUE" --repo "$REPO" --remove-label agent-working
+
+          if [ -n "$SIGNAL" ]; then
+            gh issue edit "$ISSUE" --repo "$REPO" --add-label "$SIGNAL"
+            echo "PR #$PR_NUM signalled $SIGNAL; mirrored onto issue #$ISSUE, claim released."
+            exit 0
+          fi
+
+          # PR exists and signals nothing wrong. `agent-done` is deliberately not applied
+          # here: it should mean the build is live, which only the staging deploy knows.
+          # ci.yml applies it after the smoke tests pass.
+          echo "PR #$PR_NUM found for issue #$ISSUE; claim released, outcome left to auto-merge and staging."

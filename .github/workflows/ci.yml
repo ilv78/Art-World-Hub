@@ -341,6 +341,34 @@ jobs:
           for issue in $issues; do
             echo "Commenting on #$issue"
             gh issue comment "$issue" --body "$body" || echo "Could not comment on #$issue (may be a PR or inaccessible); continuing."
+
+            # Close the agent lifecycle here rather than leaving it to the developer
+            # (#771). The agent cannot write to issues at all, and `agent-done` should
+            # mean the build is live — which is exactly what this job has just proven
+            # and nothing before it can.
+            #
+            # `agent-ready` is the marker that an issue went through the agent pipeline:
+            # a human applies it to start a run and nothing removes it, so it is still
+            # present at deploy time. Gating on it keeps this loop off issues referenced
+            # by ordinary human PRs, which must not be labelled `agent-done`.
+            #
+            # Accepted imprecision: an issue a human labelled `agent-ready` but then
+            # worked by hand gets `agent-done` too. Harmless, and rare enough to prefer
+            # over a second marker to maintain.
+            labels=$(gh issue view "$issue" --json labels --jq '[.labels[].name] | join(",")' 2>/dev/null || echo "")
+            case ",$labels," in
+              *,agent-ready,*)
+                echo "#$issue went through the agent pipeline; marking done."
+                gh issue edit "$issue" \
+                  --remove-label agent-ready \
+                  --add-label agent-done \
+                  --add-label "release: next" \
+                  || echo "Could not update labels on #$issue; continuing."
+                ;;
+              *)
+                echo "#$issue carries no agent-ready marker; leaving labels alone."
+                ;;
+            esac
           done
 
       - name: Tag release in git
