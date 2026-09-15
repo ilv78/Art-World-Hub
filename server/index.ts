@@ -12,9 +12,18 @@ import robotsRouter from "./routes/robots";
 import sitemapRouter from "./routes/sitemap";
 import ogCardsRouter from "./routes/og-cards";
 import { logger } from "./logger";
+import { pool } from "./db";
+import { registerGracefulShutdown } from "./shutdown";
 
 const app = express();
 const httpServer = createServer(app);
+
+// Graceful shutdown (#686). Node's default SIGTERM behavior is immediate
+// termination, which drops in-flight requests — e.g. a request that already
+// ran createOrder but has not yet sent its 201 response. docker-entrypoint.sh
+// `exec`s node, so SIGTERM from `docker compose up -d` (or any orchestrator)
+// hits this process directly.
+registerGracefulShutdown(httpServer, pool);
 
 declare module "http" {
   interface IncomingMessage {
