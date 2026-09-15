@@ -101,6 +101,22 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           use_sticky_comment: true
+          # Without this the job runs and publishes nothing (#764). The action has two
+          # modes: tag mode creates a tracking comment before the run and updates it
+          # after, and prompt mode — what a `prompt:` input on a `pull_request` event
+          # gives you — creates no comment at all. `use_sticky_comment` governs how many
+          # comments the action posts, not whether one exists, so in prompt mode it has
+          # nothing to stick to and the agent is left to publish the verdict itself.
+          # That call is denied: every run since #761 shows exactly
+          # `permission_denials_count: 1` and exactly zero comments.
+          #
+          # `track_progress` forces tag mode, so the *action* owns the comment and the
+          # agent cannot silently fail to post it — the same move as #771, which took the
+          # label lifecycle out of the agent's hands for the same reason.
+          #
+          # Requires the event to be one of opened/synchronize/ready_for_review/
+          # reopened/labeled; this workflow triggers on the first, second and fourth.
+          track_progress: true
 
   # --- AUDIT MODE: Runs on push to main, weekly schedule, or manual trigger ---
   audit:
