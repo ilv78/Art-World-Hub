@@ -1,7 +1,7 @@
 # Vernis9 — CI/CD Pipeline Specification
 
 **Status:** Active
-**Last Updated:** 2026-09-11
+**Last Updated:** 2026-09-15
 
 ---
 
@@ -534,7 +534,15 @@ Non-draft PRs by the repo owner are automatically approved and have auto-merge e
 
 ### 5.5 CI Failure Notifier (ci-failure-notify.yml — automatic, on workflow_run)
 
-Fires on completion of CI/CD or Security workflows when `conclusion == failure` AND `head_branch == main`. Sends a Telegram message with the workflow name, commit SHA, title, and a link to the run. Catches failures that the existing per-job notifications miss — in particular when a job is *skipped* (not failed) because an upstream job failed, the `if: always()` Telegram step inside the skipped job never runs.
+Fires on completion of CI/CD, Security, or Trivyignore Expiry Check workflows when `conclusion == failure` AND `head_branch == main`. Sends a Telegram message with the workflow name, commit SHA, title, and a link to the run. Catches failures that the existing per-job notifications miss — in particular when a job is *skipped* (not failed) because an upstream job failed, the `if: always()` Telegram step inside the skipped job never runs.
+
+### 5.6 Trivyignore Expiry Check (trivyignore-expiry.yml — weekly schedule + manual dispatch)
+
+Runs `script/check-trivyignore-expiry.mjs` every Monday at 08:00 UTC (same cadence as `doc-agent.yml`'s schedule) and fails when any `.trivyignore.yaml` entry is already past `expired_at`, or within 14 days of it. A failure reaches Telegram via §5.5 rather than a separate notification path.
+
+Added in #729 (postmortem `docs/postmortems/2026-09-10-trivy-scan-blocked-staging-61-days.md`, action item 4): five `libgnutls30` suppressions lapsed silently on `expired_at` and became a second, independent cause of the 61-day staging freeze. `expired_at` was meant to force review, but the force only ever arrived as a red container scan after the fact. This job turns that into a warning beforehand.
+
+The script parses `.trivyignore.yaml` by hand (no YAML dependency) — same reasoning as `script/partition-trivy.mjs`: the file's own convention (`specs/SECURITY_AGENT.md` §6) keeps every entry to a flat `id` / `paths` / `statement` / `expired_at` shape, so a handful of line patterns cover it without adding a dependency for one script.
 
 ### 5.4 Production Deploy (deploy-production.yml — manual dispatch)
 
@@ -760,3 +768,4 @@ After the health check passes, both staging (`ci.yml`) and production (`deploy-p
 | 2026-09-11 | Post-deploy evidence + a latent smoke-test fix (#744). The staging logging smoke test asserted on `/app/logs/app.log`, which #738 stopped being the active file — `pino-roll` writes `app.<n>.log`. It kept passing only because staging's volume still holds the pre-#738 file, so since #738 it had been validating the **previous** build's log, and it would fail outright on a fresh volume. It now resolves the highest-numbered file the way `logReadPaths()` does, and additionally asserts the MCP audit trail is producing entries. Added a step posting deploy evidence (commit, run link, reported version, which smoke tests passed) to every issue referenced in the merge commit, so the record that a change reached staging lands where the developer reads rather than in a job log. ([#744](https://github.com/ilv78/Art-World-Hub/issues/744), [#738](https://github.com/ilv78/Art-World-Hub/issues/738)) |
 | 2026-09-11 | Added `gated-paths.yml` — mechanical enforcement of the gated list in `specs/AGENT-AUTONOMY-POLICY.md` §1 (#744). Runs `script/gated-paths.mjs` on every PR and fails until the developer applies the `human-approved` label. Covers the two gated items a diff can reveal: destructive schema/data statements in `migrations/*.sql` (matched on each statement's **leading keyword**, because every additive Drizzle migration contains `ON DELETE no action ON UPDATE no action` in its foreign keys) and secret-shaped paths. Lives in its own workflow so that applying a label re-runs only this check, not the Docker build and two Trivy scans. Self-guarding: the script, its workflow and the policy are themselves gated paths. Validated against all 14 migrations in the repo — flags exactly the three that backfill or tighten data (#513, #543 shapes), passes the other 11. ([#744](https://github.com/ilv78/Art-World-Hub/issues/744)) |
 | 2026-09-11 | Pruned `.trivyignore.yaml` from 50 entries to zero (#739), completing #728. A scan of the production image with the ignore file not applied showed every entry was redundant: 32 are classified vendored by `script/partition-trivy.mjs` (10 npm-CLI-bundled, 22 drizzle-kit esbuild) and 18 suppressed findings the gate no longer sees (12 absent from the image entirely, 6 still present but MEDIUM, below the CRITICAL/HIGH threshold). Blocking set unchanged at 0, verified by scanning with the pruned file and diffing the partitioner output against the unsuppressed baseline. This is also the first CI run in which the #728 vendored warning table renders on real data — until the prune, Trivy applied the suppressions before the report reached the partitioner, so every run reported `0 blocking, 0 vendored`. ([#739](https://github.com/ilv78/Art-World-Hub/issues/739)) |
+| 2026-09-15 | Added `trivyignore-expiry.yml` (#729, postmortem action item 4): weekly (Monday 08:00 UTC) + manual-dispatch job running `script/check-trivyignore-expiry.mjs`, which fails when a `.trivyignore.yaml` entry is already past `expired_at` or within 14 days of it. Closes the failure mode where the five `libgnutls30` suppressions lapsed silently and only surfaced as a second cause of an already-red pipeline during the 61-day staging freeze. `ci-failure-notify.yml`'s `workflow_run` watch list gained the new workflow name so a failure reaches Telegram through the existing persistent-alert path rather than a new one. Added §5.6. ([#729](https://github.com/ilv78/Art-World-Hub/issues/729)) |
