@@ -341,24 +341,50 @@ jobs:
           for issue in $issues; do
             echo "Commenting on #$issue"
             gh issue comment "$issue" --body "$body" || echo "Could not comment on #$issue (may be a PR or inaccessible); continuing."
+          done
 
-            # Close the agent lifecycle here rather than leaving it to the developer
-            # (#771). The agent cannot write to issues at all, and `agent-done` should
-            # mean the build is live — which is exactly what this job has just proven
-            # and nothing before it can.
-            #
-            # `agent-ready` is the marker that an issue went through the agent pipeline:
-            # a human applies it to start a run and nothing removes it, so it is still
-            # present at deploy time. Gating on it keeps this loop off issues referenced
-            # by ordinary human PRs, which must not be labelled `agent-done`.
-            #
-            # Accepted imprecision: an issue a human labelled `agent-ready` but then
-            # worked by hand gets `agent-done` too. Harmless, and rare enough to prefer
-            # over a second marker to maintain.
+          # Close the agent lifecycle here rather than leaving it to the developer
+          # (#771). The agent cannot write to issues at all, and `agent-done` should
+          # mean the build is live — which is exactly what this job has just proven
+          # and nothing before it can.
+          #
+          # BY HEAD BRANCH, NOT BY MENTION (#785). The first version of this block
+          # walked `$issues` — every `#N` in the commit message — and marked any of
+          # them carrying `agent-ready` as done. On its first day it marked #688 done
+          # for being *mentioned* in #773's commit body; #688 had never been worked.
+          # #768 had already found and fixed exactly this bug in the dispatcher's
+          # "did the run produce work" check, where matching `#N` in PR bodies reported
+          # that #688 produced work because #762's body discussed it. Same defect,
+          # second location. The commit message is evidence of what a change *talks
+          # about*; the merged PR's head branch is evidence of what it *is*.
+          #
+          # `agent-ready` still gates the write: a human applies it to start a run and
+          # nothing else removes it, so its presence at deploy time means the issue
+          # went through the pipeline and was not simply worked by hand under a branch
+          # that happened to follow the naming convention.
+          merged_prs=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/pulls" \
+            --jq '.[] | "\(.number) \(.head.ref)"' 2>/dev/null || echo "")
+
+          if [ -z "$merged_prs" ]; then
+            echo "No PR resolves to ${{ github.sha }}; no agent lifecycle to close."
+          fi
+
+          while read -r pr_number head_ref; do
+            [ -n "$pr_number" ] || continue
+            case "$head_ref" in
+              feature/issue-*-*)
+                issue=$(printf '%s' "$head_ref" | sed -E 's#^feature/issue-([0-9]+)-.*$#\1#')
+                ;;
+              *)
+                echo "PR #$pr_number head '$head_ref' is not an agent branch; leaving labels alone."
+                continue
+                ;;
+            esac
+
             labels=$(gh issue view "$issue" --json labels --jq '[.labels[].name] | join(",")' 2>/dev/null || echo "")
             case ",$labels," in
               *,agent-ready,*)
-                echo "#$issue went through the agent pipeline; marking done."
+                echo "PR #$pr_number ($head_ref) carried #$issue through the agent pipeline; marking done."
                 gh issue edit "$issue" \
                   --remove-label agent-ready \
                   --add-label agent-done \
@@ -366,10 +392,10 @@ jobs:
                   || echo "Could not update labels on #$issue; continuing."
                 ;;
               *)
-                echo "#$issue carries no agent-ready marker; leaving labels alone."
+                echo "#$issue (from $head_ref) carries no agent-ready marker; leaving labels alone."
                 ;;
             esac
-          done
+          done <<< "$merged_prs"
 
       - name: Tag release in git
         if: success()
