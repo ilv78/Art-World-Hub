@@ -114,5 +114,6 @@ export const logger = pino(
 // Child loggers for different modules
 export const authLogger = logger.child({ module: "auth" });
 export const mcpLogger = logger.child({ module: "mcp" });
+export const dbLogger = logger.child({ module: "db" });
 
 export { LOG_DIR };
