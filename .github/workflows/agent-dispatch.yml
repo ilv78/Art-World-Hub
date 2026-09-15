@@ -126,20 +126,30 @@ jobs:
           # open a PR while the harness denies every call that would do it — 12 denials
           # over 20 turns on the first real run, no output, job green (#765).
           #
-          # Deliberately a list rather than --permission-mode bypassPermissions: the
-          # blast radius should stay set by RELEASE_PAT and the gated-path check, not
-          # by removing the tool boundary. Widen only on an observed denial.
-          # 80 was guessed before any run had reached the agent, and both runs that
-          # ever have overran it: #731 (documentation, the deliberately easy trial) used
-          # 82, #684 (server code plus a test) used 81 and ended `is_error: true`. A cap
-          # that truncates every real run is not a bound, it is a defect — #684's
-          # truncation landed mid-wrap-up.
+          # `Bash` is unenumerated, deliberately (#782). The previous list named
+          # git/gh/npm/npx, which blocked `cat`, `docker`, `curl` and `node` while
+          # permitting `npm run <script>` and `npm install` postinstall hooks — i.e. it
+          # already granted arbitrary code execution. It was never a containment
+          # boundary; it was a list that stopped the agent checking its own work. #686
+          # shipped a graceful-shutdown fix whose SIGTERM path it could not exercise and
+          # four compose healthchecks it could not validate, and said so in #781.
           #
-          # The real bound is `timeout-minutes: 45` above, plus MAX_RUNS_PER_DAY, both of
-          # which cap spend directly. Those two runs used 16 and 8 minutes, so turns were
-          # binding long before time was. 200 keeps a backstop against a tight loop
-          # without truncating ordinary work; the timeout still catches a true runaway.
-          claude_args: --max-turns 200 --allowedTools "Edit,Write,Read,Glob,Grep,Bash(git:*),Bash(gh:*),Bash(npm:*),Bash(npx:*)"
+          # Do not re-add the enumeration believing it contains anything. What actually
+          # bounds this run: an ephemeral runner, RELEASE_PAT's scope (which cannot even
+          # write to issues, #771), Gated Path Review, the required PR Contract and Gate
+          # checks, MAX_RUNS_PER_DAY and the 45-minute timeout.
+          #
+          # WebFetch and WebSearch stay off the list. They are not needed to verify a
+          # change and widen egress rather than verification; add them only when
+          # something concrete needs them.
+          #
+          # 200 turns, not 80. That number was guessed before any run had reached the
+          # agent, and every run since overran it: #731 used 82, #684 used 81 and ended
+          # `is_error: true` truncated mid-wrap-up, #686 used 121. A cap that truncates
+          # real work is not a bound, it is a defect. The bound is `timeout-minutes: 45`
+          # above plus MAX_RUNS_PER_DAY, both of which cap spend directly; those runs
+          # took 16, 8 and 19 minutes, so turns bound long before time does (#772).
+          claude_args: --max-turns 200 --allowedTools "Edit,Write,Read,Glob,Grep,Bash"
           prompt: |
             Work GitHub issue #${{ github.event.issue.number }} in this repository,
             autonomously, to completion.
