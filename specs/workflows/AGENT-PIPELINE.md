@@ -1,7 +1,7 @@
 # Agent Pipeline
 
 **Status:** Active
-**Last Updated:** 2026-09-11
+**Last Updated:** 2026-09-15
 **Issue:** [#744](https://github.com/ilv78/Art-World-Hub/issues/744)
 
 Operational companion to `specs/AGENT-AUTONOMY-POLICY.md`. The policy says *what* the
@@ -116,6 +116,18 @@ human to read goes in a PR comment.
 succeeds, fails, or produces nothing — the failure that cost #688 three manual label
 clearances before #771.
 
+**A second, opposite-shaped PAT limit: it cannot touch `.github/workflows/` at all (#729).**
+Where the issue-write limit above was fixed by moving the write to `${{ github.token }}`,
+this one has no such escape — GitHub rejects the push server-side ("refusing to allow a
+Personal Access Token to create or update workflow ... without `workflow` scope") for both
+a brand-new workflow file and a one-line edit to an existing one, and `GITHUB_TOKEN` cannot
+create or modify these paths either, by GitHub's own design, regardless of the `permissions:`
+block a job declares. There is no alternate actor to reroute the write to. When an issue
+needs a change under `.github/workflows/`, ship everything else, paste the exact file
+content in a PR comment, and label the PR `agent-stuck` — a human applies it directly, or
+decides whether to grant the PAT `workflow` scope, which is a credential change (gated list
+item 3) and never the agent's call.
+
 ---
 
 ## 3. When it goes wrong
@@ -126,6 +138,7 @@ onto the issue after the run (§2) — the agent's credential cannot write to is
 | Situation | Action | PR label |
 |---|---|---|
 | The PR needs a gated change (§1) | Finish everything else, open the PR, let `Gated Path Review` fail. One batched comment: options, recommendation, what happens with no answer. | `agent-stuck` |
+| The change needs a new or edited file under `.github/workflows/` (§2) | The PAT cannot push it, full stop. Finish and push everything else, paste the exact file content in a PR comment for a human to apply. | `agent-stuck` |
 | Ambiguity the policy does not cover | Do **not** ask. Most reversible option, declared in the PR, written back into the policy. | — |
 | Deviation the issue text does not cover | Ship it with the deviation declared in the PR body. | — |
 | Deviation that changes what the issue is *for* | Drop to Tier A: post the interpretation and wait. | `agent-stuck` |

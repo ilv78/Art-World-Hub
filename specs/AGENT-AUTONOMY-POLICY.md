@@ -1,7 +1,7 @@
 # Agent Autonomy Policy
 
 **Status:** Active
-**Last Updated:** 2026-09-11
+**Last Updated:** 2026-09-15
 **Issue:** [#744](https://github.com/ilv78/Art-World-Hub/issues/744)
 
 ---
@@ -172,6 +172,7 @@ A revert costs minutes. A blocking question costs an afternoon. The asymmetry is
 | Rebase onto `main` before opening a PR, and whenever a PR goes stale. | Three PRs sat red for weeks in #741 purely because their branches predated fixes on `main`. |
 | A Dependabot branch edited by a human cannot be rebased by Dependabot. Use `@dependabot recreate` once you have confirmed the edit carried nothing of value. | #628 — the "edit" was a stale merge of `main`; recreate regenerated the lockfile cleanly against current `main`. |
 | End commits with the attribution line given in the session's instructions; end PR bodies with the generated-with line. | |
+| **The agent's PAT cannot push any change under `.github/workflows/`** — new file or edit, GitHub rejects it server-side ("refusing to allow a Personal Access Token to create or update workflow ... without `workflow` scope"), and this is a hard platform restriction that no job-level `permissions:` block can lift. Unlike #771's issue-write limit, there is no alternate actor to move the write to: `GITHUB_TOKEN` cannot touch these paths either, by GitHub's own design, so the work cannot be rerouted the way the label lifecycle was. When a change needs one, ship everything else, paste the exact file content in a PR comment, and label the PR `agent-stuck` — a human applies it directly, or decides whether to grant the PAT `workflow` scope (itself a credential change, gated list item 3, never the agent's call). (#729) | Discovered opening the PR for #729: `git push` was rejected for both a brand-new `.github/workflows/trivyignore-expiry.yml` and a one-line edit to the existing `ci-failure-notify.yml`, confirmed by testing each in isolation. |
 
 ---
 
@@ -326,6 +327,7 @@ Only for the gated list (§1), or for something genuinely unrecoverable if wrong
 
 | Date | Change |
 |---|---|
+| 2026-09-15 | §3: the agent's PAT cannot push any change under `.github/workflows/` — server-side, `workflow`-scope restriction with no `GITHUB_TOKEN` workaround. Discovered on #729, which needed a new scheduled workflow; that PR ships the underlying script with the workflow YAML pasted into a comment for a human to apply. ([#729](https://github.com/ilv78/Art-World-Hub/issues/729)) |
 | 2026-09-12 | Tier B now starts itself: `agent-dispatch.yml` begins a run when a human applies `agent-ready`, serialised repository-wide and bounded by a daily ceiling. ([#753](https://github.com/ilv78/Art-World-Hub/issues/753)) |
 | 2026-09-12 | §9a: `PR Contract` made a required status check, with Dependabot and `autorelease` exempted first — a required check those PRs could never satisfy would have blocked every dependency update and every release. ([#752](https://github.com/ilv78/Art-World-Hub/issues/752)) |
 | 2026-09-11 | Tier B activated (§1a): plan approval drops for issues a human labels `agent-ready`. `agent-stuck` created as a state distinct from `agent-failed`; `auto-merge.yml` conditioned on `agent-review` and added to the self-guarded paths. ([#744](https://github.com/ilv78/Art-World-Hub/issues/744)) |
