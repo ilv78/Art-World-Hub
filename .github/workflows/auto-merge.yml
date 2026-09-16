@@ -22,10 +22,31 @@ name: Auto-Merge
 #
 # This file is a self-guarded path in script/gated-paths.mjs. Restoring unconditional
 # auto-merge would re-grant Tier B to every PR in one edit, so that edit costs a label.
+#
+# #793: native `gh pr merge --auto` never updates a PR's branch. `main` has
+# `required_status_checks.strict: true`, so a PR that falls BEHIND (because another
+# agent PR merged underneath it — routine under `concurrency: agent-run`, which
+# serialises runs so back-to-back dispatches land exactly like this) sits forever:
+# every required check is green, auto-merge is armed, and nothing moves it. Two things
+# fix that:
+#
+#   1. The `pull_request_target` job updates the branch itself, before arming
+#      auto-merge, whenever it finds the PR already BEHIND at open/label/sync time.
+#   2. A `push` to `main` re-evaluates every open `agent-review`/`autorelease` PR and
+#      updates any that are now BEHIND — this is the case #793 actually hit: the second
+#      PR was not yet BEHIND when it opened, only after the first merged underneath it.
+#
+# `gh pr update-branch` triggers `synchronize`, which re-runs required checks; the
+# existing auto-merge arm then fires once they pass. A real conflict makes
+# `update-branch` fail — logged and skipped, never force-resolved — and the PR is left
+# DIRTY for the existing "checks absent = not a bypass" handling
+# (AGENT-PIPELINE.md §3) to surface to a human.
 
 on:
   pull_request_target:
     types: [opened, synchronize, reopened, ready_for_review, labeled]
+  push:
+    branches: [main]
 
 permissions:
   contents: write
@@ -34,19 +55,55 @@ permissions:
 jobs:
   auto-merge:
     name: Auto-Approve & Merge
-    runs-on: ubuntu-latest
     if: >-
+      github.event_name == 'pull_request_target' &&
       github.event.pull_request.draft == false &&
       github.event.pull_request.user.login == github.repository_owner &&
       (
         contains(github.event.pull_request.labels.*.name, 'agent-review') ||
         contains(github.event.pull_request.labels.*.name, 'autorelease')
       )
-
+    runs-on: ubuntu-latest
     steps:
-      - name: Enable auto-merge
+      - name: Update branch if behind, then enable auto-merge
         env:
           GH_TOKEN: ${{ secrets.RELEASE_PAT }}
           PR_URL: ${{ github.event.pull_request.html_url }}
         run: |
+          state=$(gh pr view "$PR_URL" --json mergeStateStatus --jq .mergeStateStatus)
+          echo "mergeStateStatus: $state"
+          if [ "$state" = "BEHIND" ]; then
+            # REST, not `gh pr update-branch`: that subcommand is absent from older gh
+            # (2.45 on the dev VPS) and was never exercised here; the API call is what
+            # updated #792 and #790 by hand on 2026-09-16. expected_head_sha guards against
+            # racing a push that landed between the state read and the update.
+            head=$(gh pr view "$PR_URL" --json headRefOid --jq .headRefOid)
+            num=$(gh pr view "$PR_URL" --json number --jq .number)
+            gh api -X PUT "repos/${{ github.repository }}/pulls/$num/update-branch" \
+              -f expected_head_sha="$head" --jq .message \
+              || echo "::warning::update-branch failed for $PR_URL — likely a real conflict, leaving it for the existing conflict handling"
+          fi
           gh pr merge "$PR_URL" --auto --squash
+
+  update-behind-on-main-push:
+    name: Update behind agent PRs after main moves
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Find and update BEHIND agent-review/autorelease PRs
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+          REPO: ${{ github.repository }}
+        run: |
+          prs=$( (gh pr list --repo "$REPO" --state open --label agent-review --json number,mergeStateStatus --jq '.[] | select(.mergeStateStatus == "BEHIND") | .number';
+                  gh pr list --repo "$REPO" --state open --label autorelease --json number,mergeStateStatus --jq '.[] | select(.mergeStateStatus == "BEHIND") | .number') | sort -u)
+          if [ -z "$prs" ]; then
+            echo "No BEHIND agent-review/autorelease PRs found."
+            exit 0
+          fi
+          for n in $prs; do
+            echo "Updating branch for PR #$n"
+            head=$(gh pr view "$n" --repo "$REPO" --json headRefOid --jq .headRefOid)
+            gh api -X PUT "repos/$REPO/pulls/$n/update-branch" -f expected_head_sha="$head" --jq .message \
+              || echo "::warning::update-branch failed for PR #$n — likely a real conflict, leaving it for the existing conflict handling"
+          done
