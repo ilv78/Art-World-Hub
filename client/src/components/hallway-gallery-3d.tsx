@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { X, ShoppingCart, Move, Mouse, Keyboard, Maximize2, Minimize2, ZoomIn, Box, Map as MapIcon, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Hand } from "lucide-react";
 import type { ArtworkWithArtist, MazeLayout, MazeCell } from "@shared/schema";
+import { getArtworkTextureUrl } from "@shared/responsive-image";
 import { useCartStore } from "@/lib/cart-store";
 import { formatArtworkPrice } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -960,7 +961,7 @@ export function HallwayGallery3D({ artistRooms, curatorRooms, museumTemplate, is
         const meshKey = `${artwork.id}-${p.isLeft ? "L" : "R"}-${p.corridorZ}-${si}`;
         artworkMeshesRef.current.set(meshKey, { mesh: artMesh, artwork });
 
-        loadTextureWithCache(artwork.imageUrl).then(texture => {
+        loadTextureWithCache(getArtworkTextureUrl(artwork.imageUrl, 960)).then(texture => {
           artMesh.material = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.3 });
         }).catch(() => {
           artMesh.material = new THREE.MeshStandardMaterial({ color: 0xc0b8a8, roughness: 0.5 });

@@ -10,6 +10,7 @@ import { X, ShoppingCart, Info, Move, Mouse, Keyboard, Maximize2, Minimize2, Zoo
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import type { ArtworkWithArtist, Artist, MazeLayout, MazeCell } from "@shared/schema";
+import { getArtworkTextureUrl } from "@shared/responsive-image";
 import { useCartStore } from "@/lib/cart-store";
 import { formatArtworkPrice } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -572,7 +573,7 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
           roughness: 0.3,
         });
       };
-      const imgUrl = artwork.imageUrl;
+      const imgUrl = getArtworkTextureUrl(artwork.imageUrl, 1440);
       try {
         const u = new URL(imgUrl);
         const host = u.hostname.toLowerCase();
