@@ -127,6 +127,36 @@ describe("DatabaseStorage", () => {
       const result = await storage.getArtists();
       expect(result).toEqual(mockArtists);
     });
+
+    it("selects an explicit column list without galleryLayout by default (#689)", async () => {
+      const mockRows = [
+        { id: "1", name: "Alice", bio: "Bio", userId: null, avatarUrl: null, country: null, specialization: null, email: null, galleryTemplate: "contemporary", socialLinks: null },
+      ];
+      const selectMock = vi.mocked(db.select);
+      const chain = selectMock();
+      vi.mocked(chain.from).mockResolvedValueOnce(mockRows as any);
+
+      const result = await storage.getArtists();
+
+      const columns = selectMock.mock.calls.at(-1)?.[0] as Record<string, unknown> | undefined;
+      expect(columns).toBeDefined();
+      expect(columns).not.toHaveProperty("galleryLayout");
+      expect(result[0].galleryLayout).toBeNull();
+    });
+
+    it("selects the full row, including galleryLayout, when explicitly requested", async () => {
+      const mockArtists = [
+        { id: "1", name: "Alice", bio: "Bio", userId: null, avatarUrl: null, country: null, specialization: null, email: null, galleryLayout: { width: 5, height: 5, cells: [] }, socialLinks: null },
+      ];
+      const selectMock = vi.mocked(db.select);
+      const chain = selectMock();
+      vi.mocked(chain.from).mockResolvedValueOnce(mockArtists as any);
+
+      const result = await storage.getArtists({ includeGalleryLayout: true });
+
+      expect(selectMock.mock.calls.at(-1)?.[0]).toBeUndefined();
+      expect(result).toEqual(mockArtists);
+    });
   });
 
   describe("getArtworks", () => {
@@ -151,6 +181,29 @@ describe("DatabaseStorage", () => {
       expect(result[0].artist.name).toBe("Alice");
       expect(chain.where).toHaveBeenCalled();
       expect(chain.orderBy).toHaveBeenCalled();
+    });
+
+    it("strips galleryLayout from the joined artist (#689)", async () => {
+      const joinResult = [
+        {
+          artworks: { id: "a1", title: "Painting", artistId: "art1", description: "desc", imageUrl: "url", price: "100", medium: "oil", dimensions: null, year: null, isPublished: true, isForSale: true, isInGallery: true, isReadyForExhibition: false, exhibitionOrder: null, category: "painting" },
+          artists: { id: "art1", name: "Alice", bio: "Bio", userId: null, avatarUrl: null, country: null, specialization: null, email: null, galleryLayout: { width: 5, height: 5, cells: [] }, socialLinks: null },
+        },
+      ];
+
+      const selectMock = vi.mocked(db.select);
+      const chain = selectMock();
+      vi.mocked(chain.from).mockReturnThis();
+      vi.mocked(chain.innerJoin).mockReturnThis();
+      vi.mocked(chain.where).mockReturnThis();
+      vi.mocked(chain.orderBy).mockResolvedValueOnce(joinResult as any);
+
+      const result = await storage.getArtworks();
+
+      expect(result[0].artist.galleryLayout).toBeNull();
+      const selectArg = selectMock.mock.calls.at(-1)?.[0] as { artists?: Record<string, unknown> } | undefined;
+      expect(selectArg?.artists).toBeDefined();
+      expect(selectArg?.artists).not.toHaveProperty("galleryLayout");
     });
 
     it("skips the published filter when includeDrafts is set", async () => {
