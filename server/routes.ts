@@ -567,7 +567,9 @@ export async function registerRoutes(
 
   app.get("/api/gallery/hallway", async (req, res) => {
     try {
-      const artists = await storage.getArtists();
+      // Needs the real layout to decide whether it's stale (#689 dropped it
+      // from the default getArtists() list to stop repeated JSONB serialization).
+      const artists = await storage.getArtists({ includeGalleryLayout: true });
       const artistRooms = await Promise.all(
         artists.map(async (artist) => {
           const readyArtworks = await storage.getExhibitionReadyArtworks(artist.id);
