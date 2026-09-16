@@ -31,7 +31,7 @@ import { makeArtistSlug } from "@shared/artist-slug";
 
 export interface IStorage {
   // Artists
-  getArtists(): Promise<Artist[]>;
+  getArtists(opts?: { includeGalleryLayout?: boolean }): Promise<Artist[]>;
   getArtist(id: string): Promise<Artist | undefined>;
   getArtistBySlug(slug: string): Promise<Artist | undefined>;
   getArtistByRetiredSlug(slug: string): Promise<Artist | undefined>;
@@ -127,10 +127,31 @@ export interface IStorage {
   }>;
 }
 
+// `galleryLayout` is a width×height JSONB array of cell objects (#689) — expensive to
+// serialize and unused by every list/join consumer below. Only the hallway gallery
+// (which renders per-artist layouts) needs the real value.
+const ARTIST_COLUMNS_SANS_GALLERY_LAYOUT = {
+  id: artists.id,
+  userId: artists.userId,
+  name: artists.name,
+  slug: artists.slug,
+  bio: artists.bio,
+  avatarUrl: artists.avatarUrl,
+  country: artists.country,
+  specialization: artists.specialization,
+  email: artists.email,
+  galleryTemplate: artists.galleryTemplate,
+  socialLinks: artists.socialLinks,
+};
+
 export class DatabaseStorage implements IStorage {
   // Artists
-  async getArtists(): Promise<Artist[]> {
-    return db.select().from(artists);
+  async getArtists(opts: { includeGalleryLayout?: boolean } = {}): Promise<Artist[]> {
+    if (opts.includeGalleryLayout) {
+      return db.select().from(artists);
+    }
+    const rows = await db.select(ARTIST_COLUMNS_SANS_GALLERY_LAYOUT).from(artists);
+    return rows.map((row) => ({ ...row, galleryLayout: null }));
   }
 
   async getArtist(id: string): Promise<Artist | undefined> {
@@ -186,8 +207,12 @@ export class DatabaseStorage implements IStorage {
     // client carousel's slide 0 from the server-side LCP preload picker
     // (`getHomeHeroSlide0` shares this ordering). UUID-id ordering isn't
     // user-meaningful but it's stable, which is the property we need. (#560)
+    //
+    // The joined artist row omits `galleryLayout` (#689): no consumer of this
+    // list reads it off an embedded artist, and unpaginated it would otherwise
+    // be serialized once per artwork instead of once per artist.
     const baseQuery = db
-      .select()
+      .select({ artworks, artists: ARTIST_COLUMNS_SANS_GALLERY_LAYOUT })
       .from(artworks)
       .innerJoin(artists, eq(artworks.artistId, artists.id));
 
@@ -197,7 +222,7 @@ export class DatabaseStorage implements IStorage {
 
     return result.map(({ artworks: artwork, artists: artist }) => ({
       ...artwork,
-      artist,
+      artist: { ...artist, galleryLayout: null },
     }));
   }
 
