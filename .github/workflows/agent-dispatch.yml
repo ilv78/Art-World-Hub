@@ -36,8 +36,16 @@ on:
   # same state arises from a label applied before this workflow existed (three
   # issues, 2026-09-12). The sweep reconciles both: it finds the oldest eligible
   # issue and dispatches it. The event path stays as the fast path.
+  #
+  # Minute chosen deliberately (#795): `*/15` lands on :00/:15/:30/:45, which
+  # GitHub's own docs name as the contended minutes under `schedule` — high
+  # load can delay or drop queued runs entirely. After this workflow merged
+  # (#790, 12:20 UTC) the first schedule-event run arrived at 17:13 — 4h54m and
+  # 19 missed windows later — while `workflow_dispatch` on the same workflow
+  # fired immediately. So the timer works; its worst case on the quarter-hours
+  # is hours, not 15 minutes. `7,22,37,52` keeps the cadence off every one.
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "7,22,37,52 * * * *"
   workflow_dispatch:
     inputs:
       issue:
