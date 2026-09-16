@@ -29,6 +29,21 @@ name: Agent Dispatch
 on:
   issues:
     types: [labeled]
+  # The sweep (#788). GitHub holds one running and one pending run per
+  # concurrency group; a third arrival cancels the pending one before any step
+  # runs, leaving `agent-ready` with no claim, no comment and a consumed event.
+  # Four labels applied in 134 seconds on 2026-09-15 lost two runs that way. The
+  # same state arises from a label applied before this workflow existed (three
+  # issues, 2026-09-12). The sweep reconciles both: it finds the oldest eligible
+  # issue and dispatches it. The event path stays as the fast path.
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: "Issue number to dispatch. Leave empty to sweep for the oldest eligible."
+        required: false
+        type: string
 
 # One agent run at a time, repository-wide, and never cancel one that is mid-flight.
 #
@@ -51,20 +66,105 @@ env:
 jobs:
   dispatch:
     name: Work the issue
+    # Labeled events keep all four guards here. Sweep triggers pass through and
+    # apply the same guards inside the pick step, where they can read the
+    # timeline instead of the event payload.
     if: >-
-      github.event.label.name == 'agent-ready' &&
-      github.event.sender.type == 'User' &&
-      !contains(github.event.issue.labels.*.name, 'agent-working') &&
-      !contains(github.event.issue.labels.*.name, 'agent-done')
+      github.event_name != 'issues' ||
+      (
+        github.event.label.name == 'agent-ready' &&
+        github.event.sender.type == 'User' &&
+        !contains(github.event.issue.labels.*.name, 'agent-working') &&
+        !contains(github.event.issue.labels.*.name, 'agent-done')
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
     steps:
-      - name: Check the daily ceiling
+      # Resolve which issue this run is for. Three sources, one output, and every
+      # later step reads `steps.pick.outputs.issue` — never the event payload,
+      # which is empty on schedule and workflow_dispatch.
+      - name: Pick the issue
+        id: pick
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          ISSUE: ${{ github.event.issue.number }}
+          EVENT: ${{ github.event_name }}
+          EVENT_ISSUE: ${{ github.event.issue.number }}
+          INPUT_ISSUE: ${{ github.event.inputs.issue }}
+        run: |
+          set -euo pipefail
+
+          if [ "$EVENT" = "issues" ]; then
+            echo "issue=$EVENT_ISSUE" >> "$GITHUB_OUTPUT"
+            echo "Labeled event for #$EVENT_ISSUE."
+            exit 0
+          fi
+
+          # Eligible: open, carries agent-ready, carries no state label, agent-ready
+          # applied by a User (guard 2 — read from the timeline, the same way
+          # gated-paths.yml checks human-approved), and no PR in ANY state on
+          # feature/issue-N-*. That last one is what keeps the sweep off work that
+          # is mid-flight: after a good run the claim is released while the PR is
+          # still open or merged-but-not-deployed, and the issue looks unclaimed.
+          eligible() {
+            local n="$1" labels applier prs
+            labels=$(gh issue view "$n" --repo "$REPO" --json labels --jq '[.labels[].name]|join(",")')
+            case ",$labels," in
+              *,agent-ready,*) ;;
+              *) echo "  #$n: no agent-ready"; return 1 ;;
+            esac
+            case ",$labels," in
+              *,agent-working,*|*,agent-done,*|*,agent-stuck,*|*,agent-failed,*|*,agent-no-change,*)
+                echo "  #$n: state label present"; return 1 ;;
+            esac
+            applier=$(gh api "repos/$REPO/issues/$n/timeline" --paginate \
+              --jq '[.[] | select(.event=="labeled" and .label.name=="agent-ready")] | last
+                    | if . == null then "" else "\(.actor.login) \(.actor.type)" end')
+            case "$applier" in
+              "")    echo "  #$n: no agent-ready label event found"; return 1 ;;
+              *Bot)  echo "  #$n: agent-ready applied by a bot ($applier) — guard 2"; return 1 ;;
+            esac
+            prs=$(gh pr list --repo "$REPO" --state all --limit 100 --json headRefName \
+              --jq "[.[] | select(.headRefName|startswith(\"feature/issue-$n-\"))] | length")
+            if [ "$prs" != "0" ]; then
+              echo "  #$n: $prs PR(s) already exist on its branch"; return 1
+            fi
+            return 0
+          }
+
+          if [ -n "$INPUT_ISSUE" ]; then
+            if eligible "$INPUT_ISSUE"; then
+              echo "issue=$INPUT_ISSUE" >> "$GITHUB_OUTPUT"
+              echo "workflow_dispatch for #$INPUT_ISSUE — eligible."
+            else
+              echo "issue=" >> "$GITHUB_OUTPUT"
+              echo "::warning::#$INPUT_ISSUE is not eligible; nothing dispatched."
+            fi
+            exit 0
+          fi
+
+          # Oldest first = lowest number. Simpler than reading every timeline for
+          # the label timestamp, and only matters when several are waiting — in
+          # which case they all get picked within the hour.
+          echo "Sweeping for the oldest eligible agent-ready issue:"
+          for n in $(gh issue list --repo "$REPO" --label agent-ready --state open \
+                       --limit 100 --json number --jq '.[].number' | sort -n); do
+            if eligible "$n"; then
+              echo "issue=$n" >> "$GITHUB_OUTPUT"
+              echo "Picked #$n."
+              exit 0
+            fi
+          done
+          echo "issue=" >> "$GITHUB_OUTPUT"
+          echo "Nothing eligible; sweep is a no-op."
+
+      - name: Check the daily ceiling
+        if: steps.pick.outputs.issue != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          ISSUE: ${{ steps.pick.outputs.issue }}
         run: |
           set -euo pipefail
           TODAY=$(date -u +%Y-%m-%d)
@@ -96,14 +196,16 @@ jobs:
       # Claim before working, so guard 3 means something for the next event and a
       # human can see the issue is taken.
       - name: Claim the issue
+        if: steps.pick.outputs.issue != ''
         id: claim
         env:
           GH_TOKEN: ${{ github.token }}
-          ISSUE: ${{ github.event.issue.number }}
+          ISSUE: ${{ steps.pick.outputs.issue }}
           REPO: ${{ github.repository }}
         run: gh issue edit "$ISSUE" --repo "$REPO" --add-label agent-working
 
       - name: Checkout
+        if: steps.pick.outputs.issue != ''
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
@@ -115,6 +217,7 @@ jobs:
           token: ${{ secrets.RELEASE_PAT }}
 
       - name: Work the issue
+        if: steps.pick.outputs.issue != ''
         uses: anthropics/claude-code-action@56cf60fde42f7b19c3abfd5c9c48b69a1288461f # v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -151,7 +254,7 @@ jobs:
           # took 16, 8 and 19 minutes, so turns bound long before time does (#772).
           claude_args: --max-turns 200 --allowedTools "Edit,Write,Read,Glob,Grep,Bash"
           prompt: |
-            Work GitHub issue #${{ github.event.issue.number }} in this repository,
+            Work GitHub issue #${{ steps.pick.outputs.issue }} in this repository,
             autonomously, to completion.
 
             Read `CLAUDE.md` first, then `specs/AGENT-AUTONOMY-POLICY.md` and
@@ -163,7 +266,7 @@ jobs:
             and do not wait for approval. Nobody is watching this run. There is no one
             to answer a question, so do not ask one.
 
-            - Branch `feature/issue-${{ github.event.issue.number }}-<slug>` off `main`.
+            - Branch `feature/issue-${{ steps.pick.outputs.issue }}-<slug>` off `main`.
               Never commit to `main`.
             - Where the policy is silent, take the most reversible option, ship it, and
               record it in `specs/decisions/DECISION-LOG.md` in the same PR. Write any
@@ -233,7 +336,7 @@ jobs:
         if: always() && steps.claim.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
-          ISSUE: ${{ github.event.issue.number }}
+          ISSUE: ${{ steps.pick.outputs.issue }}
           REPO: ${{ github.repository }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
