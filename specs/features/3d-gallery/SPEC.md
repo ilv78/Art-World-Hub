@@ -22,6 +22,7 @@ As a visitor, I want to walk through a virtual 3D museum, explore artist rooms, 
 - [x] Artist poster displayed at first slot with name, country, specialization, bio, avatar
 - [x] Name plaques at hallway room entrances
 - [x] Texture loading with retry logic (3 attempts), caching, and fallback
+- [x] Textures load resized webp variants (960/1440px), not full-size originals
 - [x] Image proxy for CORS-blocked external images
 - [x] Gallery layout auto-regenerates when `isReadyForExhibition` or `exhibitionOrder` changes
 - [x] Classic 2D carousel fallback view available on gallery page
@@ -89,11 +90,27 @@ Layout regenerates when:
 - Manual via MCP tool `regenerate_gallery`
 - Stale layout detected on `/api/gallery/hallway` (slot count mismatch)
 
+### Texture Sizing
+
+Both components resolve `artwork.imageUrl` through `getArtworkTextureUrl()`
+(`shared/responsive-image.ts`) before loading it as a texture, so the GPU decodes a
+960/1440px webp variant instead of the full-size original upload (up to 10 MB,
+often several thousand pixels wide) that the artwork planes (~2 units) never need.
+`getArtworkTextureUrl()` returns the input unchanged for URLs it does not recognize
+(external/imported images), so the CORS-proxy fallback in `MazeGallery3D` is
+unaffected.
+
+| Component | Requested width |
+|-----------|-----------------|
+| `HallwayGallery3D` | 960 — smaller rooms viewed at a distance in the corridor |
+| `MazeGallery3D` | 1440 — single-room exhibition viewed up close |
+
 ## Dependencies
 
 - `three` v0.182.0 — WebGL 3D rendering
 - React 18 hooks (`useEffect`, `useRef`, `useState`, `useCallback`)
 - TanStack React Query — gallery data fetching
+- `getArtworkTextureUrl()` (`shared/responsive-image.ts`) — resolves resized webp texture variants
 - Image proxy (`/api/image-proxy`) for CORS-blocked textures
 
 ## Open Questions
