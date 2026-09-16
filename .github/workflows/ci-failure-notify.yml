@@ -5,11 +5,12 @@ name: CI Failure Notifier
 # because the existing notification step lived inside deploy-staging
 # (which is skipped — not failed — when a prior job fails). This workflow
 # pings on any main-branch CI/CD or Security workflow that ends in failure.
-# See #631.
+# See #631. Trivyignore Expiry Check joined the watch list in #729, reusing
+# this same persistent-alert path instead of a second notification mechanism.
 
 on:
   workflow_run:
-    workflows: ["CI/CD", "Security"]
+    workflows: ["CI/CD", "Security", "Trivyignore Expiry Check"]
     types: [completed]
 
 permissions:
