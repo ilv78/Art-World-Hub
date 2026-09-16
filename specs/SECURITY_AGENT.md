@@ -302,6 +302,18 @@ single file and cannot mix formats, so all entries live in the yaml file.
   column in the Trivy output). If yes, remove the entry and let CI re-run.
   If no, update `expired_at` with a fresh justification and re-review date.
 
+**Expiry is checked weekly, ahead of the scan that would otherwise catch it
+late.** `.github/workflows/trivyignore-expiry.yml` runs
+`script/check-trivyignore-expiry.mjs` every Monday and fails when any entry
+is already past `expired_at`, or within 14 days of it — a Telegram alert via
+`ci-failure-notify.yml`. Added after five `libgnutls30` entries lapsed
+silently and became a second cause of the 61-day staging freeze documented in
+`docs/postmortems/2026-09-10-trivy-scan-blocked-staging-61-days.md` (#729):
+`expired_at` was meant to force review, but the force only ever arrived as a
+red container scan after the fact. Do not treat this job's silence as
+sufficient review on its own — it only checks dates, not whether the
+suppression is still justified.
+
 **What NOT to do:**
 
 - Don't blanket-ignore a CVE ID globally when it only affects one binary —

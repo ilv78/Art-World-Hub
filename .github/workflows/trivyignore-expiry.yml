@@ -1,0 +1,33 @@
+name: Trivyignore Expiry Check
+
+# Postmortem docs/postmortems/2026-09-10-trivy-scan-blocked-staging-61-days.md,
+# action item 4: five libgnutls30 suppressions reached `expired_at` and lapsed
+# silently, adding a second independent failure cause to an already-red
+# pipeline. `expired_at` is meant as a forcing function to prompt review, but
+# the force arrived as a red pipeline after the fact, not a reminder before
+# it. This runs weekly and fails while any `.trivyignore.yaml` entry is
+# within 14 days of `expired_at` (or already past it), so review happens
+# before the container scan finds it lapsed. See #729.
+#
+# A failure here reaches Telegram via the existing ci-failure-notify.yml
+# watcher rather than a new notification path — reuses the persistent-alert
+# mechanism the #631 postmortem action item already built.
+
+on:
+  schedule:
+    - cron: "0 8 * * 1" # Weekly Monday 08:00 UTC — matches doc-agent.yml's cadence
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-expiry:
+    name: Check .trivyignore.yaml expiry
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check suppression expiry
+        run: node script/check-trivyignore-expiry.mjs .trivyignore.yaml
