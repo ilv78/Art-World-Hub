@@ -1,5 +1,8 @@
 # 3D Gallery — Changelog
 
+## 2026-09-16
+- Textures now load the 960/1440px webp variants via `getArtworkTextureUrl()` instead of the full-size original upload (closes #688)
+
 ## 2026-03-11
 - Fixed missing artworks in gallery due to slot count mismatch (PR #30, closes #25)
 - Fixed stale gallery layouts in museum hallway (PR #29, closes #28)
