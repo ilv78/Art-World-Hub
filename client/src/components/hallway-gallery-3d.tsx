@@ -400,7 +400,10 @@ export function HallwayGallery3D({ artistRooms, curatorRooms, museumTemplate, is
   const { addItem, items } = useCartStore();
   const { toast } = useToast();
   const isInCart = selectedArtwork ? items.some(item => item.artwork.id === selectedArtwork.id) : false;
-  selectedArtworkRef.current = selectedArtwork;
+
+  useEffect(() => {
+    selectedArtworkRef.current = selectedArtwork;
+  }, [selectedArtwork]);
 
   const handleAddToCart = useCallback(() => {
     if (selectedArtwork && !isInCart) {
@@ -449,6 +452,151 @@ export function HallwayGallery3D({ artistRooms, curatorRooms, museumTemplate, is
     return texture;
   }, []);
 
+  function createArtistPoster(
+    scene: THREE.Scene,
+    artist: ArtistRoom["artist"],
+    wx: number,
+    wz: number,
+    rotY: number
+  ) {
+    const posterW = CELL_SIZE - 0.1;
+    const posterH = WALL_H * 0.75;
+    const canvas = document.createElement("canvas");
+    const cw = 1024;
+    const ch = Math.round(1024 * (posterH / posterW));
+    canvas.width = cw;
+    canvas.height = ch;
+    const ctx = canvas.getContext("2d")!;
+
+    ctx.fillStyle = "#faf8f5";
+    ctx.fillRect(0, 0, cw, ch);
+    ctx.strokeStyle = "#d4a854";
+    ctx.lineWidth = 6;
+    ctx.strokeRect(16, 16, cw - 32, ch - 32);
+
+    const drawText = () => {
+      let y = 320;
+      ctx.fillStyle = "#000000";
+      ctx.font = "bold 72px Georgia, serif";
+      ctx.textAlign = "center";
+      ctx.fillText(artist.name, cw / 2, y);
+      y += 70;
+
+      if (artist.country) {
+        ctx.fillStyle = "#111111";
+        ctx.font = "bold 34px sans-serif";
+        ctx.fillText(artist.country, cw / 2, y);
+        y += 50;
+      }
+
+      if (artist.specialization) {
+        ctx.fillStyle = "#222222";
+        ctx.font = "bold italic 32px Georgia, serif";
+        ctx.fillText(artist.specialization, cw / 2, y);
+        y += 54;
+      }
+
+      if (artist.bio) {
+        ctx.fillStyle = "#111111";
+        ctx.font = "bold 26px sans-serif";
+        ctx.textAlign = "left";
+        const maxWidth = cw - 100;
+        const words = artist.bio.split(" ");
+        let line = "";
+        const lines: string[] = [];
+        for (const word of words) {
+          const test = line + (line ? " " : "") + word;
+          if (ctx.measureText(test).width > maxWidth && line) {
+            lines.push(line);
+            line = word;
+          } else {
+            line = test;
+          }
+        }
+        if (line) lines.push(line);
+        const maxLines = 10;
+        const displayLines = lines.slice(0, maxLines);
+        if (lines.length > maxLines) {
+          displayLines[maxLines - 1] = displayLines[maxLines - 1].replace(/\s*\S*$/, "...");
+        }
+        for (const l of displayLines) {
+          ctx.fillText(l, 50, y);
+          y += 30;
+        }
+      }
+    };
+
+    const avatarSize = 180;
+    const ax = (cw - avatarSize) / 2;
+    const ay = 50;
+
+    const drawFallbackAvatar = () => {
+      ctx.fillStyle = "#e8e0d8";
+      ctx.beginPath();
+      ctx.arc(ax + avatarSize / 2, ay + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#1a1a2e";
+      ctx.font = "bold 64px Georgia, serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      const initials = (artist.name || "?").split(" ").map(n => n[0]).join("");
+      ctx.fillText(initials, ax + avatarSize / 2, ay + avatarSize / 2);
+      ctx.textBaseline = "alphabetic";
+    };
+
+    drawFallbackAvatar();
+    drawText();
+
+    const posterTexture = new THREE.CanvasTexture(canvas);
+    posterTexture.colorSpace = THREE.SRGBColorSpace;
+    const posterGeo = new THREE.PlaneGeometry(posterW, posterH);
+    const posterMat = new THREE.MeshStandardMaterial({ map: posterTexture, roughness: 0.4 });
+    const posterMesh = new THREE.Mesh(posterGeo, posterMat);
+    posterMesh.position.set(wx, WALL_H / 2, wz);
+    posterMesh.rotation.y = rotY;
+    posterMesh.translateZ(0.06);
+    scene.add(posterMesh);
+
+    if (artist.avatarUrl) {
+      const avatarImg = new Image();
+      avatarImg.crossOrigin = "anonymous";
+      avatarImg.onload = () => {
+        ctx.fillStyle = "#faf8f5";
+        ctx.fillRect(0, 0, cw, ch);
+        ctx.strokeStyle = "#d4a854";
+        ctx.lineWidth = 6;
+        ctx.strokeRect(16, 16, cw - 32, ch - 32);
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(ax + avatarSize / 2, ay + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.drawImage(avatarImg, ax, ay, avatarSize, avatarSize);
+        ctx.restore();
+        ctx.strokeStyle = "#d4a854";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(ax + avatarSize / 2, ay + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+        ctx.stroke();
+        drawText();
+        posterTexture.needsUpdate = true;
+      };
+      try {
+        const u = new URL(artist.avatarUrl);
+        const host = u.hostname.toLowerCase();
+        const isCorsOk = host.includes("unsplash.com") || host === window.location.hostname;
+        avatarImg.src = isCorsOk ? artist.avatarUrl : `/api/image-proxy?url=${encodeURIComponent(artist.avatarUrl)}`;
+      } catch {
+        avatarImg.src = artist.avatarUrl;
+      }
+    }
+  }
+
+  // Why: the compiler's escape analysis can't see past `addHangingSign`'s Canvas2D
+  // calls (below) and conservatively assumes a string derived from
+  // `curatorRooms`/`artistRooms` could be mutated somewhere inside this ~400-line
+  // scene builder. It only reads the name to draw a texture; nothing here writes
+  // back to props. False positive.
+  // eslint-disable-next-line react-hooks/immutability
   const buildScene = useCallback((scene: THREE.Scene) => {
     const tmpl = getTemplate(museumTemplate);
     const wallMat = new THREE.MeshStandardMaterial({ color: tmpl.wallColor, roughness: tmpl.wallRoughness });
@@ -972,6 +1120,11 @@ export function HallwayGallery3D({ artistRooms, curatorRooms, museumTemplate, is
       const doorHalfW = CELL_SIZE * 0.25;
 
       const signName = p.isCuratorRoom && cRoom ? cRoom.gallery.name : room.artist.name;
+      // Why: `signName` is a plain string read from `curatorRooms`/`artistRooms`;
+      // `addHangingSign` only reads it to draw a canvas texture. The compiler doesn't
+      // model Canvas2D as pure, so it flags this as a possible prop mutation. Not a
+      // real one — see the note above `buildScene`.
+      // eslint-disable-next-line react-hooks/immutability
       addHangingSign(signName, doorWorldZ);
       addDirectionalArrow(signName, p.isLeft ? hallLeft : hallRight, doorWorldZ, p.isLeft);
 
@@ -994,145 +1147,6 @@ export function HallwayGallery3D({ artistRooms, curatorRooms, museumTemplate, is
       scene.add(pl);
     }
   }, [artistRooms, placements, hallwayLen, createParquetTexture]);
-
-  function createArtistPoster(
-    scene: THREE.Scene,
-    artist: ArtistRoom["artist"],
-    wx: number,
-    wz: number,
-    rotY: number
-  ) {
-    const posterW = CELL_SIZE - 0.1;
-    const posterH = WALL_H * 0.75;
-    const canvas = document.createElement("canvas");
-    const cw = 1024;
-    const ch = Math.round(1024 * (posterH / posterW));
-    canvas.width = cw;
-    canvas.height = ch;
-    const ctx = canvas.getContext("2d")!;
-
-    ctx.fillStyle = "#faf8f5";
-    ctx.fillRect(0, 0, cw, ch);
-    ctx.strokeStyle = "#d4a854";
-    ctx.lineWidth = 6;
-    ctx.strokeRect(16, 16, cw - 32, ch - 32);
-
-    const drawText = () => {
-      let y = 320;
-      ctx.fillStyle = "#000000";
-      ctx.font = "bold 72px Georgia, serif";
-      ctx.textAlign = "center";
-      ctx.fillText(artist.name, cw / 2, y);
-      y += 70;
-
-      if (artist.country) {
-        ctx.fillStyle = "#111111";
-        ctx.font = "bold 34px sans-serif";
-        ctx.fillText(artist.country, cw / 2, y);
-        y += 50;
-      }
-
-      if (artist.specialization) {
-        ctx.fillStyle = "#222222";
-        ctx.font = "bold italic 32px Georgia, serif";
-        ctx.fillText(artist.specialization, cw / 2, y);
-        y += 54;
-      }
-
-      if (artist.bio) {
-        ctx.fillStyle = "#111111";
-        ctx.font = "bold 26px sans-serif";
-        ctx.textAlign = "left";
-        const maxWidth = cw - 100;
-        const words = artist.bio.split(" ");
-        let line = "";
-        const lines: string[] = [];
-        for (const word of words) {
-          const test = line + (line ? " " : "") + word;
-          if (ctx.measureText(test).width > maxWidth && line) {
-            lines.push(line);
-            line = word;
-          } else {
-            line = test;
-          }
-        }
-        if (line) lines.push(line);
-        const maxLines = 10;
-        const displayLines = lines.slice(0, maxLines);
-        if (lines.length > maxLines) {
-          displayLines[maxLines - 1] = displayLines[maxLines - 1].replace(/\s*\S*$/, "...");
-        }
-        for (const l of displayLines) {
-          ctx.fillText(l, 50, y);
-          y += 30;
-        }
-      }
-    };
-
-    const avatarSize = 180;
-    const ax = (cw - avatarSize) / 2;
-    const ay = 50;
-
-    const drawFallbackAvatar = () => {
-      ctx.fillStyle = "#e8e0d8";
-      ctx.beginPath();
-      ctx.arc(ax + avatarSize / 2, ay + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#1a1a2e";
-      ctx.font = "bold 64px Georgia, serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      const initials = (artist.name || "?").split(" ").map(n => n[0]).join("");
-      ctx.fillText(initials, ax + avatarSize / 2, ay + avatarSize / 2);
-      ctx.textBaseline = "alphabetic";
-    };
-
-    drawFallbackAvatar();
-    drawText();
-
-    const posterTexture = new THREE.CanvasTexture(canvas);
-    posterTexture.colorSpace = THREE.SRGBColorSpace;
-    const posterGeo = new THREE.PlaneGeometry(posterW, posterH);
-    const posterMat = new THREE.MeshStandardMaterial({ map: posterTexture, roughness: 0.4 });
-    const posterMesh = new THREE.Mesh(posterGeo, posterMat);
-    posterMesh.position.set(wx, WALL_H / 2, wz);
-    posterMesh.rotation.y = rotY;
-    posterMesh.translateZ(0.06);
-    scene.add(posterMesh);
-
-    if (artist.avatarUrl) {
-      const avatarImg = new Image();
-      avatarImg.crossOrigin = "anonymous";
-      avatarImg.onload = () => {
-        ctx.fillStyle = "#faf8f5";
-        ctx.fillRect(0, 0, cw, ch);
-        ctx.strokeStyle = "#d4a854";
-        ctx.lineWidth = 6;
-        ctx.strokeRect(16, 16, cw - 32, ch - 32);
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(ax + avatarSize / 2, ay + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
-        ctx.clip();
-        ctx.drawImage(avatarImg, ax, ay, avatarSize, avatarSize);
-        ctx.restore();
-        ctx.strokeStyle = "#d4a854";
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(ax + avatarSize / 2, ay + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
-        ctx.stroke();
-        drawText();
-        posterTexture.needsUpdate = true;
-      };
-      try {
-        const u = new URL(artist.avatarUrl);
-        const host = u.hostname.toLowerCase();
-        const isCorsOk = host.includes("unsplash.com") || host === window.location.hostname;
-        avatarImg.src = isCorsOk ? artist.avatarUrl : `/api/image-proxy?url=${encodeURIComponent(artist.avatarUrl)}`;
-      } catch {
-        avatarImg.src = artist.avatarUrl;
-      }
-    }
-  }
 
   const checkCollision = useCallback((pos: THREE.Vector3): boolean => {
     const margin = 0.35;
@@ -1170,6 +1184,10 @@ export function HallwayGallery3D({ artistRooms, curatorRooms, museumTemplate, is
     }
   }, []);
 
+  // Why: this effect calls `buildScene`, which the compiler infers may mutate
+  // `curatorRooms` (see the note above `buildScene`'s declaration) — a false
+  // positive, not a real one.
+  // eslint-disable-next-line react-hooks/immutability
   useEffect(() => {
     if (!containerRef.current) return;
     const container = containerRef.current;
@@ -1178,7 +1196,15 @@ export function HallwayGallery3D({ artistRooms, curatorRooms, museumTemplate, is
 
     const testCanvas = document.createElement("canvas");
     const gl = testCanvas.getContext("webgl") || testCanvas.getContext("experimental-webgl");
-    if (!gl) { setWebglError("WebGL is not supported."); return; }
+    if (!gl) {
+      // Why: WebGL capability can only be known by attempting to create a context,
+      // which is inherently imperative and lives inside this larger
+      // scene-setup/teardown effect. There's no external store to subscribe to and
+      // no way to know it during render.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setWebglError("WebGL is not supported.");
+      return;
+    }
 
     const sceneTmpl = getTemplate(museumTemplate);
     const scene = new THREE.Scene();

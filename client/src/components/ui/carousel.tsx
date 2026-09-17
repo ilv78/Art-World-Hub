@@ -109,6 +109,12 @@ const Carousel = React.forwardRef<
         return
       }
 
+      // Why: embla-carousel doesn't fire an initial "select" event, so the immediate
+      // call primes `canScrollPrev`/`canScrollNext` for the first render; the two
+      // `.on()` calls below subscribe for every update after that. There's no
+      // snapshot API to move this to `useSyncExternalStore` without a wrapper around
+      // the whole embla instance.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       onSelect(api)
       api.on("reInit", onSelect)
       api.on("select", onSelect)

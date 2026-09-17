@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
@@ -29,6 +29,12 @@ export default function SetPassword() {
     },
   });
 
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      window.location.href = "/auth";
+    }
+  }, [authLoading, isAuthenticated]);
+
   if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -38,7 +44,6 @@ export default function SetPassword() {
   }
 
   if (!isAuthenticated) {
-    window.location.href = "/auth";
     return null;
   }
 

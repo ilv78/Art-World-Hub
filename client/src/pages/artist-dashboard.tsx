@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { formatArtworkPrice } from "@/lib/utils";
@@ -128,6 +128,7 @@ export default function ArtistDashboard() {
     socialLinks: {} as Record<string, string>,
   });
   const [profileEditing, setProfileEditing] = useState(false);
+  const [prevProfileSyncKey, setPrevProfileSyncKey] = useState<{ myArtist: Artist | undefined; profileEditing: boolean }>({ myArtist: undefined, profileEditing: false });
 
   const [artworkForm, setArtworkForm] = useState({
     title: "",
@@ -235,7 +236,12 @@ export default function ArtistDashboard() {
     },
   });
 
-  useEffect(() => {
+  // Resync the profile form from the fetched artist whenever it changes (or editing
+  // is toggled off) as long as the user isn't actively mid-edit. Adjusting state
+  // during render (rather than in an effect) avoids the extra commit a `useEffect`
+  // would cost — see https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  if (myArtist !== prevProfileSyncKey.myArtist || profileEditing !== prevProfileSyncKey.profileEditing) {
+    setPrevProfileSyncKey({ myArtist, profileEditing });
     if (myArtist && !profileEditing) {
       setProfileForm({
         name: myArtist.name || "",
@@ -248,7 +254,7 @@ export default function ArtistDashboard() {
         socialLinks: (myArtist.socialLinks as Record<string, string>) || {},
       });
     }
-  }, [myArtist, profileEditing]);
+  }
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: { name: string; avatarUrl: string; bio: string; country: string; specialization: string; email: string; galleryTemplate: string; socialLinks: Record<string, string> }) => {

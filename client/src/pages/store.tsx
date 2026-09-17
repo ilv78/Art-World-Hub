@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "wouter";
@@ -41,11 +41,16 @@ export default function Store() {
   const search = useSearch();
   const initialSearch = new URLSearchParams(search).get("search") ?? "";
   const [searchQuery, setSearchQuery] = useState(initialSearch);
+  const [prevSearch, setPrevSearch] = useState(search);
 
-  useEffect(() => {
+  // Pick up a `?search=` param set by navigation from another page. Adjusting
+  // state during render (rather than in an effect) avoids the extra commit a
+  // `useEffect` would cost — see https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  if (search !== prevSearch) {
+    setPrevSearch(search);
     const q = new URLSearchParams(search).get("search") ?? "";
     if (q) setSearchQuery(q);
-  }, [search]);
+  }
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [sortBy, setSortBy] = useState("newest");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
