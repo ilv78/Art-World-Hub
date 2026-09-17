@@ -40,7 +40,26 @@ interface MetaTags {
   ogImage: string;
   jsonLd: Record<string, unknown>[];
   lcpImagePreload?: string; // path of the LCP image to preload (only / today)
+  // True when `url` matched no known static or dynamic SPA route (or a
+  // dynamic one whose entity doesn't exist). server/static.ts uses this to
+  // send a real HTTP 404 instead of a soft-404 (200 + "not found" content),
+  // which is what this field exists for. Undefined/false means "serve 200".
+  notFound?: boolean;
 }
+
+// App routes that exist and must return 200 but don't carry custom SEO meta
+// (STATIC_ROUTES below) — authenticated app surfaces (dashboard, admin),
+// auth pages, and one-off campaign pages, not public content pages. Mirrors
+// client/src/App.tsx's <Route> list; keep the two in sync when adding a
+// page there that has no entry in STATIC_ROUTES. (#508)
+const KNOWN_NON_SEO_ROUTES = new Set<string>([
+  "/dashboard",
+  "/curator",
+  "/admin",
+  "/auth",
+  "/auth/set-password",
+  "/koningsdag",
+]);
 
 // In-memory cache for the home-page LCP candidate. Refreshed on a TTL because
 // `/` is the most-hit URL and we don't want to query the DB on every request.
@@ -295,6 +314,11 @@ function buildArtworkMetaFrom(artwork: {
 
 async function resolveMetaTags(url: string): Promise<MetaTags> {
   const path = normalizePath(url);
+  // Set inside a dynamic route's catch block below. A DB error means we
+  // couldn't determine whether the entity exists, not that it doesn't —
+  // fail open (200, no notFound) rather than 404ing a page that may well be
+  // real. Only a *successful* lookup that comes back empty is a real 404.
+  let dynamicRouteErrored = false;
 
   // Modal-share fallback: any path with `?artwork=<slug>` emits artwork-
   // specific OG. og:url/canonical still point at /artworks/<slug> so search
@@ -390,7 +414,8 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
         };
       }
     } catch {
-      // fall through to defaults
+      // fall through to defaults; unknown, not confirmed-absent (see flag above)
+      dynamicRouteErrored = true;
     }
   }
 
@@ -403,7 +428,8 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
         return buildArtworkMetaFrom(artwork);
       }
     } catch {
-      // fall through to defaults
+      // fall through to defaults; unknown, not confirmed-absent (see flag above)
+      dynamicRouteErrored = true;
     }
   }
 
@@ -469,7 +495,8 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
         };
       }
     } catch {
-      // fall through to defaults
+      // fall through to defaults; unknown, not confirmed-absent (see flag above)
+      dynamicRouteErrored = true;
     }
   }
 
@@ -526,11 +553,15 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
         };
       }
     } catch {
-      // fall through to defaults
+      // fall through to defaults; unknown, not confirmed-absent (see flag above)
+      dynamicRouteErrored = true;
     }
   }
 
-  // Fallback for unknown routes
+  // Fallback: path matched no static route, no dynamic pattern resolved to
+  // a real entity, and it isn't one of the no-custom-meta app routes above.
+  // That's a genuine 404 — unless a DB error is why nothing resolved, in
+  // which case we don't actually know and shouldn't claim otherwise (#508).
   return {
     title: DEFAULT_TITLE,
     description: DEFAULT_DESCRIPTION,
@@ -540,6 +571,7 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
     ogUrl: `${SITE_URL}${path}`,
     ogImage: DEFAULT_OG_IMAGE,
     jsonLd: [breadcrumb({ name: "Home", url: `${SITE_URL}/` })],
+    notFound: !KNOWN_NON_SEO_ROUTES.has(path) && !dynamicRouteErrored,
   };
 }
 

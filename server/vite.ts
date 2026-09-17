@@ -60,7 +60,9 @@ export async function setupVite(server: Server, app: Express) {
       const meta = await resolveMetaTags(url);
       template = injectMetaTags(template, meta);
       const page = await vite.transformIndexHtml(url, template);
-      res.status(200).set({ "Content-Type": "text/html" }).end(page);
+      // Mirror server/static.ts's 404 behavior for unknown routes (#508) so
+      // dev mode doesn't mask what production does.
+      res.status(meta.notFound ? 404 : 200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
       vite.ssrFixStacktrace(e as Error);
       next(e);

@@ -1,7 +1,7 @@
 # Feature: SEO (Search Engine Optimization)
 
 **Status:** In Progress
-**Last Updated:** 2026-04-23
+**Last Updated:** 2026-09-17
 **Owner:** Architecture
 
 ## Summary
@@ -26,6 +26,7 @@ Prepare Vernis9 for search engine discovery and social sharing. The site is a cl
 | Semantic HTML | Good | Proper heading hierarchy, `<section>`, `<article>`, `<main>` |
 | URL structure | Done | `/artists/:slug` (#537) and `/artworks/:slug` (#503) — slug format `slugify(name|title)-<first-8-chars-of-uuid>`. Old UUID artist URLs 301-redirect to the slug form |
 | Alt text | Done | #369 — all img and AvatarImage have descriptive alt text |
+| HTTP status on unknown routes | Done | #508 — SPA catch-all returned 200 for every URL (soft-404); now 404s unknown static routes and dynamic routes whose entity doesn't exist |
 
 ## Work Items
 
@@ -402,6 +403,26 @@ already went through `escapeHtml()`; JSON-LD was the one gap. Regression coverag
 - [ ] No `<img>` tag without an `alt` attribute
 - [ ] Decorative images use `alt=""`
 - [ ] Content images have descriptive alt text
+
+---
+
+### 7. Real HTTP 404s for Unknown SPA Routes
+
+**What it does:** The SPA catch-all in `server/static.ts` (and its dev-mode counterpart `server/vite.ts`) serves `index.html` for every URL that doesn't hit a static asset or API route, always with a `200` status — including URLs that don't correspond to anything, like `/this-page-does-not-exist` or `/artists/<deleted-uuid>`. Google treats "200 + page that says not found" as a soft-404, which downranks the whole site's crawl quality (#496, audit gap §3.14).
+
+**Priority:** P3 (low)
+**Effort:** Small
+
+**Implementation:**
+- `server/meta.ts`'s `resolveMetaTags()` already classifies every URL as one of: a known static SEO route (`STATIC_ROUTES`), a known non-SEO app route (`KNOWN_NON_SEO_ROUTES` — `/dashboard`, `/curator`, `/admin`, `/auth`, `/auth/set-password`, `/koningsdag`; mirrors `client/src/App.tsx`'s route list), a dynamic route resolved against the DB (`/artists/:slug`, `/artworks/:slug`, `/blog/:id`, `/curator-gallery/:id`), or unresolved. It now also returns `notFound: boolean` reflecting that classification — the SPA catch-all didn't need a second, separate router; the existing per-URL resolution used for meta tags already **is** the route registry the issue asked for.
+- A DB error during a dynamic lookup does **not** produce a 404 — an error means "unknown," not "confirmed absent," so it fails open to `200`. Only a lookup that successfully completes and finds nothing sets `notFound: true`.
+- `server/static.ts`'s catch-all (`createSpaCatchAllHandler`) and `server/vite.ts`'s dev-mode catch-all both read `meta.notFound` and set the response status accordingly, while still serving the SPA shell either way — the client-side router's own `NotFound` component renders the same page a real 404 does, so nothing about what the visitor sees changes, only the status code.
+
+**Acceptance criteria:**
+- [x] `curl -I https://vernis9.art/this-page-does-not-exist` → `HTTP/1.1 404`
+- [x] `curl -I https://vernis9.art/artists/nonexistent-uuid` → `HTTP/1.1 404`
+- [x] Real pages (static and dynamic) still 200
+- [x] User-facing 404 page still renders (SPA shell served on both 200 and 404)
 
 ---
 
