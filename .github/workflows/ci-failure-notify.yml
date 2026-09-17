@@ -7,10 +7,11 @@ name: CI Failure Notifier
 # pings on any main-branch CI/CD or Security workflow that ends in failure.
 # See #631. Trivyignore Expiry Check joined the watch list in #729, reusing
 # this same persistent-alert path instead of a second notification mechanism.
+# Deploy Freshness Check joined in #730 for the same reason.
 
 on:
   workflow_run:
-    workflows: ["CI/CD", "Security", "Trivyignore Expiry Check"]
+    workflows: ["CI/CD", "Security", "Trivyignore Expiry Check", "Deploy Freshness Check"]
     types: [completed]
 
 permissions:
