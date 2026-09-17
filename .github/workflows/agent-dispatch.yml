@@ -53,14 +53,21 @@ on:
         required: false
         type: string
 
-# One agent run at a time, repository-wide, and never cancel one that is mid-flight.
+# One group PER ISSUE, not one for the repository (#808). The single `agent-run` group
+# was chosen in #753 because every PR appended a row to one DECISION-LOG.md and
+# concurrent appends always conflict. ADR-0010 made the decision log one file per
+# decision, so that collision no longer exists and the reason to serialise went with
+# it. Per-issue groups mean N issues run at once and there is no shared one-deep
+# pending slot — the mechanism that cancelled every third label (#788).
 #
-# #744 predicted that concurrent runs collide on `DECISION-LOG.md` (append-only) and
-# `package-lock.json` (regenerated) every time. #749 and #750 then merged underneath
-# #751 and conflicted it for real — which also silently skipped its required checks,
-# because a conflicted PR runs no `pull_request` workflows at all (#752).
+# Sweeps (schedule / workflow_dispatch with no input) share a `sweep` group so two
+# sweeps never race each other over the same pick; the issue they pick is then claimed
+# under guard 3 like any other.
+#
+# The spend bound is no longer "one at a time": it is MAX_RUNS_PER_DAY for the day and
+# the max-concurrent check in the pick step for the moment.
 concurrency:
-  group: agent-run
+  group: agent-run-${{ github.event.issue.number || github.event.inputs.issue || 'sweep' }}
   cancel-in-progress: false
 
 permissions:
@@ -70,6 +77,7 @@ permissions:
 
 env:
   MAX_RUNS_PER_DAY: 10
+  MAX_CONCURRENT: 3
 
 jobs:
   dispatch:
@@ -102,6 +110,19 @@ jobs:
           INPUT_ISSUE: ${{ github.event.inputs.issue }}
         run: |
           set -euo pipefail
+
+          # Bound the moment (#808). MAX_RUNS_PER_DAY bounds the day; this bounds how many
+          # agents run at once now that groups are per issue. Other in-progress runs of
+          # this workflow are counted (this run is excluded). A labelled issue that bounces
+          # here keeps `agent-ready` and gets no claim, so the sweep picks it up later —
+          # deferred, never dropped.
+          ACTIVE=$(gh api "repos/$REPO/actions/workflows/agent-dispatch.yml/runs?status=in_progress&per_page=50" \
+            --jq "[.workflow_runs[] | select(.id != ${{ github.run_id }})] | length")
+          if [ "$ACTIVE" -ge "$MAX_CONCURRENT" ]; then
+            echo "issue=" >> "$GITHUB_OUTPUT"
+            echo "::notice::$ACTIVE dispatcher run(s) already in progress (max $MAX_CONCURRENT); deferring. The sweep will pick this up."
+            exit 0
+          fi
 
           if [ "$EVENT" = "issues" ]; then
             echo "issue=$EVENT_ISSUE" >> "$GITHUB_OUTPUT"
@@ -277,8 +298,10 @@ jobs:
             - Branch `feature/issue-${{ steps.pick.outputs.issue }}-<slug>` off `main`.
               Never commit to `main`.
             - Where the policy is silent, take the most reversible option, ship it, and
-              record it in `specs/decisions/DECISION-LOG.md` in the same PR. Write any
-              new standing rule back into the policy file.
+              record it as **one new file** under `specs/decisions/log/` in the same PR
+              (`YYYY-MM-DD-<slug>.md`, frontmatter per `log/README.md`). Never append to
+              `specs/decisions/DECISION-LOG.md` — it is frozen. Write any new standing
+              rule back into the policy file.
             - Documentation is part of the change, not a follow-up.
             - **You cannot write to the issue. Do not try.** Your credential 403s on
               every issue label, comment and close. Labels you apply to the **PR** are
