@@ -1,0 +1,68 @@
+name: Deploy Freshness Check
+
+# Postmortem docs/postmortems/2026-09-10-trivy-scan-blocked-staging-61-days.md,
+# action item 6: `/api/version` reports the CHANGELOG-derived release string —
+# during that incident it read `v3.19.0` on both a freshly-deployed staging and
+# a 67-day-stale production, identical output two months apart. It cannot be the
+# freshness signal. This compares each environment's actually-deployed commit
+# SHA (`IMAGE_TAG` in its `.env`, written by ci.yml's staging deploy and by
+# deploy-production.yml) against `main`, and fails when the oldest commit an
+# environment is missing is more than `--max-days` old. See #730.
+#
+# A failure reaches Telegram via the existing ci-failure-notify.yml watcher
+# (added to that workflow's trigger list in the same change) rather than a new
+# notification path — same reasoning as trivyignore-expiry.yml (#729).
+
+on:
+  schedule:
+    - cron: "0 9 * * *" # daily — offset from the Monday 08:00 doc-agent/trivyignore jobs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-freshness:
+    name: Check deploy freshness
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history required: script/check-deploy-freshness.mjs runs
+          # `git log <deployed-sha>..origin/main`, which a shallow clone cannot
+          # answer for any commit older than the default depth.
+          fetch-depth: 0
+
+      - name: Read deployed SHA from each environment's .env
+        id: deployed
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          key_file="$(mktemp)"
+          trap 'rm -f "$key_file"' EXIT
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$key_file"
+          chmod 600 "$key_file"
+          ssh_opts=(-i "$key_file" -o StrictHostKeyChecking=no -o ConnectTimeout=10)
+
+          staging_sha=$(ssh "${ssh_opts[@]}" "staging@$DEPLOY_HOST" "grep '^IMAGE_TAG=' ~/app/.env | cut -d= -f2")
+          production_sha=$(ssh "${ssh_opts[@]}" "production@$DEPLOY_HOST" "grep '^IMAGE_TAG=' ~/app/.env | cut -d= -f2")
+
+          if [ -z "$staging_sha" ] || [ -z "$production_sha" ]; then
+            echo "::error::Could not read IMAGE_TAG from one or both environments"
+            exit 1
+          fi
+
+          echo "staging=$staging_sha" >> "$GITHUB_OUTPUT"
+          echo "production=$production_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Check freshness against main
+        env:
+          STAGING_SHA: ${{ steps.deployed.outputs.staging }}
+          PRODUCTION_SHA: ${{ steps.deployed.outputs.production }}
+        run: |
+          node script/check-deploy-freshness.mjs --max-days 3 \
+            "staging=$STAGING_SHA" \
+            "production=$PRODUCTION_SHA"
