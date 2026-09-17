@@ -406,6 +406,32 @@ describe("POST /api/orders", () => {
     expect(res.body.error).toContain("price-on-request");
     expect(mockStorage.createOrder).not.toHaveBeenCalled();
   });
+
+  it("returns 409 when a concurrent order already claimed the artwork (issue #687)", async () => {
+    // Dynamic import so this resolves the same mocked module `routes.ts`
+    // itself sees (registered by helpers/test-app.ts), rather than racing it
+    // via a static top-level import.
+    const { ArtworkAlreadySoldError } = await import("../storage");
+
+    (mockStorage.getArtwork as ReturnType<typeof vi.fn>).mockResolvedValue(artworkForSale);
+    (mockStorage.createOrder as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new ArtworkAlreadySoldError("a1"),
+    );
+
+    const res = await request(app)
+      .post("/api/orders")
+      .send({
+        artworkId: "a1",
+        buyerName: "John",
+        buyerEmail: "john@example.com",
+        shippingAddress: "123 Main St",
+        totalAmount: "500.00",
+        status: "pending",
+      });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBeDefined();
+  });
 });
 
 describe("POST /api/artworks/:id/enquire (issue #668)", () => {

@@ -27,8 +27,9 @@ vi.mock("../db", () => {
   return { db: dbObj };
 });
 
-import { generateWhiteRoomLayout, DatabaseStorage } from "../storage";
+import { generateWhiteRoomLayout, DatabaseStorage, ArtworkAlreadySoldError } from "../storage";
 import { db } from "../db";
+import { artworks, orders } from "@shared/schema";
 import type { MazeLayout } from "@shared/schema";
 
 // ----- generateWhiteRoomLayout tests (pure function) -----
@@ -415,6 +416,121 @@ describe("DatabaseStorage", () => {
 
       // Should have called delete 6 times (curator_gallery_artworks, exhibition_artworks, bids, auctions, orders, artworks)
       expect(deleteMock).toHaveBeenCalledTimes(6);
+    });
+  });
+
+  describe("createOrder / updateOrderStatus (issue #687)", () => {
+    it("createOrder inserts the order and marks the artwork not for sale, in one transaction", async () => {
+      const insertMock = vi.mocked(db.insert);
+      insertMock.mockImplementation(() => {
+        const chain: any = {
+          values: vi.fn().mockReturnThis(),
+          returning: vi.fn().mockResolvedValue([{ id: "o1", artworkId: "a1", status: "pending" }]),
+        };
+        return chain;
+      });
+
+      const updateMock = vi.mocked(db.update);
+      let updatedTable: any;
+      let capturedSet: any;
+      updateMock.mockImplementation((table: any) => {
+        updatedTable = table;
+        const chain: any = {
+          set: vi.fn().mockImplementation((data: any) => {
+            capturedSet = data;
+            return chain;
+          }),
+          where: vi.fn().mockResolvedValue(undefined),
+        };
+        return chain;
+      });
+
+      const order = await storage.createOrder({
+        artworkId: "a1",
+        buyerName: "John",
+        buyerEmail: "john@example.com",
+        shippingAddress: "123 Main St",
+        totalAmount: "500.00",
+        status: "pending",
+      } as any);
+
+      expect(order).toEqual({ id: "o1", artworkId: "a1", status: "pending" });
+      expect(db.transaction).toHaveBeenCalled();
+      expect(updatedTable).toBe(artworks);
+      expect(capturedSet).toEqual({ isForSale: false });
+    });
+
+    it("createOrder translates a unique-constraint violation into ArtworkAlreadySoldError", async () => {
+      const insertMock = vi.mocked(db.insert);
+      insertMock.mockImplementation(() => {
+        const chain: any = {
+          values: vi.fn().mockReturnThis(),
+          returning: vi.fn().mockRejectedValue(Object.assign(new Error("duplicate key"), { code: "23505" })),
+        };
+        return chain;
+      });
+
+      await expect(
+        storage.createOrder({
+          artworkId: "a1",
+          buyerName: "John",
+          buyerEmail: "john@example.com",
+          shippingAddress: "123 Main St",
+          totalAmount: "500.00",
+          status: "pending",
+        } as any),
+      ).rejects.toThrow(ArtworkAlreadySoldError);
+    });
+
+    it("updateOrderStatus re-lists the artwork when the order is canceled", async () => {
+      const updateMock = vi.mocked(db.update);
+      const updatedTables: any[] = [];
+      let artworkSet: any;
+      updateMock.mockImplementation((table: any) => {
+        updatedTables.push(table);
+        if (table === orders) {
+          const chain: any = {
+            set: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValue([{ id: "o1", artworkId: "a1", status: "canceled" }]),
+            }),
+          };
+          return chain;
+        }
+        const chain: any = {
+          set: vi.fn().mockImplementation((data: any) => {
+            artworkSet = data;
+            return chain;
+          }),
+          where: vi.fn().mockResolvedValue(undefined),
+        };
+        return chain;
+      });
+
+      const result = await storage.updateOrderStatus("o1", "canceled");
+
+      expect(result).toEqual({ id: "o1", artworkId: "a1", status: "canceled" });
+      expect(updatedTables).toContain(artworks);
+      expect(artworkSet).toEqual({ isForSale: true });
+    });
+
+    it("updateOrderStatus does not touch the artwork for a non-canceling transition", async () => {
+      const updateMock = vi.mocked(db.update);
+      updateMock.mockImplementation((table: any) => {
+        if (table === orders) {
+          const chain: any = {
+            set: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnValue({
+              returning: vi.fn().mockResolvedValue([{ id: "o1", artworkId: "a1", status: "communicating" }]),
+            }),
+          };
+          return chain;
+        }
+        throw new Error("should not update artworks for a non-canceling transition");
+      });
+
+      const result = await storage.updateOrderStatus("o1", "communicating");
+      expect(result).toEqual({ id: "o1", artworkId: "a1", status: "communicating" });
     });
   });
 

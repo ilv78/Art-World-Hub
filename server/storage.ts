@@ -29,6 +29,20 @@ import { randomUUID } from "crypto";
 import { makeArtworkSlug } from "@shared/artwork-slug";
 import { makeArtistSlug } from "@shared/artist-slug";
 
+// Thrown by createOrder when the partial unique index on orders.artworkId
+// (IDX_orders_artwork_active, see shared/schema.ts) rejects a second
+// non-canceled order for the same one-of-a-kind artwork. See #687.
+export class ArtworkAlreadySoldError extends Error {
+  constructor(artworkId: string) {
+    super(`Artwork ${artworkId} already has an active order`);
+    this.name = "ArtworkAlreadySoldError";
+  }
+}
+
+function isUniqueViolation(err: unknown): boolean {
+  return typeof err === "object" && err !== null && (err as { code?: string }).code === "23505";
+}
+
 export interface IStorage {
   // Artists
   getArtists(opts?: { includeGalleryLayout?: boolean }): Promise<Artist[]>;
@@ -430,13 +444,38 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createOrder(insertOrder: InsertOrder): Promise<Order> {
-    const [order] = await db.insert(orders).values(insertOrder).returning();
-    return order;
+    try {
+      return await db.transaction(async (tx) => {
+        const [order] = await tx.insert(orders).values(insertOrder).returning();
+        // Take the artwork off sale in the same transaction as the order so
+        // a concurrent order for the same one-of-a-kind piece either sees it
+        // as unavailable or collides with the unique index below. See #687.
+        await tx
+          .update(artworks)
+          .set({ isForSale: false })
+          .where(eq(artworks.id, insertOrder.artworkId));
+        return order;
+      });
+    } catch (err) {
+      if (isUniqueViolation(err)) {
+        throw new ArtworkAlreadySoldError(insertOrder.artworkId);
+      }
+      throw err;
+    }
   }
 
   async updateOrderStatus(id: string, status: string): Promise<Order | undefined> {
-    const [order] = await db.update(orders).set({ status }).where(eq(orders.id, id)).returning();
-    return order;
+    return db.transaction(async (tx) => {
+      const [order] = await tx.update(orders).set({ status }).where(eq(orders.id, id)).returning();
+      // Re-list the artwork when its only active order is canceled. See #687.
+      if (order && status === "canceled") {
+        await tx
+          .update(artworks)
+          .set({ isForSale: true })
+          .where(eq(artworks.id, order.artworkId));
+      }
+      return order;
+    });
   }
 
   // Exhibitions

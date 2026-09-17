@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, serial, decimal, timestamp, boolean, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, serial, decimal, timestamp, boolean, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -164,16 +164,27 @@ export type InsertBlogPost = z.infer<typeof insertBlogPostSchema>;
 export type BlogPost = typeof blogPosts.$inferSelect;
 
 // Orders table
-export const orders = pgTable("orders", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  artworkId: varchar("artwork_id").references(() => artworks.id).notNull(),
-  buyerName: text("buyer_name").notNull(),
-  buyerEmail: text("buyer_email").notNull(),
-  shippingAddress: text("shipping_address").notNull(),
-  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
-  status: text("status").notNull().default("pending"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export const orders = pgTable(
+  "orders",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    artworkId: varchar("artwork_id").references(() => artworks.id).notNull(),
+    buyerName: text("buyer_name").notNull(),
+    buyerEmail: text("buyer_email").notNull(),
+    shippingAddress: text("shipping_address").notNull(),
+    totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
+    status: text("status").notNull().default("pending"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    // At most one non-canceled order per artwork — the DB-level backstop
+    // against overselling a one-of-a-kind piece when two orders race past
+    // the isForSale check in the same window. See #687.
+    uniqueIndex("IDX_orders_artwork_active")
+      .on(table.artworkId)
+      .where(sql`${table.status} <> 'canceled'`),
+  ],
+);
 
 export const ORDER_STATUSES = ["pending", "communicating", "sending", "closed", "canceled"] as const;
 export type OrderStatus = typeof ORDER_STATUSES[number];

@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage, ArtworkAlreadySoldError } from "./storage";
 import { insertArtworkSchema, updateArtworkSchema, insertBidSchema, insertOrderSchema, insertBlogPostSchema, updateBlogPostSchema, updateArtistSchema, ORDER_TRANSITIONS, ORDER_STATUSES, NEWSLETTER_SOURCES, insertShareEventSchema, artworkEnquirySchema } from "@shared/schema";
 import { normalizeArtworkForCreate, normalizeArtworkForUpdate } from "./publish";
 import type { Artist, ArtworkWithArtist, Order, InsertOrder, ArtworkEnquiry } from "@shared/schema";
@@ -797,6 +797,9 @@ export async function registerRoutes(
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.issues[0].message });
+      }
+      if (error instanceof ArtworkAlreadySoldError) {
+        return res.status(409).json({ error: "This artwork was just sold to another buyer" });
       }
       res.status(500).json({ error: "Failed to create order" });
     }
