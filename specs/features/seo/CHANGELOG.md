@@ -1,5 +1,12 @@
 # SEO Feature Changelog
 
+## 2026-09-17 — Real HTTP 404s for unknown SPA routes, not soft-404s (#508)
+- `server/static.ts`'s SPA catch-all (and `server/vite.ts`'s dev-mode equivalent) served `index.html` with a `200` for every URL, including ones matching no page — Google treats "200 + not-found content" as a soft-404 and downranks the whole site's crawl quality.
+- `server/meta.ts`'s `resolveMetaTags()` already resolves every URL against static routes, a new `KNOWN_NON_SEO_ROUTES` set (app pages with no custom SEO meta — `/dashboard`, `/curator`, `/admin`, `/auth`, `/auth/set-password`, `/koningsdag` — mirroring `client/src/App.tsx`), and the DB for dynamic routes (`/artists/:slug`, `/artworks/:slug`, `/blog/:id`, `/curator-gallery/:id`). It now also returns `notFound: boolean` from that same resolution, so no separate route registry was needed.
+- A dynamic-route DB error fails open (`notFound: false`) rather than 404ing a page whose existence just couldn't be checked — only a completed lookup that finds nothing is a real 404.
+- Extracted `createSpaCatchAllHandler()` in `server/static.ts` so the catch-all's status-code logic is unit-testable with supertest against a bare `express()` app, independent of a built `dist/public`.
+- New tests: `server/__tests__/spa-404.test.ts` (end-to-end status codes via supertest) and additions to `server/__tests__/meta.test.ts` covering the `notFound` flag across static, known-non-SEO, dynamic-found, dynamic-missing, and DB-error cases.
+
 ## 2026-09-15 — Fix stored XSS via unescaped JSON-LD in SSR HTML (#683)
 - `JSON.stringify` does not escape `<`, `>` or `&`. The JSON-LD `<script>` block built from it embeds attacker-controllable DB fields (artist name/bio, artwork title, gallery name, blog title) unescaped — a bio of `</script><script>...` closed the tag early and executed for every visitor of that artist/artwork/blog page. Every other meta-tag replacement already went through `escapeHtml()`; JSON-LD was the one gap.
 - Added `escapeJsonForScript()` in `server/meta.ts`, applied to the `JSON.stringify(ld)` output before embedding: unicode-escapes `<` `>` `&` plus the ` `/` ` line separators (valid JSON, invalid raw script-context text). Representational only — a JSON parser reads the escaped payload back to the identical object.

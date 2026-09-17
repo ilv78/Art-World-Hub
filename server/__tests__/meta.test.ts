@@ -555,3 +555,66 @@ describe("resolveMetaTags — /curator-gallery/:id (issue #569)", () => {
     expect(findLd(meta.jsonLd, "ExhibitionEvent")).toBeUndefined();
   });
 });
+
+describe("resolveMetaTags — notFound flag for real HTTP 404s (issue #508)", () => {
+  it("is false/undefined for known static routes", async () => {
+    for (const path of ["/", "/gallery", "/store", "/artists", "/blog", "/changelog", "/privacy", "/terms"]) {
+      const meta = await resolveMetaTags(path);
+      expect(meta.notFound).toBeFalsy();
+    }
+  });
+
+  it("is false/undefined for app routes with no custom SEO meta (dashboard, admin, auth, curator, koningsdag)", async () => {
+    for (const path of ["/dashboard", "/curator", "/admin", "/auth", "/auth/set-password", "/koningsdag"]) {
+      const meta = await resolveMetaTags(path);
+      expect(meta.notFound).toBeFalsy();
+    }
+  });
+
+  it("is true for a path matching no static or dynamic route at all", async () => {
+    const meta = await resolveMetaTags("/this-page-does-not-exist");
+    expect(meta.notFound).toBe(true);
+  });
+
+  it("is true for /artists/:slug when the artist doesn't exist", async () => {
+    setMockArtist(undefined);
+    const meta = await resolveMetaTags("/artists/nonexistent-uuid");
+    expect(meta.notFound).toBe(true);
+  });
+
+  it("is true for /artworks/:slug when the artwork doesn't exist", async () => {
+    setMockArtwork(undefined);
+    const meta = await resolveMetaTags("/artworks/nonexistent-slug");
+    expect(meta.notFound).toBe(true);
+  });
+
+  it("is true for /blog/:id when the post doesn't exist", async () => {
+    const meta = await resolveMetaTags("/blog/nonexistent-id");
+    expect(meta.notFound).toBe(true);
+  });
+
+  it("is true for /curator-gallery/:id when the gallery doesn't exist or isn't published", async () => {
+    mockStorageState.curatorGallery = undefined;
+    expect((await resolveMetaTags("/curator-gallery/nonexistent-id")).notFound).toBe(true);
+
+    mockStorageState.curatorGallery = {
+      id: "gallery-1",
+      isPublished: false,
+      curator: { id: "u", firstName: "A", lastName: "B" },
+      artworks: [],
+    };
+    expect((await resolveMetaTags("/curator-gallery/gallery-1")).notFound).toBe(true);
+  });
+
+  it("is false/undefined when a known static or dynamic route resolves successfully", async () => {
+    setMockArtist(baseArtist());
+    expect((await resolveMetaTags("/artists/alexandra-constantin-alex0001")).notFound).toBeFalsy();
+  });
+
+  it("fails open (not notFound) when a dynamic-route DB lookup throws", async () => {
+    const { storage } = await import("../storage");
+    vi.mocked(storage.getArtistBySlug).mockRejectedValueOnce(new Error("db down"));
+    const meta = await resolveMetaTags("/artists/some-slug");
+    expect(meta.notFound).toBeFalsy();
+  });
+});
