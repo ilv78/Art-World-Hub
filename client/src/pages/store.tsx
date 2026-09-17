@@ -219,6 +219,8 @@ export default function Store() {
       </div>
 
       {/* Artwork Grid */}
+      <section aria-labelledby="store-results-heading">
+      <h2 id="store-results-heading" className="sr-only">Artworks</h2>
       {isLoading ? (
         <div
           className={
@@ -294,6 +296,7 @@ export default function Store() {
           ))}
         </div>
       )}
+      </section>
 
       {/* Artwork Detail Dialog */}
       <ArtworkDetailDialog

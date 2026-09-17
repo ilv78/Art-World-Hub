@@ -285,6 +285,8 @@ export default function Auctions() {
       </div>
 
       {/* Auction Tabs */}
+      <section aria-labelledby="auctions-results-heading">
+      <h2 id="auctions-results-heading" className="sr-only">Auctions</h2>
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="active" data-testid="tab-active">
@@ -352,6 +354,7 @@ export default function Auctions() {
           </TabsContent>
         ))}
       </Tabs>
+      </section>
 
       {/* Bid Dialog */}
       <Dialog

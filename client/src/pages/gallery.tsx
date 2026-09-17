@@ -162,7 +162,7 @@ export default function Gallery() {
           <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center mx-auto">
             <ZoomIn className="h-10 w-10 text-muted-foreground" />
           </div>
-          <h2 className="font-serif text-2xl font-bold">Gallery Coming Soon</h2>
+          <h1 className="font-serif text-2xl font-bold">Gallery Coming Soon</h1>
           <p className="text-muted-foreground">
             Our virtual gallery is being curated. Check back soon!
           </p>
@@ -210,6 +210,7 @@ export default function Gallery() {
         </div>
       </div>
       )}
+      <h2 className="sr-only">Gallery viewer</h2>
 
       {viewMode === "3d" && (
         <div className="flex-1 relative">

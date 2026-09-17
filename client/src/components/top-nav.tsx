@@ -88,7 +88,7 @@ export function TopNav() {
         </Link>
 
         {/* Center: Nav links (desktop) */}
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="hidden md:flex items-center gap-1" aria-label="Primary">
           {navLinks.map((link) => {
             const isActive = location === link.url;
             return (
@@ -197,7 +197,7 @@ export function TopNav() {
 
       {/* Mobile menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t bg-background px-4 py-3 space-y-1">
+        <nav className="md:hidden border-t bg-background px-4 py-3 space-y-1" aria-label="Mobile">
           {navLinks.map((link) => {
             const isActive = location === link.url;
             return (
@@ -246,7 +246,7 @@ export function TopNav() {
               </button>
             </Link>
           )}
-        </div>
+        </nav>
       )}
 
       {/* Search dialog */}
