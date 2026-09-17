@@ -328,6 +328,35 @@ jobs:
       #
       # `if-no-files-found: ignore` because a sweep that picks nothing skips
       # `Work the issue` and writes no transcript; that is not a failure.
+      # REDACT BEFORE UPLOAD. The first transcript ever kept (#800's run, 2026-09-17)
+      # contained RELEASE_PAT in clear, four times: the agent ran `git remote -v` and
+      # the action had embedded the token in the remote URL as
+      # `x-access-token:github_pat_…@`. The job log masks secrets; the transcript is
+      # the action's raw record and is not masked. The artifact was deleted within
+      # the hour and the token rotated. This step masks the remote-URL credential
+      # form and every known token prefix in place, and refuses to continue if any
+      # survives — an upload that might leak is worse than no upload (#789).
+      - name: Redact secrets from the transcript
+        if: always() && steps.claim.outcome == 'success'
+        env:
+          TRANSCRIPT: ${{ runner.temp }}/claude-execution-output.json
+        run: |
+          set -euo pipefail
+          [ -f "$TRANSCRIPT" ] || { echo "No transcript written; nothing to redact."; exit 0; }
+          sed -i -E \
+            -e 's#(x-access-token:)[^@"[:space:]]+@#\1***@#g' \
+            -e 's#github_pat_[A-Za-z0-9_]+#github_pat_***#g' \
+            -e 's#ghp_[A-Za-z0-9]+#ghp_***#g' \
+            -e 's#gh[opsur]_[A-Za-z0-9]{20,}#gh?_***#g' \
+            -e 's#sk-ant-[A-Za-z0-9_-]+#sk-ant-***#g' \
+            "$TRANSCRIPT"
+          if grep -qE 'x-access-token:[^*@"[:space:]]|github_pat_[A-Za-z0-9_]{8}|ghp_[A-Za-z0-9]{8}|sk-ant-[A-Za-z0-9_-]{8}' "$TRANSCRIPT"; then
+            echo "::error::Token material survived redaction; refusing to upload."
+            rm -f "$TRANSCRIPT"
+            exit 1
+          fi
+          echo "Transcript redacted; no token material remains."
+
       - name: Keep the run transcript
         id: transcript
         if: always() && steps.claim.outcome == 'success'
