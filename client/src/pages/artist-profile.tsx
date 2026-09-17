@@ -118,13 +118,25 @@ export default function ArtistProfile() {
   };
 
   if (artistLoading) {
+    // Mirrors the loaded layout's banner + overlapping card structure
+    // (same h-48 banner, same max-w-5xl/-mt-24 container) so swapping in
+    // real content doesn't reflow the whole page — see #553.
     return (
-      <div className="p-6 space-y-6">
-        <Skeleton className="h-48" />
-        <div className="space-y-4">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-4 w-32" />
-          <Skeleton className="h-20 w-full" />
+      <div className="min-h-screen">
+        <div className="relative h-48 bg-linear-to-br from-primary/20 via-primary/10 to-background" />
+        <div className="max-w-5xl mx-auto px-6 -mt-24 relative z-10 pb-12">
+          <Card className="mb-8">
+            <CardContent className="pt-6">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+                <Skeleton className="w-32 h-32 rounded-full shrink-0" />
+                <div className="flex-1 w-full space-y-4">
+                  <Skeleton className="h-8 w-64" />
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-20 w-full" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
@@ -273,7 +285,15 @@ export default function ArtistProfile() {
 
           <TabsContent value="gallery" className="space-y-4">
             {galleryLoading ? (
-              <Skeleton className="h-[500px] rounded-md" />
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="space-y-2">
+                    <Skeleton className="aspect-4/5 rounded-md" />
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                ))}
+              </div>
             ) : galleryArtworks.length > 0 && galleryLayout ? (
               <>
                 <div className="flex justify-end">
@@ -422,9 +442,16 @@ export default function ArtistProfile() {
 
           <TabsContent value="blog" className="space-y-6">
             {blogLoading ? (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-40" />
+                  <Card key={i} className="overflow-hidden">
+                    <Skeleton className="aspect-3/1 rounded-none" />
+                    <CardHeader>
+                      <Skeleton className="h-4 w-32 mb-2" />
+                      <Skeleton className="h-7 w-2/3 mb-2" />
+                      <Skeleton className="h-4 w-full" />
+                    </CardHeader>
+                  </Card>
                 ))}
               </div>
             ) : publishedPosts.length > 0 ? (
