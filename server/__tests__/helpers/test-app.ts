@@ -120,6 +120,14 @@ vi.mock("../../storage", () => ({
   storage: mockStorage,
   DatabaseStorage: vi.fn(),
   generateWhiteRoomLayout: vi.fn(),
+  // routes.ts does `instanceof ArtworkAlreadySoldError` on the error thrown by
+  // storage.createOrder, so the mock needs a real class here, not vi.fn().
+  ArtworkAlreadySoldError: class ArtworkAlreadySoldError extends Error {
+    constructor(artworkId: string) {
+      super(`Artwork ${artworkId} already has an active order`);
+      this.name = "ArtworkAlreadySoldError";
+    }
+  },
 }));
 
 // Mock logger — no-op logger + testable logFilePath

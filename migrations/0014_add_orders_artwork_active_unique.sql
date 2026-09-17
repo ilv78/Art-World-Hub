@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "IDX_orders_artwork_active" ON "orders" USING btree ("artwork_id") WHERE "orders"."status" <> 'canceled';
