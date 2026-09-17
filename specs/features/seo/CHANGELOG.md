@@ -1,5 +1,15 @@
 # SEO Feature Changelog
 
+## 2026-09-17 — Semantic HTML pass: landmarks + heading hierarchy (#505)
+- #496's audit claimed no `<main>`/`<nav>` existed anywhere — a curl-based check against the pre-hydration SPA shell, which really has neither; both already existed in the rendered DOM (`public-layout.tsx`'s `<main>` since #289, `top-nav.tsx`'s desktop `<nav>`) and are what Lighthouse/axe DevTools, the tools this issue's acceptance criteria name, actually see.
+- What was real: `store.tsx`, `artists.tsx`, `auctions.tsx`, and `gallery.tsx`'s classic image viewer rendered their first sub-heading as `<h3>` directly under the page `<h1>`, skipping `<h2>` — a genuine axe `heading-order` violation.
+- Fixed with a visually-hidden (`sr-only`) `<h2>` ahead of each results grid/tabs block, wrapped in a labelled `<section>` (matching `exhibitions.tsx`'s existing pattern), rather than promoting the shared `ArtworkCard`/`AuctionCard` components' `<h3>` — that would have flattened the already-correct `h2`→`h3` nesting those components have on `home.tsx`/`exhibitions.tsx`.
+- Promoted four standalone empty/not-found states from `<h2>` to `<h1>` since each is the only heading on the page in that state: `gallery.tsx` ("Gallery Coming Soon"), `blog-post.tsx` ("Post not found"), `artwork-detail.tsx` ("Artwork not found").
+- `top-nav.tsx`: added `aria-label` to the desktop `<nav>`; the mobile menu's wrapping `<div>` became a second, labelled `<nav>` (only one visible per breakpoint).
+- `artist-profile.tsx`: bio card and the gallery/portfolio/blog tabs area wrapped in labelled `<section>`s, with a hidden `<h2>` ahead of the tabs.
+- Zero visual diff — `sr-only` is the same clip-and-hide Tailwind utility already used in `top-nav.tsx`'s search dialog title.
+- Lighthouse/axe DevTools re-verification against the deployed instance is a manual post-merge step — CI has no browser-lab accessibility check (see PR `## Verification`).
+
 ## 2026-09-17 — Reduce Cumulative Layout Shift on `/artists/:slug` (#553)
 - Lighthouse 12 mobile runs against staging (post-#550) showed CLS bouncing 0 → ~0.21 across repeated runs on the artist profile page — into the "poor" band (Google's "good" threshold is < 0.1).
 - Root cause: three independent loading states (`artistLoading`, and per-tab `galleryLoading`/`artworksLoading`/`blogLoading`) each swapped a structurally different, differently-sized `<Skeleton>` placeholder for the real content once its query resolved.

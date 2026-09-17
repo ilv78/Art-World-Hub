@@ -190,6 +190,7 @@ export default function ArtistProfile() {
       </div>
 
       <div className="max-w-5xl mx-auto px-6 -mt-24 relative z-10 pb-12">
+        <section aria-label={`About ${artist.name}`}>
         <Card className="mb-8">
           <CardContent className="pt-6">
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
@@ -266,7 +267,10 @@ export default function ArtistProfile() {
             </div>
           </CardContent>
         </Card>
+        </section>
 
+        <section aria-labelledby="artist-artworks-heading">
+        <h2 id="artist-artworks-heading" className="sr-only">{artist.name}'s work</h2>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList>
             <TabsTrigger value="gallery" data-testid="tab-profile-gallery">
@@ -503,6 +507,7 @@ export default function ArtistProfile() {
             )}
           </TabsContent>
         </Tabs>
+        </section>
 
         <ArtworkDetailDialog
           artwork={selectedArtwork}

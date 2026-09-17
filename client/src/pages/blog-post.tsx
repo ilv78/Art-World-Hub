@@ -49,7 +49,7 @@ export default function BlogPost({ params }: { params: { id: string } }) {
   if (!post) {
     return (
       <div className="min-h-screen p-6 flex flex-col items-center justify-center">
-        <h2 className="font-serif text-2xl font-semibold mb-2">Post not found</h2>
+        <h1 className="font-serif text-2xl font-semibold mb-2">Post not found</h1>
         <p className="text-muted-foreground mb-4">This blog post doesn't exist or has been removed.</p>
         <Button asChild variant="outline">
           <Link href="/blog">Back to Blog</Link>
