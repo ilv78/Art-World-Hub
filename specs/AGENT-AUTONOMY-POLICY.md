@@ -153,7 +153,7 @@ When this policy does not cover a decision:
 
 1. **Choose the most reversible option.** Not the best one — the one that is cheapest to undo if it is wrong.
 2. **Do it.** Do not wait.
-3. **Record it** in `specs/decisions/DECISION-LOG.md` and in the PR body, with the reasoning and what it would take to reverse.
+3. **Record it** as a file under `specs/decisions/log/` and in the PR body, with the reasoning and what it would take to reverse.
 4. **Write the rule back into this file** in the same PR, phrased so the next agent does not re-derive it.
 
 A revert costs minutes. A blocking question costs an afternoon. The asymmetry is the whole design.
@@ -236,7 +236,7 @@ Documentation is part of the change, never a follow-up.
 
 - New or changed feature → `specs/features/<name>/SPEC.md` (+ `CHANGELOG.md` where one exists)
 - Schema change → `specs/architecture/DATA-MODEL.md`
-- Architectural, infrastructure, security, or process decision → a row in `specs/decisions/DECISION-LOG.md`, **in the same PR**
+- Architectural, infrastructure, security, or process decision → a file under `specs/decisions/log/`, **in the same PR**
 - A decision with lasting structure → `specs/architecture/ADR/ADR-XXXX.md`
 - Workflow change → the relevant `specs/workflows/` doc
 - A decision that answers a question an agent would otherwise ask → **a rule in this file**

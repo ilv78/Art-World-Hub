@@ -11,7 +11,7 @@ Analyze the pull request diff and check documentation rules.
 3. Apply consistency rules (C-001 through C-004) against the changed files:
    - C-001: If a new migration file is added, check that `specs/architecture/DATA-MODEL.md` is also updated or an ADR is linked.
    - C-002: If a new Express route is added in `server/routes.ts`, check that a feature spec exists or is updated.
-   - C-003: If `CLAUDE.md` is changed, check that `specs/decisions/DECISION-LOG.md` has a new entry.
+   - C-003: If `CLAUDE.md` is changed, check that `specs/decisions/log/` (one file per decision; `DECISION-LOG.md` is frozen) has a new entry.
    - C-004: If the PR title contains "breaking-change", check that an ADR is linked in the PR description.
 4. Apply structure rules (S-001 through S-006) — verify required files exist.
 5. Check staleness rules (ST-001 through ST-005) if relevant files were modified.
