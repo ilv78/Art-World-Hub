@@ -1,5 +1,12 @@
 # SEO Feature Changelog
 
+## 2026-09-17 — Reduce Cumulative Layout Shift on `/artists/:slug` (#553)
+- Lighthouse 12 mobile runs against staging (post-#550) showed CLS bouncing 0 → ~0.21 across repeated runs on the artist profile page — into the "poor" band (Google's "good" threshold is < 0.1).
+- Root cause: three independent loading states (`artistLoading`, and per-tab `galleryLoading`/`artworksLoading`/`blogLoading`) each swapped a structurally different, differently-sized `<Skeleton>` placeholder for the real content once its query resolved.
+- `client/src/pages/artist-profile.tsx`: the whole-page loading skeleton now reuses the loaded layout's own banner + `max-w-5xl`/`-mt-24` card geometry instead of a generic `p-6` stack; the Gallery tab's skeleton is now a responsive grid of card-shaped placeholders (matching `ArtworkCard`'s `aspect-4/5` image) instead of one fixed `h-[500px]` block; the Blog tab's skeleton now matches the real card's `aspect-3/1` cover image + header shape instead of flat `h-40` bars.
+- The avatar image (a candidate raised in the issue) was ruled out — its parent `<Avatar>` already renders at a fixed `w-32 h-32` regardless of image-load state, so there's no box to reflow.
+- Lighthouse re-verification against the deployed instance is a manual post-merge follow-up (see PR `## Verification`) — CI has no browser-lab CLS check.
+
 ## 2026-09-17 — Real HTTP 404s for unknown SPA routes, not soft-404s (#508)
 - `server/static.ts`'s SPA catch-all (and `server/vite.ts`'s dev-mode equivalent) served `index.html` with a `200` for every URL, including ones matching no page — Google treats "200 + not-found content" as a soft-404 and downranks the whole site's crawl quality.
 - `server/meta.ts`'s `resolveMetaTags()` already resolves every URL against static routes, a new `KNOWN_NON_SEO_ROUTES` set (app pages with no custom SEO meta — `/dashboard`, `/curator`, `/admin`, `/auth`, `/auth/set-password`, `/koningsdag` — mirroring `client/src/App.tsx`), and the DB for dynamic routes (`/artists/:slug`, `/artworks/:slug`, `/blog/:id`, `/curator-gallery/:id`). It now also returns `notFound: boolean` from that same resolution, so no separate route registry was needed.

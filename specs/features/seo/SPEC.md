@@ -27,6 +27,7 @@ Prepare Vernis9 for search engine discovery and social sharing. The site is a cl
 | URL structure | Done | `/artists/:slug` (#537) and `/artworks/:slug` (#503) — slug format `slugify(name|title)-<first-8-chars-of-uuid>`. Old UUID artist URLs 301-redirect to the slug form |
 | Alt text | Done | #369 — all img and AvatarImage have descriptive alt text |
 | HTTP status on unknown routes | Done | #508 — SPA catch-all returned 200 for every URL (soft-404); now 404s unknown static routes and dynamic routes whose entity doesn't exist |
+| Cumulative Layout Shift (artist profile) | Done | #553 — loading skeletons on `/artists/:slug` reshaped to match the loaded layout's geometry (banner + card container, gallery grid, blog cards), instead of a structurally different placeholder |
 
 ## Work Items
 
@@ -423,6 +424,32 @@ already went through `escapeHtml()`; JSON-LD was the one gap. Regression coverag
 - [x] `curl -I https://vernis9.art/artists/nonexistent-uuid` → `HTTP/1.1 404`
 - [x] Real pages (static and dynamic) still 200
 - [x] User-facing 404 page still renders (SPA shell served on both 200 and 404)
+
+---
+
+### 8. Cumulative Layout Shift (CLS) — Artist Profile
+
+**What it does:** CLS measures how much visible content jumps around as a page loads. Google folds it into Core Web Vitals, and a high score both hurts ranking and reads as a janky page to users. Lighthouse 12 mobile runs against `/artists/:slug` post-#550 (which fixed compression and, incidentally, made the artist page's LCP fast enough for Lighthouse's measurement window to actually catch the layout shifts happening underneath) showed CLS bouncing between 0 and ~0.21 across repeated runs — well into the "poor" band (Google's threshold for "good" is < 0.1).
+
+**Priority:** P2 (medium — real CWV/ranking impact, but LCP/FCP work in #551 matters more)
+**Effort:** Small
+
+**Root cause:** the page renders three independent loading states — the top-level `artistLoading` gate, and per-tab `galleryLoading`/`artworksLoading`/`blogLoading` gates — and each one's `<Skeleton>` placeholder had a different shape and height than the content that replaces it:
+- The whole-page loading skeleton used a plain `p-6 space-y-6` wrapper with generic bars, while the loaded page uses a `h-48` gradient banner + a `max-w-5xl mx-auto -mt-24` card pulled up underneath it — a structural swap, not just a content swap.
+- The default-active "Gallery" tab's skeleton was a single fixed `h-[500px]` block, standing in for content that is actually a responsive grid of artwork cards (or a 3D canvas, or an empty state) — heights that don't resemble 500px in the common case.
+- The "Blog" tab's skeleton was three `h-40` bars, shorter than the real cards (a 3:1 cover image plus a header with date/title/excerpt).
+
+The avatar image (a candidate raised in the issue, and the reason #549 added `fetchPriority="high"` to it) turned out **not** to be a contributor: its parent `<Avatar>` already renders at a fixed `w-32 h-32` regardless of image load state, so there is no box to reflow.
+
+**Implementation:**
+- `client/src/pages/artist-profile.tsx`: the `artistLoading` skeleton now reuses the loaded layout's own banner + `max-w-5xl`/`-mt-24` card structure, with skeleton shapes sized to the real avatar/name/bio geometry inside it.
+- The Gallery tab's loading state is now a `grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4` of card-shaped skeletons (matching `ArtworkCard`'s `aspect-4/5` image + two text lines) instead of one flat block.
+- The Blog tab's loading state is now three `Card`s with an `aspect-3/1` image skeleton and header-line skeletons, matching the real post card's shape.
+
+**Acceptance criteria:**
+- [x] Loading and loaded states share the same outer geometry for the profile header (banner height, container width, negative-margin overlap)
+- [x] Per-tab skeletons approximate the real content's shape and total height rather than an arbitrary fixed block
+- [ ] Re-running Lighthouse 5× on the deployed instance shows CLS ≤ 0.1 on at least 4/5 runs (lab verification, tracked as a post-merge follow-up — see PR `## Verification`)
 
 ---
 
