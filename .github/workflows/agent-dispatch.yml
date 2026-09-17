@@ -403,8 +403,27 @@ jobs:
           REPO: ${{ github.repository }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           TRANSCRIPT_URL: ${{ steps.transcript.outputs.artifact-url }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           set -euo pipefail
+
+          # #800: `agent-stuck` and `agent-no-change` both need a human decision and
+          # were both silent — reusing ci-failure-notify.yml's Telegram path (#631)
+          # rather than a second notification mechanism. Once per state, not
+          # repeatedly: this step only runs once per dispatch, and a mirrored state
+          # label removes the issue from the sweep's eligible set (`pick` step above),
+          # so there is no second run to post a second message. Best-effort — `|| true`
+          # so a Telegram outage cannot fail the step that releases the claim.
+          notify_telegram() {
+            local text="$1"
+            [ -n "$TELEGRAM_BOT_TOKEN" ] || return 0
+            curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+              -d chat_id="${TELEGRAM_CHAT_ID}" \
+              -d parse_mode="HTML" \
+              -d disable_web_page_preview="true" \
+              -d text="$text" > /dev/null || true
+          }
 
           # Head branch only, deliberately. Matching the PR *body* for "#<issue>" looks
           # more forgiving and is wrong: #762's body discusses the failed #688 run at
@@ -469,12 +488,20 @@ jobs:
 
           Run: $RUN_URL"
 
+              notify_telegram "@racu8_bot
+          🤷 <b>agent-no-change on #${ISSUE}</b>
+          $(printf '%s' "$REASON" | head -n 1)
+          <a href=\"${RUN_URL}\">View run</a>"
+
               echo "Issue #$ISSUE needs no change per the agent; claim released, agent-no-change applied."
               exit 0
             fi
 
             gh issue edit "$ISSUE" --repo "$REPO" \
               --remove-label agent-working --add-label agent-failed
+            # Mutually exclusive states (#800): a stale `agent-stuck` from an earlier
+            # run on this issue must not survive alongside a fresh `agent-failed`.
+            gh issue edit "$ISSUE" --repo "$REPO" --remove-label agent-stuck || true
 
             gh issue comment "$ISSUE" --repo "$REPO" --body "Agent run produced no PR and no branch.
 
@@ -506,6 +533,27 @@ jobs:
 
           if [ -n "$SIGNAL" ]; then
             gh issue edit "$ISSUE" --repo "$REPO" --add-label "$SIGNAL"
+
+            # Mutually exclusive states (#800): whichever one is being written now,
+            # clear the other rather than leaving a stale copy from a previous run on
+            # the same issue — #730 carried both at once and neither label lifecycle
+            # step had ever cleared the opposite one.
+            if [ "$SIGNAL" = "agent-stuck" ]; then
+              gh issue edit "$ISSUE" --repo "$REPO" --remove-label agent-failed || true
+
+              # First line of the agent's escalation comment — the last comment it
+              # left on the PR before labelling it `agent-stuck` (AGENT-PIPELINE.md
+              # §3: "one batched comment with the options and recommendation").
+              DETAIL=$(gh pr view "$PR_NUM" --repo "$REPO" --json comments \
+                --jq '.comments[-1].body // "(no PR comment found)"' | head -n 1)
+              notify_telegram "@racu8_bot
+          🧑‍💻 <b>agent-stuck on #${ISSUE}</b> (PR #${PR_NUM})
+          ${DETAIL}
+          <a href=\"${RUN_URL}\">View run</a>"
+            else
+              gh issue edit "$ISSUE" --repo "$REPO" --remove-label agent-stuck || true
+            fi
+
             echo "PR #$PR_NUM signalled $SIGNAL; mirrored onto issue #$ISSUE, claim released."
             exit 0
           fi
