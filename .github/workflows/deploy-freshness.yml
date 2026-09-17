@@ -47,8 +47,14 @@ jobs:
           chmod 600 "$key_file"
           ssh_opts=(-i "$key_file" -o StrictHostKeyChecking=no -o ConnectTimeout=10)
 
-          staging_sha=$(ssh "${ssh_opts[@]}" "staging@$DEPLOY_HOST" "grep '^IMAGE_TAG=' ~/app/.env | cut -d= -f2")
-          production_sha=$(ssh "${ssh_opts[@]}" "production@$DEPLOY_HOST" "grep '^IMAGE_TAG=' ~/app/.env | cut -d= -f2")
+          # Last IMAGE_TAG= line only, CR and quotes stripped. The first live run read
+          # staging successfully and then failed writing $GITHUB_OUTPUT with
+          # "Invalid format '<sha>'" — a bare SHA on its own line, so the value was
+          # multi-line: the deploy appends to .env rather than replacing, or the file
+          # carries CRLF. Hardened for both; not verified on the host from CI.
+
+          staging_sha=$(ssh "${ssh_opts[@]}" "staging@$DEPLOY_HOST" "grep '^IMAGE_TAG=' ~/app/.env | tail -n1 | cut -d= -f2- | sed -e 's/\r$//' -e 's/^\"//' -e 's/\"$//'")
+          production_sha=$(ssh "${ssh_opts[@]}" "production@$DEPLOY_HOST" "grep '^IMAGE_TAG=' ~/app/.env | tail -n1 | cut -d= -f2- | sed -e 's/\r$//' -e 's/^\"//' -e 's/\"$//'")
 
           if [ -z "$staging_sha" ] || [ -z "$production_sha" ]; then
             echo "::error::Could not read IMAGE_TAG from one or both environments"
