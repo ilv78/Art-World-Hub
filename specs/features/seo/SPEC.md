@@ -23,7 +23,7 @@ Prepare Vernis9 for search engine discovery and social sharing. The site is a cl
 | Trailing-slash canonicalization | Done | #427 — homepage canonical fixed; nginx strips trailing slash from non-root paths |
 | Image lazy loading | Done | #368 — `loading="lazy"` on all below-the-fold images |
 | OG image | Done | #366 — default `og-default.png` + per-entity images |
-| Semantic HTML | Good | Proper heading hierarchy, `<section>`, `<article>`, `<main>` |
+| Semantic HTML | Done | #505 — `<main>`/`<nav>` landmarks confirmed present (already existed via `public-layout.tsx`/`top-nav.tsx`, contra #496's curl-based finding — see Work Item 9); heading-order skips fixed on `/store`, `/artists`, `/auctions`, `/gallery`; `<section>` landmarks added to `/artists/:slug` |
 | URL structure | Done | `/artists/:slug` (#537) and `/artworks/:slug` (#503) — slug format `slugify(name|title)-<first-8-chars-of-uuid>`. Old UUID artist URLs 301-redirect to the slug form |
 | Alt text | Done | #369 — all img and AvatarImage have descriptive alt text |
 | HTTP status on unknown routes | Done | #508 — SPA catch-all returned 200 for every URL (soft-404); now 404s unknown static routes and dynamic routes whose entity doesn't exist |
@@ -450,6 +450,32 @@ The avatar image (a candidate raised in the issue, and the reason #549 added `fe
 - [x] Loading and loaded states share the same outer geometry for the profile header (banner height, container width, negative-margin overlap)
 - [x] Per-tab skeletons approximate the real content's shape and total height rather than an arbitrary fixed block
 - [ ] Re-running Lighthouse 5× on the deployed instance shows CLS ≤ 0.1 on at least 4/5 runs (lab verification, tracked as a post-merge follow-up — see PR `## Verification`)
+
+---
+
+### 9. Semantic HTML Pass — Landmarks & Heading Hierarchy
+
+**What it does:** Screen readers and crawlers use `<main>`/`<nav>` landmarks and heading levels (`<h1>` → `<h2>` → `<h3>`, never skipping a level) to build a page outline. A skipped level or a missing landmark doesn't break the visual page, but it breaks the *assistive* navigation of it, and axe/Lighthouse both score it as an accessibility violation.
+
+**Priority:** P2
+**Effort:** Small
+
+**Findings vs. #496's audit:** the audit (a curl-based external check, run before JS execution) reported no `<main>`/`<nav>` anywhere. Both already existed in the rendered DOM — `public-layout.tsx` has wrapped every non-bare route in `<main>` since #289, and `top-nav.tsx` already had a desktop `<nav>` — just not in the raw pre-hydration HTML a non-JS fetch sees. Lighthouse and axe DevTools, the tools this issue's acceptance criteria actually name, render through Chrome and see the hydrated DOM. What *was* real: `store.tsx`, `artists.tsx`, `auctions.tsx`, and `gallery.tsx`'s classic image viewer rendered their first sub-heading as `<h3>` directly under the page's `<h1>`, skipping `<h2>` — a genuine `heading-order` violation, matching the issue's own gallery example.
+
+**Implementation:**
+- `top-nav.tsx`: `aria-label="Primary"` on the desktop `<nav>`; the mobile menu's wrapping `<div>` became a second `<nav aria-label="Mobile">` (only one is ever visible per breakpoint — same pattern the component already uses for two logo variants).
+- `store.tsx`, `artists.tsx`, `auctions.tsx`: results grid/tabs wrapped in `<section aria-labelledby>` with a visually-hidden (`sr-only`) `<h2>` ahead of the grid, so existing `<h3>` card titles (from the shared `ArtworkCard`/`AuctionCard` components, unchanged) nest correctly instead of skipping a level. `sr-only` was chosen over promoting the shared card components' heading level so `home.tsx`'s and `exhibitions.tsx`'s already-correct `h2` section title → `h3` card title nesting isn't flattened.
+- `gallery.tsx`: added the same `sr-only` `<h2>` before the viewMode-conditional content (fixes the classic viewer's caption `<h3>`); promoted the "Gallery Coming Soon" empty state from `<h2>` to `<h1>` since it is the page's only heading in that state.
+- `blog-post.tsx`, `artwork-detail.tsx`: promoted the "Post not found" / "Artwork not found" states from `<h2>` to `<h1>` for the same reason.
+- `artist-profile.tsx`: bio card and the gallery/portfolio/blog tabs area each wrapped in a labelled `<section>`, with a hidden `<h2>` ahead of the tabs so their `<h3>` artwork/post titles nest correctly under the page's `<h1>` (artist name).
+
+**Acceptance criteria:**
+- [x] Every public page (home, gallery, store, auctions, exhibitions, artists, artist-profile, blog, blog-post) has exactly one `<h1>` in its default render state
+- [x] No heading level is skipped going deeper, on any of the pages above
+- [x] Top navigation (desktop and mobile) is inside a `<nav>` landmark
+- [x] Page content is inside a `<main>` landmark (pre-existing, confirmed rather than re-added)
+- [x] `artist-profile.tsx` has `<section>` landmarks around the bio and artworks/tabs areas
+- [ ] Lighthouse Accessibility + SEO score does not drop, and axe DevTools "page has heading-order" passes — both require a rendered-browser run against the deployed instance; not something CI's `npm test` exercises (see PR `## Verification`)
 
 ---
 

@@ -65,9 +65,9 @@ export default function ArtworkDetail({
   if (isError || !data) {
     return (
       <div className="min-h-screen p-6 flex flex-col items-center justify-center text-center">
-        <h2 className="font-serif text-2xl font-semibold mb-2">
+        <h1 className="font-serif text-2xl font-semibold mb-2">
           Artwork not found
-        </h2>
+        </h1>
         <p className="text-muted-foreground mb-4">
           This artwork doesn't exist or has been removed.
         </p>

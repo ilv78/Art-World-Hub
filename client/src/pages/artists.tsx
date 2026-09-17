@@ -68,6 +68,8 @@ export default function Artists() {
       </div>
 
       {/* Artists Grid */}
+      <section aria-labelledby="artists-results-heading">
+      <h2 id="artists-results-heading" className="sr-only">Artists</h2>
       {isLoading ? (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {Array.from({ length: 8 }).map((_, i) => (
@@ -147,6 +149,7 @@ export default function Artists() {
           })}
         </div>
       )}
+      </section>
 
       {/* Artist Detail Dialog */}
       <Dialog
