@@ -198,19 +198,29 @@ jobs:
           set -euo pipefail
           TODAY=$(date -u +%Y-%m-%d)
 
-          # `total_count` counts every *invocation*, and this workflow is invoked on
-          # every `issues: labeled` event in the repository — most of which the job-level
-          # `if` then skips. On 2026-09-14 that read 13/10 and refused a dispatch while
-          # exactly one run had done any work: 9 skipped, 2 cancelled, 1 success,
-          # 1 refused. Filing three issues had spent the agent budget.
-          #
-          # The ceiling exists to bound spend, and a skipped run spends nothing. Count
-          # only runs that reached the agent. In-progress runs carry a null conclusion
-          # and are counted, which keeps "including this one" true.
-          COUNT=$(gh api --paginate \
-            "repos/$REPO/actions/workflows/agent-dispatch.yml/runs?created=>=$TODAY&per_page=100" \
-            --jq '[.workflow_runs[] | select(.conclusion != "skipped" and .conclusion != "cancelled")] | length' \
-            | awk '{total += $1} END {print total + 0}')
+          # Count runs in which the AGENT actually ran — i.e. a `Work the issue` step that
+          # was not skipped — not workflow invocations. Two earlier versions got this
+          # wrong in two directions: `total_count` counted every `issues: labeled` event
+          # (13/10 on 2026-09-14 with one real run), and the conclusion filter that
+          # replaced it counted every *sweep* that picked nothing, because a no-op sweep
+          # ends `success` (refused #507 on 2026-09-17 after ~7 real runs). The only
+          # honest signal is the step itself, so read each of today's runs' jobs. That
+          # is one API call per run, bounded by the ceiling this step enforces.
+          COUNT=0
+          for id in $(gh api --paginate \
+              "repos/$REPO/actions/workflows/agent-dispatch.yml/runs?created=>=$TODAY&per_page=100" \
+              --jq '.workflow_runs[] | select(.conclusion != "skipped" and .conclusion != "cancelled") | .id'); do
+            if [ "$id" = "${{ github.run_id }}" ]; then
+              COUNT=$((COUNT + 1))   # this run, which is about to reach the agent
+              continue
+            fi
+            w=$(gh api "repos/$REPO/actions/runs/$id/jobs" \
+                  --jq '[.jobs[].steps[] | select(.name == "Work the issue")][0].conclusion // "absent"')
+            case "$w" in
+              skipped|absent) ;;      # ceiling refusal, no-op sweep, or bounced on MAX_CONCURRENT
+              *) COUNT=$((COUNT + 1)) ;;
+            esac
+          done
 
           echo "Dispatch runs today that reached the agent (including this one): $COUNT / $MAX_RUNS_PER_DAY"
           if [ "$COUNT" -gt "$MAX_RUNS_PER_DAY" ]; then
