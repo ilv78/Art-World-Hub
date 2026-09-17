@@ -44,7 +44,8 @@ specs/
 │   └── DEPLOYMENT.md            # VPS deployment steps and rollback
 │
 ├── decisions/
-│   └── DECISION-LOG.md          # Lightweight log for minor decisions (not ADR-worthy)
+│   ├── DECISION-LOG.md          # Frozen history (2026-03-10 → 2026-09-17); do not append
+│   └── log/                     # One file per decision, YYYY-MM-DD-<slug>.md (#808)
 │
 └── DOC-AGENT-SPEC.md            # This file
 ```
@@ -95,7 +96,7 @@ The agent enforces rules at three severity levels: **ERROR** (blocks merge), **W
 |---|---|
 | C-001 | A PR that adds a new database migration must reference a DATA-MODEL update or ADR |
 | C-002 | A PR that introduces a new top-level Express route must have a corresponding SPEC.md entry or feature spec |
-| C-003 | A PR that changes `CLAUDE.md` must have an entry in `specs/decisions/DECISION-LOG.md` |
+| C-003 | A PR that changes `CLAUDE.md` must add a decision file under `specs/decisions/log/` (never a row in the frozen `DECISION-LOG.md`) |
 | C-004 | A PR marked `breaking-change` in its title must have an ADR linked in the PR description |
 
 ### 3.4 Quality Rules (INFO)
@@ -336,7 +337,7 @@ List of other features or specs this depends on.
 
 This document is itself subject to the documentation culture it enforces.
 
-- Any change to validation rules requires a `DECISION-LOG.md` entry.
+- Any change to validation rules requires a decision file under `specs/decisions/log/`.
 - Any addition of a new rule category requires an ADR.
 - This file must be reviewed and its `Last Updated` field refreshed at minimum quarterly.
 

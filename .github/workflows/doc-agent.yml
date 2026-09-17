@@ -68,7 +68,7 @@ jobs:
             Check these rules against the PR diff:
             - C-001: PR adds a migration → specs/architecture/DATA-MODEL.md must be updated or ADR linked
             - C-002: PR adds a new Express route → feature spec must exist or be updated
-            - C-003: PR changes CLAUDE.md → specs/decisions/DECISION-LOG.md needs an entry
+            - C-003: PR changes CLAUDE.md → a new file under specs/decisions/log/ is required (DECISION-LOG.md is frozen; never a row there)
             - C-004: PR title has "breaking-change" → ADR must be linked in description
             - C-005: Bug files with status Open >30 days need a ## Workaround section
             - S-001 to S-006: Required files must exist

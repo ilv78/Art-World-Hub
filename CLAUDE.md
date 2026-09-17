@@ -69,11 +69,9 @@ Key constraints:
 
 ## Decision Log
 
-When work involves an architectural or infrastructure decision (technology choice, security change, process change, major feature design, deployment/CI change), add a row to `specs/decisions/DECISION-LOG.md` as part of the same PR. One-line format:
+When work involves an architectural or infrastructure decision (technology choice, security change, process change, major feature design, deployment/CI change), add **one file** under `specs/decisions/log/` as part of the same PR — `YYYY-MM-DD-<slug>.md` with `date` / `title` / `issue` / `category` frontmatter and the reasoning as the body. Template and rules: `specs/decisions/log/README.md`. `node script/decision-log.mjs --check` validates; `node script/decision-log.mjs` lists.
 
-```
-| YYYY-MM-DD | Decision summary (#issue) | Context/reason | Architecture |
-```
+One file per decision is deliberate (#808): new files never conflict on merge, which is what lets several agent PRs land at once. **Never append to `specs/decisions/DECISION-LOG.md`** — it is the frozen history.
 
 This applies during normal work — do not batch decisions for later.
 

@@ -292,7 +292,7 @@ single file and cannot mix formats, so all entries live in the yaml file.
   five `libgnutls30` entries named #629 ("base-image rebuild") as the fix;
   it never shipped, and nobody had a documented next step. The working fix
   (a targeted `apt-get --only-upgrade`) was available the whole time.
-- **Link the decision.** Add a one-line row to `specs/decisions/DECISION-LOG.md`
+- **Link the decision.** Add a decision file under `specs/decisions/log/` (never a row in the frozen `DECISION-LOG.md`)
   when introducing the first entry for a new library or when changing scope.
 
 **When removing an entry:**
