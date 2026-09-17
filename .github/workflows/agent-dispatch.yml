@@ -312,6 +312,32 @@ jobs:
 
             Post what you did as a PR comment when the PR is open.
 
+      # Keep the transcript, every run (#789). #730 ended `is_error: true` after 79
+      # turns with no branch, no PR and no comment, and the action discards its
+      # execution log with the runner — so the `agent-failed` comment's "re-apply once
+      # the cause is understood" pointed at nothing. This is the action's own record
+      # (prompt, every tool call, file contents read, reasoning), uploaded whether the
+      # run succeeded or not: a successful run's transcript is how a human checks *why*
+      # the agent scoped something as it did without re-deriving it from the diff.
+      #
+      # Exposure, decided rather than defaulted: the repo is public, so the artifact is
+      # downloadable by anyone with read access. Repository contents are already public.
+      # Secrets are environment, not files, and the transcript is not run through the
+      # job-log masker — the first artifact was grepped for both token prefixes before
+      # this was declared safe (result recorded on #789). 30-day retention, not 90.
+      #
+      # `if-no-files-found: ignore` because a sweep that picks nothing skips
+      # `Work the issue` and writes no transcript; that is not a failure.
+      - name: Keep the run transcript
+        id: transcript
+        if: always() && steps.claim.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: agent-run-${{ steps.pick.outputs.issue }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/claude-execution-output.json
+          retention-days: 30
+          if-no-files-found: ignore
+
       # A run that produces nothing must not report success, and must not strand the
       # issue behind its own claim.
       #
@@ -347,6 +373,7 @@ jobs:
           ISSUE: ${{ steps.pick.outputs.issue }}
           REPO: ${{ github.repository }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          TRANSCRIPT_URL: ${{ steps.transcript.outputs.artifact-url }}
         run: |
           set -euo pipefail
 
@@ -425,6 +452,7 @@ jobs:
           The \`agent-working\` claim has been released and \`agent-failed\` applied, so this issue will **not** retry automatically. Remove \`agent-failed\` and re-apply \`agent-ready\` once the cause is understood.
 
           Run: $RUN_URL
+          Transcript (30-day artifact, the full execution log from the action): ${TRANSCRIPT_URL:-not captured; see the Artifacts section of the run}
 
           If the agent concluded that no change was needed, that is currently indistinguishable from a failed run — see #765."
 
