@@ -41,9 +41,12 @@ Four guards decide whether it proceeds, and each exists because of a specific fa
 
 Two properties of the run itself matter as much as the guards:
 
-- **`concurrency: agent-run`, never cancelling.** One run at a time repository-wide.
-  Concurrent runs collide on `DECISION-LOG.md` and `package-lock.json` every time — #744
-  predicted it and #749/#750/#751 delivered it.
+- **`concurrency: agent-run-<issue>`, never cancelling.** One run *per issue*; several
+  issues run at once, bounded by `MAX_CONCURRENT` in the moment and `MAX_RUNS_PER_DAY` for
+  the day. Until #808 the group was repository-wide because every PR appended to one
+  `DECISION-LOG.md`; ADR-0010 made the log one file per decision, so that collision — and
+  the one-deep queue that dropped every third label (#788) — no longer exists.
+  `package-lock.json` can still conflict on dependency PRs; rebase and retry.
 - **The PAT, not `GITHUB_TOKEN`.** A PR opened with `GITHUB_TOKEN` does not trigger
   `pull_request` workflows, so `Gated Path Review` and `PR Contract` would never run on
   agent PRs. The gate would be permanently absent on exactly the PRs it exists for.
@@ -194,7 +197,7 @@ checks are present, not merely that nothing is red.**
 | Only Tier B PRs merge themselves | `auto-merge.yml`, conditioned on `agent-review` / `autorelease` |
 | The gate cannot be widened quietly | `script/gated-paths.mjs`, its workflow, and `auto-merge.yml` are self-guarded paths |
 | Production is never automatic | `deploy-production.yml` is `workflow_dispatch` only |
-| Only a human starts a run, one at a time, within a spend ceiling | `agent-dispatch.yml` — label filter, `sender.type` check, `concurrency: agent-run`, `MAX_RUNS_PER_DAY` |
+| Only a human starts a run, at most `MAX_CONCURRENT` at once, within a spend ceiling | `agent-dispatch.yml` — label filter, `sender.type` check, per-issue concurrency group, `MAX_CONCURRENT`, `MAX_RUNS_PER_DAY` |
 | Documentation is not optional | Documentation Agent on every PR |
 | A PR says what it did and did not verify | `pr-contract.yml`, a **required** check since #752 — declaration only; it cannot check that the claim is true. Dependabot and `autorelease` PRs are exempt and report *skipped*. |
 | The change survives a real environment | Staging deploy + smoke tests, evidence posted to the issue |
