@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import {
   Dialog,
@@ -28,15 +28,19 @@ export function EnquiryDialog({ artwork, open, onOpenChange }: EnquiryDialogProp
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
+  const [prevOpen, setPrevOpen] = useState(open);
 
   // Reset the form each time the dialog opens for a (possibly different) artwork.
-  useEffect(() => {
+  // Adjusting state during render (rather than in an effect) avoids the extra
+  // commit a `useEffect` would cost — see https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (open) {
       setName("");
       setEmail("");
       setMessage(`Hi ${artwork.artist.name}, I'm interested in "${artwork.title}". Could you share the price and availability?`);
     }
-  }, [open, artwork.title, artwork.artist.name]);
+  }
 
   const enquiryMutation = useMutation({
     mutationFn: async () => {

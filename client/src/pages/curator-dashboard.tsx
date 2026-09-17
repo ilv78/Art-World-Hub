@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -44,13 +44,17 @@ export default function CuratorDashboard() {
   const [editingProfile, setEditingProfile] = useState(false);
   const [profileFirstName, setProfileFirstName] = useState("");
   const [profileLastName, setProfileLastName] = useState("");
+  const [prevUser, setPrevUser] = useState(user);
 
-  useEffect(() => {
+  // Adjusting state during render (rather than in an effect) avoids the extra
+  // commit a `useEffect` would cost — see https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  if (user !== prevUser) {
+    setPrevUser(user);
     if (user) {
       setProfileFirstName(user.firstName || "");
       setProfileLastName(user.lastName || "");
     }
-  }, [user]);
+  }
 
   const profileMutation = useMutation({
     mutationFn: async (data: { firstName: string; lastName: string }) => {
@@ -296,9 +300,19 @@ function GalleryCard({
 
   const [localStart, setLocalStart] = useState(utcToLocal(gallery.startDate));
   const [localEnd, setLocalEnd] = useState(utcToLocal(gallery.endDate));
+  const [prevStartKey, setPrevStartKey] = useState({ startDate: gallery.startDate, tz });
+  const [prevEndKey, setPrevEndKey] = useState({ endDate: gallery.endDate, tz });
 
-  useEffect(() => { setLocalStart(utcToLocal(gallery.startDate)); }, [gallery.startDate, tz]);
-  useEffect(() => { setLocalEnd(utcToLocal(gallery.endDate)); }, [gallery.endDate, tz]);
+  // Adjusting state during render (rather than in an effect) avoids the extra
+  // commit a `useEffect` would cost — see https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  if (gallery.startDate !== prevStartKey.startDate || tz !== prevStartKey.tz) {
+    setPrevStartKey({ startDate: gallery.startDate, tz });
+    setLocalStart(utcToLocal(gallery.startDate));
+  }
+  if (gallery.endDate !== prevEndKey.endDate || tz !== prevEndKey.tz) {
+    setPrevEndKey({ endDate: gallery.endDate, tz });
+    setLocalEnd(utcToLocal(gallery.endDate));
+  }
 
   const isActive = (() => {
     if (!gallery.isPublished) return false;

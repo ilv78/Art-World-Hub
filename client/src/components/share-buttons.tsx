@@ -8,7 +8,7 @@
 //
 // Every share click is reported to /api/share-events for our own analytics.
 
-import { useState, useEffect, type ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Share2, Link as LinkIcon, Check } from "lucide-react";
@@ -106,18 +106,16 @@ export function ShareButtons({
   className,
 }: ShareButtonsProps) {
   const { toast } = useToast();
-  const [hasNativeShare, setHasNativeShare] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  // Feature-detect on mount only — SSR has no navigator. We also gate on the
-  // mobile UA class because desktop browsers (Edge, Safari) increasingly
-  // implement navigator.share but the OS share sheet there is awkward; we
-  // prefer the explicit button row on desktop.
-  useEffect(() => {
-    if (typeof navigator === "undefined") return;
+  // Feature-detect once, lazily — SSR has no navigator. We also gate on the mobile
+  // UA class because desktop browsers (Edge, Safari) increasingly implement
+  // navigator.share but the OS share sheet there is awkward; we prefer the explicit
+  // button row on desktop.
+  const [hasNativeShare] = useState(() => {
+    if (typeof navigator === "undefined") return false;
     const ua = detectUserAgentClass();
-    setHasNativeShare(ua === "mobile" && typeof navigator.share === "function");
-  }, []);
+    return ua === "mobile" && typeof navigator.share === "function";
+  });
+  const [copied, setCopied] = useState(false);
 
   const target: ShareTarget = { url, title, description, imageUrl, itemType };
   const userAgentClass = detectUserAgentClass();

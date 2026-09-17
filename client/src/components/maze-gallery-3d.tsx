@@ -140,7 +140,9 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
 
   const isInCart = selectedArtwork ? items.some(item => item.artwork.id === selectedArtwork.id) : false;
 
-  selectedArtworkRef.current = selectedArtwork;
+  useEffect(() => {
+    selectedArtworkRef.current = selectedArtwork;
+  }, [selectedArtwork]);
 
   const handleAddToCart = useCallback(() => {
     if (selectedArtwork && !isInCart) {
@@ -1253,9 +1255,15 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
   }, [layout, CELL_SIZE]);
 
   const showArtistDialogRef = useRef(false);
-  showArtistDialogRef.current = showArtistDialog;
   const onExitGalleryRef = useRef(onExitGallery);
-  onExitGalleryRef.current = onExitGallery;
+
+  useEffect(() => {
+    showArtistDialogRef.current = showArtistDialog;
+  }, [showArtistDialog]);
+
+  useEffect(() => {
+    onExitGalleryRef.current = onExitGallery;
+  }, [onExitGallery]);
 
   const handleClick = useCallback((event: MouseEvent) => {
     if (!cameraRef.current || !sceneRef.current || !isPointerLockedRef.current) return;
@@ -1317,6 +1325,11 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
     const canvas = document.createElement("canvas");
     const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
     if (!gl) {
+      // Why: WebGL capability can only be known by attempting to create a context,
+      // which is inherently imperative and lives inside this larger
+      // scene-setup/teardown effect. There's no external store to subscribe to and
+      // no way to know it during render.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setWebglError("WebGL is not supported in your browser. Please use the Classic view mode.");
       return;
     }
