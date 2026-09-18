@@ -28,6 +28,7 @@ Prepare Vernis9 for search engine discovery and social sharing. The site is a cl
 | Alt text | Done | #369 — all img and AvatarImage have descriptive alt text |
 | HTTP status on unknown routes | Done | #508 — SPA catch-all returned 200 for every URL (soft-404); now 404s unknown static routes and dynamic routes whose entity doesn't exist |
 | Cumulative Layout Shift (artist profile) | Done | #553 — loading skeletons on `/artists/:slug` reshaped to match the loaded layout's geometry (banner + card container, gallery grid, blog cards), instead of a structurally different placeholder |
+| `<img>` explicit width/height | Done | #507 — every `<img>` and `<ResponsiveImage>` in `client/src` now carries `width`/`height` attributes, sized to the Tailwind `aspect-*` class of its container (or a 4:3 default where none exists), so the browser reserves layout space before the image loads |
 
 ## Work Items
 
@@ -476,6 +477,28 @@ The avatar image (a candidate raised in the issue, and the reason #549 added `fe
 - [x] Page content is inside a `<main>` landmark (pre-existing, confirmed rather than re-added)
 - [x] `artist-profile.tsx` has `<section>` landmarks around the bio and artworks/tabs areas
 - [ ] Lighthouse Accessibility + SEO score does not drop, and axe DevTools "page has heading-order" passes — both require a rendered-browser run against the deployed instance; not something CI's `npm test` exercises (see PR `## Verification`)
+
+---
+
+### 10. Explicit `width`/`height` on `<img>` — CLS
+
+**What it does:** Lighthouse's "Image elements do not have explicit width and height" audit flags any `<img>` without sizing hints, because the browser can't reserve layout space for it before the image downloads — the surrounding content jumps when it finally loads. This is the same Core Web Vitals metric (CLS) as #553, but the cause here is the image element itself rather than a loading-state/loaded-state mismatch.
+
+**Priority:** P3 (low — the audit backlog item this closes, #496 §3.11, is itself tagged low priority)
+**Effort:** Small
+
+**Root cause:** none of the `<img>`/`<ResponsiveImage>` call sites in `client/src` set `width`/`height`. Most already render inside a container sized by a Tailwind `aspect-*` utility or a fixed `w-N h-N`, so the *visual* layout doesn't shift in practice — but the audit inspects the `<img>` element itself, not its ancestors, and artworks/avatars/blog covers have no stored intrinsic dimensions in the schema (`shared/schema.ts` has no `imageWidth`/`imageHeight` columns) to source real values from.
+
+**Implementation:**
+- Every `<img>` and `<ResponsiveImage>` in `client/src` now has `width`/`height` attributes. `ResponsiveImage` (`client/src/components/responsive-image.tsx`) needed no code change — it already spreads its props (including `width`/`height`) onto the underlying `<img>`.
+- Where the image's container declares a Tailwind `aspect-*` class (`aspect-square`, `aspect-4/3`, `aspect-4/5`, `aspect-video`, `aspect-[16/10]`, `aspect-3/1`) or a fixed `w-N h-N`, the attribute values reproduce that exact ratio/pixel size (e.g. `aspect-4/3` → `400×300`, `w-16 h-16` → `64×64`).
+- Where no aspect ratio is declared anywhere (large `object-contain` detail views, hero banners that are fully sized by `w-full h-full` on both axes), a `400×300` (4:3) default is used, per the issue's own suggested fallback — the CSS classes already on every one of these (`w-full`, `h-full`, `h-auto`) override the attribute-derived box once loaded, so the fallback only affects the pre-load placeholder size, never the final rendered size.
+- The one static (non-DB) asset, `client/public/campaigns/koningsdag/alexandra-painting.jpg`, got its real intrinsic dimensions (`2304×2560`) read directly from the file instead of a guessed default.
+
+**Acceptance criteria:**
+- [x] Every `<img>` and `<ResponsiveImage>` in `client/src` has explicit `width` and `height`
+- [x] `npm run check` and `npm test` pass unchanged
+- [ ] Lighthouse "Image elements do not have explicit width and height" passes and CLS < 0.1 on the deployed instance — requires a rendered-browser run; not something CI's `npm test` exercises (see PR `## Verification`)
 
 ---
 

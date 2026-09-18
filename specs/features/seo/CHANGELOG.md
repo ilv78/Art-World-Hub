@@ -1,5 +1,13 @@
 # SEO Feature Changelog
 
+## 2026-09-18 — Explicit `width`/`height` on every `<img>` to prevent CLS (#507)
+- #496's audit (§3.11) found most `<img>` tags omit `width`/`height`, so Lighthouse's "Image elements do not have explicit width and height" audit fails and the browser can't reserve layout space before an image loads.
+- Every `<img>` and `<ResponsiveImage>` call site in `client/src` now sets `width`/`height`: matching the exact ratio of the container's Tailwind `aspect-*` class (or its fixed `w-N h-N` pixel size) where one exists, falling back to a `400×300` (4:3) default — per the issue's own suggested fallback — where no container aspect is declared.
+- Neither `artworks`, `artists`, nor `blog_posts` store intrinsic image dimensions (`shared/schema.ts` has no `imageWidth`/`imageHeight` columns), so DB-backed images cannot use real values; the one static asset outside the DB (`client/public/campaigns/koningsdag/alexandra-painting.jpg`) got its real dimensions (`2304×2560`) read from the file instead.
+- `ResponsiveImage` (`client/src/components/responsive-image.tsx`) needed no code change — it already spreads all `img` props, including `width`/`height`, onto the underlying `<img>`.
+- Zero visual diff: every affected image already had `w-full`/`h-full`/`h-auto` or an explicit fixed size in its `className`, which overrides the attribute-derived box once CSS applies — the `width`/`height` attributes only affect the pre-load placeholder size.
+- Lighthouse re-verification against the deployed instance is a manual post-merge step — CI has no browser-lab CLS check (see PR `## Verification`).
+
 ## 2026-09-17 — Semantic HTML pass: landmarks + heading hierarchy (#505)
 - #496's audit claimed no `<main>`/`<nav>` existed anywhere — a curl-based check against the pre-hydration SPA shell, which really has neither; both already existed in the rendered DOM (`public-layout.tsx`'s `<main>` since #289, `top-nav.tsx`'s desktop `<nav>`) and are what Lighthouse/axe DevTools, the tools this issue's acceptance criteria name, actually see.
 - What was real: `store.tsx`, `artists.tsx`, `auctions.tsx`, and `gallery.tsx`'s classic image viewer rendered their first sub-heading as `<h3>` directly under the page `<h1>`, skipping `<h2>` — a genuine axe `heading-order` violation.

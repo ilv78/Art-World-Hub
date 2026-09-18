@@ -67,6 +67,8 @@ export default function Blog() {
                     loading="eager"
                     fetchPriority="high"
                     decoding="async"
+                    width={400}
+                    height={225}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                   <Badge className="absolute top-2 left-2 shadow">Featured</Badge>
@@ -121,6 +123,8 @@ export default function Blog() {
                         sizes={BLOG_SIZES.listCard}
                         loading="lazy"
                         decoding="async"
+                        width={400}
+                        height={225}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     </div>
