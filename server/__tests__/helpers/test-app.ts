@@ -2,8 +2,9 @@ import { vi } from "vitest";
 import type { IStorage } from "../../storage";
 
 // vi.hoisted runs before vi.mock hoisting, so these are available in mock factories
-const { mockStorage } = vi.hoisted(() => {
+const { mockStorage, mockGenerateWhiteRoomLayout } = vi.hoisted(() => {
   const fn = vi.fn;
+  const mockGenerateWhiteRoomLayout = fn().mockReturnValue({ width: 3, height: 3, cells: [], spawnPoint: { x: 1, z: 1 } });
   const mockStorage: IStorage = {
     getArtists: fn().mockResolvedValue([]),
     getArtist: fn().mockResolvedValue(undefined),
@@ -74,7 +75,7 @@ const { mockStorage } = vi.hoisted(() => {
     recordShareEvent: fn().mockResolvedValue({ id: "evt-1" }),
     getShareEventStats: fn().mockResolvedValue({ totalsByPlatform: [], topItems: [] }),
   };
-  return { mockStorage };
+  return { mockStorage, mockGenerateWhiteRoomLayout };
 });
 
 vi.mock("../../replit_integrations/auth", () => ({
@@ -122,7 +123,7 @@ vi.mock("../../replit_integrations/auth", () => ({
 vi.mock("../../storage", () => ({
   storage: mockStorage,
   DatabaseStorage: vi.fn(),
-  generateWhiteRoomLayout: vi.fn(),
+  generateWhiteRoomLayout: mockGenerateWhiteRoomLayout,
   // routes.ts does `instanceof ArtworkAlreadySoldError` on the error thrown by
   // storage.createOrder, so the mock needs a real class here, not vi.fn().
   ArtworkAlreadySoldError: class ArtworkAlreadySoldError extends Error {
@@ -168,4 +169,4 @@ export async function createTestApp(): Promise<{ app: express.Express; mockStora
   return { app, mockStorage };
 }
 
-export { mockStorage };
+export { mockStorage, mockGenerateWhiteRoomLayout };

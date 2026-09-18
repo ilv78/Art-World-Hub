@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage, ArtworkAlreadySoldError } from "./storage";
+import { storage, ArtworkAlreadySoldError, generateWhiteRoomLayout } from "./storage";
 import { insertArtworkSchema, updateArtworkSchema, insertBidSchema, insertOrderSchema, insertBlogPostSchema, updateBlogPostSchema, updateArtistSchema, ORDER_TRANSITIONS, ORDER_STATUSES, NEWSLETTER_SOURCES, insertShareEventSchema, artworkEnquirySchema } from "@shared/schema";
 import { normalizeArtworkForCreate, normalizeArtworkForUpdate } from "./publish";
 import type { Artist, ArtworkWithArtist, Order, InsertOrder, ArtworkEnquiry } from "@shared/schema";
@@ -560,10 +560,10 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Artist not found" });
       }
       const readyArtworks = await storage.getExhibitionReadyArtworks(req.params.id);
-      let layout = artist.galleryLayout as any;
-      if (!layout) {
-        layout = await storage.regenerateArtistGallery(req.params.id);
-      }
+      // Layouts are (re)generated on artwork mutation, not here (#691) — a public
+      // GET must never write. A missing layout gets a same-shaped, unpersisted
+      // fallback computed in memory rather than a DB round-trip.
+      const layout = (artist.galleryLayout as any) ?? generateWhiteRoomLayout(readyArtworks.length);
       res.json({ layout, artworks: readyArtworks });
     } catch (error) {
       logger.error({ err: error }, "Failed to fetch artist gallery");
@@ -573,28 +573,38 @@ export async function registerRoutes(
 
   app.get("/api/gallery/hallway", async (req, res) => {
     try {
-      // Needs the real layout to decide whether it's stale (#689 dropped it
-      // from the default getArtists() list to stop repeated JSONB serialization).
-      const artists = await storage.getArtists({ includeGalleryLayout: true });
-      const artistRooms = await Promise.all(
-        artists.map(async (artist) => {
-          const readyArtworks = await storage.getExhibitionReadyArtworks(artist.id);
-          // Regenerate layout if stale or missing
-          let layout = artist.galleryLayout;
-          if (readyArtworks.length > 0) {
-            const existingSlots = layout ? (layout as any).cells?.flatMap((c: any) => c.artworkSlots || []).length ?? 0 : 0;
-            const expectedSlots = readyArtworks.length + 1; // +1 for poster
-            if (!layout || existingSlots !== expectedSlots) {
-              layout = await storage.regenerateArtistGallery(artist.id);
-            }
-          }
-          return {
-            artist: { id: artist.id, name: artist.name, avatarUrl: artist.avatarUrl, specialization: artist.specialization, bio: artist.bio, country: artist.country, galleryLayout: layout, galleryTemplate: artist.galleryTemplate },
-            artworks: readyArtworks,
-          };
-        })
-      );
-      res.json(artistRooms.filter(r => r.artworks.length > 0));
+      // Layouts are (re)generated on artwork mutation, not here (#691) — a public
+      // GET must never write, and a racey staleness check across concurrent
+      // visitors made it worse. One join replaces the former per-artist N+1;
+      // the client already falls back to a computed layout when one is missing
+      // (hallway-gallery-3d.tsx's generateDefaultLayout).
+      const [artists, readyArtworks] = await Promise.all([
+        storage.getArtists({ includeGalleryLayout: true }),
+        storage.getAllExhibitionReadyArtworks(),
+      ]);
+      const readyArtworksByArtist = new Map<string, typeof readyArtworks>();
+      for (const artwork of readyArtworks) {
+        const list = readyArtworksByArtist.get(artwork.artistId);
+        if (list) list.push(artwork);
+        else readyArtworksByArtist.set(artwork.artistId, [artwork]);
+      }
+      // getAllExhibitionReadyArtworks orders by artist name for its own
+      // (curator-facing) callers; the wall layout instead assigns slots by
+      // exhibitionOrder, so each artist's room must be sorted the same way
+      // the layout that placed it was.
+      for (const list of readyArtworksByArtist.values()) {
+        list.sort((a, b) =>
+          (a.exhibitionOrder ?? Infinity) - (b.exhibitionOrder ?? Infinity) ||
+          a.title.localeCompare(b.title)
+        );
+      }
+      const artistRooms = artists
+        .map((artist) => ({
+          artist: { id: artist.id, name: artist.name, avatarUrl: artist.avatarUrl, specialization: artist.specialization, bio: artist.bio, country: artist.country, galleryLayout: artist.galleryLayout ?? null, galleryTemplate: artist.galleryTemplate },
+          artworks: readyArtworksByArtist.get(artist.id) ?? [],
+        }))
+        .filter((r) => r.artworks.length > 0);
+      res.json(artistRooms);
     } catch (error) {
       logger.error({ err: error }, "Failed to fetch hallway gallery data");
       res.status(500).json({ error: "Failed to fetch hallway gallery data" });

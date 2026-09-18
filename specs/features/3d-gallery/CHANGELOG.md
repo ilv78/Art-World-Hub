@@ -1,5 +1,8 @@
 # 3D Gallery — Changelog
 
+## 2026-09-18
+- Removed the write-on-read auto-regeneration added in #29/#28 (2026-03-11): `/api/gallery/hallway` and `/api/artists/:id/gallery` no longer write to the database on a GET. Both endpoints fall back to an unpersisted `generateWhiteRoomLayout()` when no layout is stored; regeneration remains a DB write, but only on artwork mutation. The hallway route also replaced its per-artist N+1 query with a single batched join (closes #691)
+
 ## 2026-09-16
 - Textures now load the 960/1440px webp variants via `getArtworkTextureUrl()` instead of the full-size original upload (closes #688)
 
