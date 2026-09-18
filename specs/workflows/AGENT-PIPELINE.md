@@ -1,7 +1,7 @@
 # Agent Pipeline
 
 **Status:** Active
-**Last Updated:** 2026-09-15
+**Last Updated:** 2026-09-18
 **Issue:** [#744](https://github.com/ilv78/Art-World-Hub/issues/744)
 
 Operational companion to `specs/AGENT-AUTONOMY-POLICY.md`. The policy says *what* the
@@ -186,6 +186,46 @@ blocked on *Expected — waiting for status to be reported*, and a conflicted PR
 merge anyway. The cost is that an agent reading a green summary will report work as
 verified when the gate never ran. **Before calling a PR green, check that the required
 checks are present, not merely that nothing is red.**
+
+### A red `Work the issue` step is not proof the run failed
+
+`anthropics/claude-code-action` enforces `--max-turns` by *throwing after a successful
+run*, not by cutting the run off mid-flight: `base-action/src/run-claude-sdk.ts` writes
+`claude-execution-output.json` (via `writeExecutionFile`) before it checks the turn
+count, and only then throws if `resultMessage.subtype === "success" && !is_error &&
+num_turns > maxTurns`. So a run the action's own SDK considered successful can still end
+the `Work the issue` step in `failure` — the transcript this workflow already keeps (see
+"Keep the run transcript" above) is written regardless and says so.
+
+Observed on #509 (run 35319082967, 2026-09-18): the step read `failure` at 208 turns
+against a cap of 200, while the transcript's trailing record read `{"type":"result",
+"subtype":"success","is_error":false,"num_turns":208}` and PR #817 was real, mergeable
+SEO work. `Confirm the run produced work` happened to leave the issue alone only because
+its branch-match check found PR #817 — incidental, not by design, since the step never
+looked at the transcript. A run that overran turns **and** had not pushed a branch yet
+would have been marked `agent-failed` on a false premise, burning a terminal state and a
+`MAX_RUNS_PER_DAY` slot for a run that had, by the action's own account, succeeded (#818).
+
+**The fix — read before writing to this file.** `Confirm the run produced work` should
+parse the transcript's trailing `type: "result"` record (always the array's last element,
+because the action's own read loop breaks immediately after appending it) before
+declaring `agent-failed` on an empty PR-branch match: only `subtype == "success" &&
+is_error == false` overrides the failure path, and even then the issue is left
+`agent-stuck` (not silently cleared) pending a human look, since a missing branch is
+still worth a glance. **Drafted, verified against six fixture transcripts (success,
+`is_error:true`, no result message, empty array, missing file, missing `is_error` key)
+and the full label/comment logic dry-run with a stubbed `gh`, but not shipped in the PR
+that documents it** — `agent-dispatch.yml` is on `script/gated-paths.mjs`'s self-guarded
+list *and* under the separate, unconditional `.github/workflows/` PAT restriction below,
+so the agent that found this cannot push the fix. The exact diff is pasted in a PR
+comment on the PR that carries this note, for a human to apply directly. See
+`specs/decisions/log/2026-09-18-transcript-success-overrides-turn-cap-failure.md`.
+
+One caught-by-testing gotcha worth keeping visible: `jq -r '.is_error // empty'` is the
+wrong way to read a boolean. jq's `//` alternative operator treats `false` exactly like
+`null` — so on the one value this check exists to detect (`is_error: false`), it silently
+returns nothing. Use `if (.is_error==false) then ... end` instead of `// empty` on any jq
+boolean check.
 
 ---
 
