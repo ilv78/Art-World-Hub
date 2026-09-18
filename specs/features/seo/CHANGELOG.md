@@ -1,5 +1,12 @@
 # SEO Feature Changelog
 
+## 2026-09-18 — Internal linking + FAQ mention by full artist name — Ultraplan Phase 4 (#539)
+- Parent Ultraplan's Phase 4 (after #535's DB fix, #537's slug URLs, #538): soft signals — internal anchor text mentioning "Alexandra Constantin" verbatim from more than one page.
+- `shared/faqs.ts`'s `Faq` interface gained an optional `link: { text, href }`, and a sixth entry, "Who is Alexandra Constantin?", uses it to link `alexandra-constantin-4493f600` with exact-match anchor text — the cheapest single internal link the issue asked for. `server/meta.ts`'s FAQPage JSON-LD is unaffected (`Answer.text` is plain text regardless); `client/src/pages/home.tsx`'s accordion renders the link as a `wouter` `<Link>` after the answer.
+- `client/src/pages/artwork-detail.tsx`'s existing link to the creator (#503) wrapped the artist's full name together with a generic "View artist profile" caption inside one `<a>` — the exact pattern the issue calls out. Removed the caption so the anchor's clickable text is just `{artwork.artist.name}`.
+- `server/__tests__/meta.test.ts` extended with a case asserting the new FAQ entry surfaces by full name in the homepage FAQPage JSON-LD.
+- Sitemap/robots/other SEO surfaces untouched — this issue was link text only.
+
 ## 2026-09-18 — Explicit `width`/`height` on every `<img>` to prevent CLS (#507)
 - #496's audit (§3.11) found most `<img>` tags omit `width`/`height`, so Lighthouse's "Image elements do not have explicit width and height" audit fails and the browser can't reserve layout space before an image loads.
 - Every `<img>` and `<ResponsiveImage>` call site in `client/src` now sets `width`/`height`: matching the exact ratio of the container's Tailwind `aspect-*` class (or its fixed `w-N h-N` pixel size) where one exists, falling back to a `400×300` (4:3) default — per the issue's own suggested fallback — where no container aspect is declared.
