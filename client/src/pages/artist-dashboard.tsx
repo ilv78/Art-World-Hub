@@ -86,6 +86,8 @@ function FileUploadField({
           src={imageUrl}
           alt={previewAlt}
           loading="lazy"
+          width={400}
+          height={300}
           className="mt-2 rounded-md max-h-40 object-contain border"
         />
       )}
@@ -500,6 +502,8 @@ export default function ArtistDashboard() {
           src={artwork.imageUrl}
           alt={artwork.title}
           loading="lazy"
+          width={400}
+          height={300}
           className="w-full h-full object-cover"
         />
         <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
@@ -599,6 +603,8 @@ export default function ArtistDashboard() {
             sizes={BLOG_SIZES.listCard}
             loading="lazy"
             decoding="async"
+            width={96}
+            height={64}
             className="w-24 h-16 object-cover rounded-md"
           />
         )}
@@ -1186,6 +1192,8 @@ export default function ArtistDashboard() {
                             src={order.artwork.imageUrl}
                             alt={order.artwork.title}
                             loading="lazy"
+                            width={64}
+                            height={64}
                             className="w-full h-full object-cover"
                           />
                         </div>

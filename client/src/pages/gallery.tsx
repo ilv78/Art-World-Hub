@@ -271,6 +271,8 @@ export default function Gallery() {
                   loading="eager"
                   fetchPriority="high"
                   decoding="async"
+                  width={400}
+                  height={300}
                   className="max-w-[70vw] sm:max-w-lg max-h-[50vh] sm:max-h-[60vh] object-contain shadow-2xl rounded-sm"
                   data-testid="img-current-artwork"
                 />
@@ -328,7 +330,7 @@ export default function Gallery() {
                     }`}
                     data-testid={`button-thumbnail-${artwork.id}`}
                   >
-                    <ResponsiveImage src={artwork.imageUrl} alt={artwork.title} sizes={ARTWORK_SIZES.thumbnail} loading="lazy" decoding="async" className="w-full h-full object-cover" pictureClassName="block w-full h-full" />
+                    <ResponsiveImage src={artwork.imageUrl} alt={artwork.title} sizes={ARTWORK_SIZES.thumbnail} loading="lazy" decoding="async" width={64} height={64} className="w-full h-full object-cover" pictureClassName="block w-full h-full" />
                   </button>
                 ))}
               </div>
@@ -346,7 +348,7 @@ export default function Gallery() {
               <ScrollArea className="flex-1">
                 <div className="p-4 space-y-6">
                   <div className="aspect-4/3 rounded-lg overflow-hidden">
-                    <ResponsiveImage src={currentArtwork.imageUrl} alt={currentArtwork.title} sizes={ARTWORK_SIZES.card} loading="lazy" decoding="async" className="w-full h-full object-cover" pictureClassName="block w-full h-full" />
+                    <ResponsiveImage src={currentArtwork.imageUrl} alt={currentArtwork.title} sizes={ARTWORK_SIZES.card} loading="lazy" decoding="async" width={400} height={300} className="w-full h-full object-cover" pictureClassName="block w-full h-full" />
                   </div>
                   <div className="space-y-4">
                     <div>

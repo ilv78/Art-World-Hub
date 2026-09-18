@@ -1567,7 +1567,7 @@ export function HallwayGallery3D({ artistRooms, curatorRooms, museumTemplate, is
       {selectedArtwork && (
         <div className="absolute inset-0 flex flex-col sm:flex-row bg-black/80 backdrop-blur-sm" style={{ zIndex: 50 }} data-testid="artwork-detail-panel">
           <div className="flex-1 relative min-w-0 min-h-0">
-            <img src={selectedArtwork.imageUrl} alt={selectedArtwork.title} loading="lazy" className="w-full h-full object-contain bg-black/40" />
+            <img src={selectedArtwork.imageUrl} alt={selectedArtwork.title} loading="lazy" width={400} height={300} className="w-full h-full object-contain bg-black/40" />
           </div>
           <div className="w-full sm:w-64 max-h-[55%] sm:max-h-none overflow-y-auto flex flex-col bg-card p-4 gap-3 relative">
             <Button size="icon" variant="ghost" className="absolute top-2 right-2" onClick={() => { setSelectedArtwork(null); requestPointerLock(); }} data-testid="button-close-artwork">
