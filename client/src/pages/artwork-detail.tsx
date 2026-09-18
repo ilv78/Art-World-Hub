@@ -150,13 +150,8 @@ export default function ArtworkDetail({
                     {initialsOf(artwork.artist.name)}
                   </AvatarFallback>
                 </Avatar>
-                <div>
-                  <div className="font-medium group-hover:text-primary transition-colors">
-                    {artwork.artist.name}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    View artist profile
-                  </div>
+                <div className="font-medium group-hover:text-primary transition-colors">
+                  {artwork.artist.name}
                 </div>
               </Link>
             </header>

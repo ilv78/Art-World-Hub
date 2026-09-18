@@ -99,6 +99,16 @@ describe("resolveMetaTags — homepage JSON-LD (issue #501)", () => {
     }
   });
 
+  it("FAQPage includes the Alexandra Constantin entry by full name (issue #539)", async () => {
+    const meta = await resolveMetaTags("/");
+    const faq = findLd(meta.jsonLd, "FAQPage");
+    const mainEntity = faq!.mainEntity as Record<string, unknown>[];
+    const entry = mainEntity.find((q) => String(q.name).includes("Alexandra Constantin"));
+    expect(entry).toBeDefined();
+    const answer = entry!.acceptedAnswer as Record<string, unknown>;
+    expect(String(answer.text)).toContain("Alexandra Constantin");
+  });
+
   it("does not emit WebSite or FAQPage on non-root static routes", async () => {
     for (const path of ["/gallery", "/store", "/artists", "/blog"]) {
       const meta = await resolveMetaTags(path);

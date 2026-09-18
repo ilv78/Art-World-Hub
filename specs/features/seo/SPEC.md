@@ -29,6 +29,7 @@ Prepare Vernis9 for search engine discovery and social sharing. The site is a cl
 | HTTP status on unknown routes | Done | #508 — SPA catch-all returned 200 for every URL (soft-404); now 404s unknown static routes and dynamic routes whose entity doesn't exist |
 | Cumulative Layout Shift (artist profile) | Done | #553 — loading skeletons on `/artists/:slug` reshaped to match the loaded layout's geometry (banner + card container, gallery grid, blog cards), instead of a structurally different placeholder |
 | `<img>` explicit width/height | Done | #507 — every `<img>` and `<ResponsiveImage>` in `client/src` now carries `width`/`height` attributes, sized to the Tailwind `aspect-*` class of its container (or a 4:3 default where none exists), so the browser reserves layout space before the image loads |
+| Internal linking by artist name | Done | #539 (Ultraplan Phase 4, after #535/#537/#538) — homepage FAQ gained a Q&A naming "Alexandra Constantin" with an exact-match anchor to her artist profile; `/artworks/:slug`'s existing link to the creator (#503) had its clickable text trimmed to just the artist's full name, dropping the generic "View artist profile" wrapper |
 
 ## Work Items
 
@@ -259,7 +260,9 @@ Inject JSON-LD `<script>` tags server-side alongside the meta tag injection (Wor
   ]
 }
 ```
-FAQ copy is hard-coded in `shared/faqs.ts` (5 entries covering what Vernis9 is, who can sell, commission policy, how to buy, shipping). Both the server (JSON-LD in `server/meta.ts`) and the client (visible accordion section on the homepage) import from this single source of truth. Google's FAQPage rich-result guidelines require that the Q&A content be visible on the page, so the accordion is not optional — keep it in sync with the schema. Changes to FAQ copy require a PR — there is no admin UI.
+FAQ copy is hard-coded in `shared/faqs.ts` (6 entries covering what Vernis9 is, who can sell, commission policy, how to buy, shipping, and — as of #539 — one naming a specific artist for an SEO campaign). Both the server (JSON-LD in `server/meta.ts`) and the client (visible accordion section on the homepage) import from this single source of truth. Google's FAQPage rich-result guidelines require that the Q&A content be visible on the page, so the accordion is not optional — keep it in sync with the schema. Changes to FAQ copy require a PR — there is no admin UI.
+
+A `Faq` entry may carry an optional `link: { text, href }`, rendered by the homepage accordion as a `wouter` `<Link>` appended after the answer text. `text` should be an exact-match keyword (typically a full name) for internal-linking SEO value, not generic text like "click here" — the whole point of adding it. `server/meta.ts`'s FAQPage JSON-LD only emits `answer` as the `Answer.text` (schema.org's `Answer` is plain text; the link carries no JSON-LD-visible weight, only in-page crawlable HTML). The Alexandra Constantin entry hard-codes her real profile slug (`alexandra-constantin-4493f600`, matching the id from #535) directly in `shared/faqs.ts` rather than through a "featured artist" config — this is a one-off, named campaign per the parent Ultraplan (#363), not a general mechanism, and an artist rename still resolves correctly because `/artists/:slug` 301s retired slugs (#537).
 
 **Artist profile — Person:**
 ```json

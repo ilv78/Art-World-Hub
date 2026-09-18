@@ -374,6 +374,17 @@ function FAQSection() {
               </AccordionTrigger>
               <AccordionContent className="text-muted-foreground text-sm sm:text-base leading-relaxed">
                 {faq.answer}
+                {faq.link && (
+                  <>
+                    {" "}
+                    <Link
+                      href={faq.link.href}
+                      className="text-primary underline-offset-4 hover:underline"
+                    >
+                      {faq.link.text}
+                    </Link>
+                  </>
+                )}
               </AccordionContent>
             </AccordionItem>
           ))}
