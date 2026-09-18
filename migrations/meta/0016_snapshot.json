@@ -1,6 +1,6 @@
 {
-  "id": "c595fc22-daa6-4634-90d4-472dad4ffdc7",
-  "prevId": "91619bc4-3c6b-45a6-94e5-f05b691e9e8e",
+  "id": "43531954-ff0a-4ebe-ba0c-2d2a1196e7e3",
+  "prevId": "c595fc22-daa6-4634-90d4-472dad4ffdc7",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -312,6 +312,13 @@
           "primaryKey": false,
           "notNull": true
         },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "concat('auction-', substr(replace(gen_random_uuid()::text, '-', ''), 1, 8))"
+        },
         "starting_price": {
           "name": "starting_price",
           "type": "numeric(10, 2)",
@@ -373,7 +380,15 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "auctions_slug_unique": {
+          "name": "auctions_slug_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "slug"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -545,6 +560,13 @@
           "primaryKey": false,
           "notNull": true
         },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "concat('exhibition-', substr(replace(gen_random_uuid()::text, '-', ''), 1, 8))"
+        },
         "description": {
           "name": "description",
           "type": "text",
@@ -608,7 +630,15 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "curator_galleries_slug_unique": {
+          "name": "curator_galleries_slug_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "slug"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

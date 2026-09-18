@@ -110,8 +110,15 @@
     {
       "idx": 15,
       "version": "7",
-      "when": 1789716549824,
-      "tag": "0015_add-auction-and-exhibition-slugs",
+      "when": 1789716248282,
+      "tag": "0015_add_artist_updated_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1789717734099,
+      "tag": "0016_add-auction-and-exhibition-slugs",
       "breakpoints": true
     }
   ]

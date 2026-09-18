@@ -20,9 +20,10 @@ export const artists = pgTable("artists", {
   galleryLayout: jsonb("gallery_layout"),
   galleryTemplate: varchar("gallery_template").default("contemporary"),
   socialLinks: jsonb("social_links").$type<Record<string, string>>(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const insertArtistSchema = createInsertSchema(artists).omit({ id: true, slug: true });
+export const insertArtistSchema = createInsertSchema(artists).omit({ id: true, slug: true, updatedAt: true });
 export const updateArtistSchema = insertArtistSchema.partial().omit({ userId: true });
 
 // Retired artist slugs. On rename, the old `artists.slug` moves here so the

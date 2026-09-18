@@ -13,9 +13,10 @@ Prepare Vernis9 for search engine discovery and social sharing. The site is a cl
 | Area | Status | Notes |
 |------|--------|-------|
 | `robots.txt` | Done | #364, #376 — dynamic route at `/robots.txt` (blocks indexing on non-production) |
-| `sitemap.xml` | Done | #365 — dynamic endpoint at `/sitemap.xml`; #504 — Google image-sitemap namespace + `<image:image>` for artist avatars, artwork images (title + caption), and blog cover images |
+| `sitemap.xml` | Done | #365 — dynamic endpoint at `/sitemap.xml`; #504 — Google image-sitemap namespace + `<image:image>` for artist avatars, artwork images (title + caption), and blog cover images; #538 — `<lastmod>` on artist entries from `artists.updatedAt` |
 | Per-page meta tags | Done | #366 — server-side injection + react-helmet-async |
-| Structured data (JSON-LD) | Done | #367 — Organization, Person, BlogPosting, BreadcrumbList; #501 — WebSite+SearchAction, FAQPage (homepage); #503 — VisualArtwork + Offer on `/artworks/:slug`; #535 — `sameAs` on Person JSON-LD (derived from `artists.socialLinks`) |
+| Structured data (JSON-LD) | Done | #367 — Organization, Person, BlogPosting, BreadcrumbList; #501 — WebSite+SearchAction, FAQPage (homepage); #503 — VisualArtwork + Offer on `/artworks/:slug`; #535 — `sameAs` on Person JSON-LD (derived from `artists.socialLinks`); #538 — Person `nationality` (from `artists.country`) + `worksFor` cross-referencing the Organization block via `@id` |
+| Per-entity OG cards | Done | #577, #593 — dynamic 1200×630 branded card at `GET /og/:type/:id.jpg` (`server/routes/og-cards.ts` + `server/lib/og-card.ts`, Sharp-rendered from an SVG template, disk-cached, source-image-mtime invalidated) for artwork/blog/exhibition/artist; `server/meta.ts`'s `ogCardUrl()` points `og:image` at it for all four types. Satisfies #538 Work Item "per-artist OG card" — already shipped ahead of this issue under a different route shape (`/og/artist/<slug>.jpg`, not `/og/artists/<slug>.png` as originally sketched) |
 | Public artwork detail pages | Done | #503 — `/artworks/:slug` server-rendered meta + JSON-LD, sitemap entries |
 | Twitter cards | Done | #366 — `twitter:card`, `twitter:title`, `twitter:description`, `twitter:image` |
 | Canonical URLs | Done | #366 — `<link rel="canonical">` on every page |
@@ -30,6 +31,7 @@ Prepare Vernis9 for search engine discovery and social sharing. The site is a cl
 | HTTP status on unknown routes | Done | #508 — SPA catch-all returned 200 for every URL (soft-404); now 404s unknown static routes and dynamic routes whose entity doesn't exist |
 | Cumulative Layout Shift (artist profile) | Done | #553 — loading skeletons on `/artists/:slug` reshaped to match the loaded layout's geometry (banner + card container, gallery grid, blog cards), instead of a structurally different placeholder |
 | `<img>` explicit width/height | Done | #507 — every `<img>` and `<ResponsiveImage>` in `client/src` now carries `width`/`height` attributes, sized to the Tailwind `aspect-*` class of its container (or a 4:3 default where none exists), so the browser reserves layout space before the image loads |
+| Internal linking by artist name | Done | #539 (Ultraplan Phase 4, after #535/#537/#538) — homepage FAQ gained a Q&A naming "Alexandra Constantin" with an exact-match anchor to her artist profile; `/artworks/:slug`'s existing link to the creator (#503) had its clickable text trimmed to just the artist's full name, dropping the generic "View artist profile" wrapper |
 
 ## Work Items
 
@@ -128,14 +130,15 @@ Prepare Vernis9 for search engine discovery and social sharing. The site is a cl
 - Blog post URL carries `<image:image>` only when `coverImageUrl` is set.
 - `<image:title>` is truncated to 100 chars; `<image:caption>` to 500. Both are XML-escaped — every user-supplied string on the sitemap must go through `xmlEscape()`.
 - Relative image paths are absolutized against `SITE_URL`.
+- `<lastmod>` (ISO-8601 date, e.g. `2026-06-15`) is emitted for blog posts from `blogPosts.updatedAt`, and for artists from `artists.updatedAt` (#538). `artists.updatedAt` is set explicitly by `storage.updateArtist` on every write — see `specs/architecture/DATA-MODEL.md`. `artworks` has no `updatedAt` column yet, so artist `<lastmod>` reflects only the artist row, not a max over their artworks — acceptable per #538's v1 scope; artwork URLs currently carry no `<lastmod>` at all.
 
 **Acceptance criteria:**
-- [ ] `GET /sitemap.xml` returns valid XML
-- [ ] All static public routes are listed
-- [ ] All artists are listed with their IDs
-- [ ] All published blog posts are listed
-- [ ] Response is cached (not a DB query per request)
-- [ ] `lastmod` is set where data is available
+- [x] `GET /sitemap.xml` returns valid XML
+- [x] All static public routes are listed
+- [x] All artists are listed with their slugs
+- [x] All published blog posts are listed
+- [x] Response is cached (not a DB query per request)
+- [x] `lastmod` is set where data is available (blog posts, artists)
 - [ ] `xmlns:image` namespace is declared on the root element
 - [ ] Every artwork URL has `<image:image>` with `<image:title>` + `<image:caption>`
 
@@ -220,6 +223,7 @@ Inject JSON-LD `<script>` tags server-side alongside the meta tag injection (Wor
 {
   "@context": "https://schema.org",
   "@type": "Organization",
+  "@id": "https://vernis9.art/#organization",
   "name": "Vernis9",
   "url": "https://vernis9.art",
   "logo": "https://vernis9.art/favicon.svg",
@@ -227,6 +231,9 @@ Inject JSON-LD `<script>` tags server-side alongside the meta tag injection (Wor
   "sameAs": []
 }
 ```
+`@id` is a stable cross-reference (#538) so other JSON-LD blocks — e.g. Person's
+`worksFor` on an artist page — can point at this entity by URI instead of
+re-emitting the whole Organization object on every page.
 
 **Homepage — WebSite + SearchAction** (enables Google sitelinks search box, added in #501):
 ```json
@@ -260,7 +267,9 @@ Inject JSON-LD `<script>` tags server-side alongside the meta tag injection (Wor
   ]
 }
 ```
-FAQ copy is hard-coded in `shared/faqs.ts` (5 entries covering what Vernis9 is, who can sell, commission policy, how to buy, shipping). Both the server (JSON-LD in `server/meta.ts`) and the client (visible accordion section on the homepage) import from this single source of truth. Google's FAQPage rich-result guidelines require that the Q&A content be visible on the page, so the accordion is not optional — keep it in sync with the schema. Changes to FAQ copy require a PR — there is no admin UI.
+FAQ copy is hard-coded in `shared/faqs.ts` (6 entries covering what Vernis9 is, who can sell, commission policy, how to buy, shipping, and — as of #539 — one naming a specific artist for an SEO campaign). Both the server (JSON-LD in `server/meta.ts`) and the client (visible accordion section on the homepage) import from this single source of truth. Google's FAQPage rich-result guidelines require that the Q&A content be visible on the page, so the accordion is not optional — keep it in sync with the schema. Changes to FAQ copy require a PR — there is no admin UI.
+
+A `Faq` entry may carry an optional `link: { text, href }`, rendered by the homepage accordion as a `wouter` `<Link>` appended after the answer text. `text` should be an exact-match keyword (typically a full name) for internal-linking SEO value, not generic text like "click here" — the whole point of adding it. `server/meta.ts`'s FAQPage JSON-LD only emits `answer` as the `Answer.text` (schema.org's `Answer` is plain text; the link carries no JSON-LD-visible weight, only in-page crawlable HTML). The Alexandra Constantin entry hard-codes her real profile slug (`alexandra-constantin-4493f600`, matching the id from #535) directly in `shared/faqs.ts` rather than through a "featured artist" config — this is a one-off, named campaign per the parent Ultraplan (#363), not a general mechanism, and an artist rename still resolves correctly because `/artists/:slug` 301s retired slugs (#537).
 
 **Artist profile — Person:**
 ```json
@@ -268,13 +277,21 @@ FAQ copy is hard-coded in `shared/faqs.ts` (5 entries covering what Vernis9 is, 
   "@context": "https://schema.org",
   "@type": "Person",
   "name": "Artist Name",
-  "url": "https://vernis9.art/artists/:id",
+  "url": "https://vernis9.art/artists/:slug",
   "image": "avatar URL",
   "description": "Artist bio",
   "jobTitle": "Artist",
-  "knowsAbout": "specialization"
+  "worksFor": { "@id": "https://vernis9.art/#organization" },
+  "nationality": "artist.country",
+  "knowsAbout": "specialization",
+  "sameAs": ["https://instagram.com/...", "..."]
 }
 ```
+`sameAs` is derived from `artists.socialLinks`, absolute `http(s)` URLs only (#535).
+`worksFor` and `nationality` were added in #538 — `worksFor` cross-references the
+homepage Organization block above via `@id` rather than re-emitting it, and
+`nationality` is only emitted when `artists.country` is set. Both `image` and
+`sameAs` are omitted, not emitted empty, when their source field is unset.
 
 **Blog post — BlogPosting:**
 ```json

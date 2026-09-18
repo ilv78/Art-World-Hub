@@ -174,10 +174,17 @@ function breadcrumb(...items: { name: string; url?: string }[]): Record<string, 
   };
 }
 
+// Stable @id so other JSON-LD blocks (e.g. Person.worksFor on an artist page)
+// can cross-reference this entity without re-emitting it. Google's structured
+// data parser stitches @id references together across pages it has crawled,
+// so the artist page doesn't need to inline the Organization block itself.
+const ORGANIZATION_LD_ID = `${SITE_URL}/#organization`;
+
 function organizationLd(): Record<string, unknown> {
   return {
     "@context": "https://schema.org",
     "@type": "Organization",
+    "@id": ORGANIZATION_LD_ID,
     name: "Vernis9",
     url: `${SITE_URL}/`,
     logo: `${SITE_URL}/favicon.svg`,
@@ -387,7 +394,9 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
           url: artistUrl,
           description: artist.bio || undefined,
           jobTitle: "Artist",
+          worksFor: { "@id": ORGANIZATION_LD_ID },
           ...(artist.avatarUrl ? { image: toAbsoluteUrl(artist.avatarUrl) } : {}),
+          ...(artist.country ? { nationality: artist.country } : {}),
           ...(artist.specialization ? { knowsAbout: artist.specialization } : {}),
           ...(sameAs.length ? { sameAs } : {}),
         };

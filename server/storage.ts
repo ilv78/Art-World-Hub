@@ -161,6 +161,7 @@ const ARTIST_COLUMNS_SANS_GALLERY_LAYOUT = {
   email: artists.email,
   galleryTemplate: artists.galleryTemplate,
   socialLinks: artists.socialLinks,
+  updatedAt: artists.updatedAt,
 };
 
 export class DatabaseStorage implements IStorage {
@@ -638,7 +639,7 @@ export class DatabaseStorage implements IStorage {
     if (!updateData.name) {
       const [artist] = await db
         .update(artists)
-        .set(updateData)
+        .set({ ...updateData, updatedAt: new Date() })
         .where(eq(artists.id, id))
         .returning();
       return artist;
@@ -662,7 +663,7 @@ export class DatabaseStorage implements IStorage {
       }
       const [artist] = await tx
         .update(artists)
-        .set({ ...updateData, slug: newSlug })
+        .set({ ...updateData, slug: newSlug, updatedAt: new Date() })
         .where(eq(artists.id, id))
         .returning();
       return artist;

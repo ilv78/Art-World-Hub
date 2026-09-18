@@ -110,6 +110,16 @@ describe("resolveMetaTags — homepage JSON-LD (issue #501)", () => {
     }
   });
 
+  it("FAQPage includes the Alexandra Constantin entry by full name (issue #539)", async () => {
+    const meta = await resolveMetaTags("/");
+    const faq = findLd(meta.jsonLd, "FAQPage");
+    const mainEntity = faq!.mainEntity as Record<string, unknown>[];
+    const entry = mainEntity.find((q) => String(q.name).includes("Alexandra Constantin"));
+    expect(entry).toBeDefined();
+    const answer = entry!.acceptedAnswer as Record<string, unknown>;
+    expect(String(answer.text)).toContain("Alexandra Constantin");
+  });
+
   it("does not emit WebSite or FAQPage on non-root static routes", async () => {
     for (const path of ["/gallery", "/store", "/artists", "/blog"]) {
       const meta = await resolveMetaTags(path);
@@ -281,6 +291,29 @@ describe("resolveMetaTags — /artists/:slug canonical URL (issue #537)", () => 
     const meta = await resolveMetaTags("/artists/does-not-exist-00000000");
     const types = meta.jsonLd.map((ld) => ld["@type"]);
     expect(types).not.toContain("Person");
+  });
+});
+
+describe("resolveMetaTags — /artists/:slug richer Person schema (issue #538)", () => {
+  it("sets nationality from artist.country", async () => {
+    setMockArtist(baseArtist({ country: "Netherlands" }));
+    const meta = await resolveMetaTags("/artists/alexandra-constantin-alex0001");
+    const person = findLd(meta.jsonLd, "Person")!;
+    expect(person.nationality).toBe("Netherlands");
+  });
+
+  it("omits nationality when country is null", async () => {
+    setMockArtist(baseArtist({ country: null }));
+    const meta = await resolveMetaTags("/artists/alexandra-constantin-alex0001");
+    const person = findLd(meta.jsonLd, "Person")!;
+    expect(person.nationality).toBeUndefined();
+  });
+
+  it("cross-references the Vernis9 Organization via worksFor.@id", async () => {
+    setMockArtist(baseArtist());
+    const meta = await resolveMetaTags("/artists/alexandra-constantin-alex0001");
+    const person = findLd(meta.jsonLd, "Person")!;
+    expect(person.worksFor).toEqual({ "@id": "https://vernis9.art/#organization" });
   });
 });
 

@@ -73,9 +73,11 @@ router.get("/sitemap.xml", async (_req, res) => {
     );
 
     for (const artist of artists) {
+      const lastmod = artist.updatedAt.toISOString().split("T")[0];
       const lines = [
         `  <url>`,
         `    <loc>${SITE_URL}/artists/${artist.slug}</loc>`,
+        `    <lastmod>${lastmod}</lastmod>`,
         `    <changefreq>monthly</changefreq>`,
         `    <priority>0.7</priority>`,
       ];
