@@ -83,6 +83,16 @@ export type Artwork = typeof artworks.$inferSelect;
 export const auctions = pgTable("auctions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   artworkId: varchar("artwork_id").references(() => artworks.id).notNull(),
+  // Application code always supplies a human-readable slug on insert (see
+  // makeAuctionSlug() in shared/auction-slug.ts). The SQL default exists only
+  // so ADD COLUMN can satisfy NOT NULL on already-populated rows in one
+  // statement — no separate UPDATE backfill, which keeps this migration
+  // additive-only (autonomous, §1 of the autonomy policy) and lets `drizzle-kit
+  // push` (staging) fill existing rows the same way `drizzle-kit generate`
+  // (production migration) does, avoiding the manual-backfill gap §6 warns
+  // about. Pre-existing rows just get a less pretty slug than new ones.
+  slug: text("slug").notNull().unique()
+    .default(sql`concat('auction-', substr(replace(gen_random_uuid()::text, '-', ''), 1, 8))`),
   startingPrice: decimal("starting_price", { precision: 10, scale: 2 }).notNull(),
   currentBid: decimal("current_bid", { precision: 10, scale: 2 }),
   minimumIncrement: decimal("minimum_increment", { precision: 10, scale: 2 }).notNull(),
@@ -101,7 +111,7 @@ export const artworkEnquirySchema = z.object({
 });
 export type ArtworkEnquiry = z.infer<typeof artworkEnquirySchema>;
 
-export const insertAuctionSchema = createInsertSchema(auctions).omit({ id: true });
+export const insertAuctionSchema = createInsertSchema(auctions).omit({ id: true, slug: true });
 export type InsertAuction = z.infer<typeof insertAuctionSchema>;
 export type Auction = typeof auctions.$inferSelect;
 
@@ -219,6 +229,9 @@ export const curatorGalleries = pgTable("curator_galleries", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   curatorId: varchar("curator_id").notNull(),
   name: text("name").notNull(),
+  // See the matching comment on auctions.slug above — same reasoning.
+  slug: text("slug").notNull().unique()
+    .default(sql`concat('exhibition-', substr(replace(gen_random_uuid()::text, '-', ''), 1, 8))`),
   description: text("description"),
   galleryLayout: jsonb("gallery_layout"),
   galleryTemplate: varchar("gallery_template").default("contemporary"),
@@ -230,7 +243,7 @@ export const curatorGalleries = pgTable("curator_galleries", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const insertCuratorGallerySchema = createInsertSchema(curatorGalleries).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertCuratorGallerySchema = createInsertSchema(curatorGalleries).omit({ id: true, slug: true, createdAt: true, updatedAt: true });
 export const updateCuratorGallerySchema = insertCuratorGallerySchema.partial().omit({ curatorId: true });
 export type InsertCuratorGallery = z.infer<typeof insertCuratorGallerySchema>;
 export type CuratorGallery = typeof curatorGalleries.$inferSelect;
@@ -285,7 +298,7 @@ export const insertNewsletterSchema = z.object({
 // (artworks, blog_posts, curator_galleries, artists) — keeping it untyped at
 // the DB level avoids cascade-delete coupling and is fine for an analytics
 // table that's append-only and indexed by (item_type, item_id).
-export const SHARE_ITEM_TYPES = ["artwork", "blog", "exhibition", "artist"] as const;
+export const SHARE_ITEM_TYPES = ["artwork", "blog", "exhibition", "artist", "auction"] as const;
 export type ShareItemType = (typeof SHARE_ITEM_TYPES)[number];
 
 export const SHARE_PLATFORMS = [

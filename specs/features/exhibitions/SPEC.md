@@ -25,6 +25,17 @@ As a visitor, I want to explore curated exhibitions of artworks in a virtual gal
 - [x] Hallway gallery loads all artists with exhibition-ready artworks
 - [x] Classic 2D view available as fallback
 
+**Naming note (#509):** this document covers the `exhibitions` table above — the
+single-`isActive` maze-layout table behind `/gallery`. It is **not** what the public
+`/exhibitions` pages render. That's `curator_galleries` (curated multi-artist
+collections with `isPublished`/`startDate`/`endDate`), documented in
+`specs/architecture/DATA-MODEL.md`. The public listing is `GET /api/curated-exhibitions`;
+detail pages are `/curator-gallery/:id` and, since #509, the canonical slug route
+`/exhibitions/:slug` (`GET /api/public/exhibitions/:slug`) — see
+`specs/features/seo/SPEC.md` Work Item 11 for the meta/JSON-LD shape. A dedicated spec
+for the curator-galleries feature doesn't exist yet; this note exists so the table-name
+overlap doesn't cost the next reader time.
+
 ## Technical Design
 
 ### Database Tables

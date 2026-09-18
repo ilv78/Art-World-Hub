@@ -662,6 +662,18 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/public/auctions/:slug", async (req, res) => {
+    try {
+      const auction = await storage.getAuctionBySlug(req.params.slug);
+      if (!auction) {
+        return res.status(404).json({ error: "Auction not found" });
+      }
+      res.json(auction);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch auction" });
+    }
+  });
+
   app.get("/api/auctions/:id/bids", async (req, res) => {
     try {
       const bids = await storage.getBidsByAuction(req.params.id);
@@ -1123,6 +1135,20 @@ export async function registerRoutes(
       res.json(gallery);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch gallery" });
+    }
+  });
+
+  // Public: single curator gallery by slug — backs /exhibitions/:slug (#509)
+  app.get("/api/public/exhibitions/:slug", async (req, res) => {
+    try {
+      const gallery = await storage.getCuratorGalleryBySlug(req.params.slug);
+      if (!gallery || !gallery.isPublished) return res.status(404).json({ error: "Exhibition not found" });
+      const now = new Date();
+      if (gallery.startDate && now < new Date(gallery.startDate)) return res.status(404).json({ error: "Exhibition not found" });
+      if (gallery.endDate && now > new Date(gallery.endDate)) return res.status(404).json({ error: "Exhibition not found" });
+      res.json(gallery);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch exhibition" });
     }
   });
 

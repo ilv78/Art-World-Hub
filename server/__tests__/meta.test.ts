@@ -4,8 +4,17 @@ const mockStorageState: {
   artwork: Record<string, unknown> | undefined;
   artist: Record<string, unknown> | undefined;
   curatorGallery: Record<string, unknown> | undefined;
+  curatorGalleryBySlug: Record<string, unknown> | undefined;
+  auctionBySlug: Record<string, unknown> | undefined;
   homeHero: { id: string; imageUrl: string } | null;
-} = { artwork: undefined, artist: undefined, curatorGallery: undefined, homeHero: null };
+} = {
+  artwork: undefined,
+  artist: undefined,
+  curatorGallery: undefined,
+  curatorGalleryBySlug: undefined,
+  auctionBySlug: undefined,
+  homeHero: null,
+};
 
 const getHomeHeroSlide0Mock = vi.fn(async () => mockStorageState.homeHero);
 
@@ -16,6 +25,8 @@ vi.mock("../storage", () => ({
     getBlogPost: vi.fn().mockResolvedValue(undefined),
     getPublishedArtworkBySlug: vi.fn(async () => mockStorageState.artwork),
     getCuratorGallery: vi.fn(async () => mockStorageState.curatorGallery),
+    getCuratorGalleryBySlug: vi.fn(async () => mockStorageState.curatorGalleryBySlug),
+    getAuctionBySlug: vi.fn(async () => mockStorageState.auctionBySlug),
     getHomeHeroSlide0: getHomeHeroSlide0Mock,
   },
 }));
@@ -556,6 +567,123 @@ describe("resolveMetaTags — /curator-gallery/:id (issue #569)", () => {
   });
 });
 
+describe("resolveMetaTags — /exhibitions/:slug (issue #509)", () => {
+  function baseGallery(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      id: "gallery-1",
+      slug: "spring-exhibition-gallery1",
+      curatorId: "user-1",
+      name: "Spring Exhibition 2026",
+      description: "A curated walk through emerging Romanian artists.",
+      isPublished: true,
+      startDate: new Date("2026-04-01T00:00:00Z"),
+      endDate: new Date("2026-06-01T00:00:00Z"),
+      curator: { id: "user-1", firstName: "Diana", lastName: "Pop" },
+      artworks: [
+        {
+          id: "aw-1",
+          title: "Light over the Carpathians",
+          imageUrl: "/uploads/artworks/lc.jpg",
+          artist: { id: "a-1", slug: "ana", name: "Ana", avatarUrl: null },
+        },
+      ],
+      ...overrides,
+    };
+  }
+
+  it("emits Event JSON-LD with virtual location and Vernis9 as organizer", async () => {
+    mockStorageState.curatorGalleryBySlug = baseGallery();
+    const meta = await resolveMetaTags("/exhibitions/spring-exhibition-gallery1");
+    const event = findLd(meta.jsonLd, "Event");
+    expect(event).toBeDefined();
+    expect(event!.name).toBe("Spring Exhibition 2026");
+    expect((event!.location as Record<string, unknown>)["@type"]).toBe("VirtualLocation");
+    expect((event!.organizer as Record<string, unknown>).name).toBe("Vernis9");
+    expect(event!.eventAttendanceMode).toBe("https://schema.org/OnlineEventAttendanceMode");
+    expect(event!.eventStatus).toBe("https://schema.org/EventScheduled");
+    expect(event!.startDate).toBe("2026-04-01T00:00:00.000Z");
+    expect(event!.endDate).toBe("2026-06-01T00:00:00.000Z");
+  });
+
+  it("canonical URL and OG image are keyed by slug / gallery id respectively", async () => {
+    mockStorageState.curatorGalleryBySlug = baseGallery();
+    const meta = await resolveMetaTags("/exhibitions/spring-exhibition-gallery1");
+    expect(meta.ogUrl).toBe("https://vernis9.art/exhibitions/spring-exhibition-gallery1");
+    expect(meta.ogImage).toMatch(/\/og\/exhibition\/gallery-1\.jpg\?v=[A-Za-z0-9_-]+$/);
+  });
+
+  it("falls back to default meta when the gallery is not published or not found", async () => {
+    mockStorageState.curatorGalleryBySlug = baseGallery({ isPublished: false });
+    let meta = await resolveMetaTags("/exhibitions/spring-exhibition-gallery1");
+    expect(findLd(meta.jsonLd, "Event")).toBeUndefined();
+
+    mockStorageState.curatorGalleryBySlug = undefined;
+    meta = await resolveMetaTags("/exhibitions/nonexistent-slug");
+    expect(findLd(meta.jsonLd, "Event")).toBeUndefined();
+  });
+});
+
+describe("resolveMetaTags — /auctions/:slug (issue #509)", () => {
+  function baseAuction(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      id: "auction-1",
+      slug: "red-harbor-sunset-auction1",
+      startingPrice: "500.00",
+      currentBid: "650.00",
+      minimumIncrement: "25.00",
+      startTime: new Date("2026-05-01T00:00:00Z"),
+      endTime: new Date("2026-05-15T00:00:00Z"),
+      status: "upcoming",
+      winnerName: null,
+      artwork: {
+        id: "aw-1",
+        title: "Red Harbor Sunset",
+        description: "A bold study of evening light over the harbor.",
+        imageUrl: "/uploads/artwork-1.jpg",
+        artist: { id: "a-1", slug: "ana", name: "Ana Popescu", avatarUrl: null },
+      },
+      ...overrides,
+    };
+  }
+
+  it("emits Event JSON-LD with an Offer carrying the current bid and priceSpecification", async () => {
+    mockStorageState.auctionBySlug = baseAuction();
+    const meta = await resolveMetaTags("/auctions/red-harbor-sunset-auction1");
+    const event = findLd(meta.jsonLd, "Event");
+    expect(event).toBeDefined();
+    expect(event!.eventAttendanceMode).toBe("https://schema.org/OnlineEventAttendanceMode");
+    expect((event!.location as Record<string, unknown>)["@type"]).toBe("VirtualLocation");
+    expect((event!.organizer as Record<string, unknown>).name).toBe("Vernis9");
+    const offer = event!.offers as Record<string, unknown>;
+    expect(offer["@type"]).toBe("Offer");
+    expect(offer.price).toBe("650.00");
+    const priceSpec = offer.priceSpecification as Record<string, unknown>;
+    expect(priceSpec["@type"]).toBe("UnitPriceSpecification");
+    expect(priceSpec.price).toBe("650.00");
+  });
+
+  it("falls back to the starting price when no bid has been placed yet", async () => {
+    mockStorageState.auctionBySlug = baseAuction({ currentBid: null });
+    const meta = await resolveMetaTags("/auctions/red-harbor-sunset-auction1");
+    const event = findLd(meta.jsonLd, "Event");
+    const offer = event!.offers as Record<string, unknown>;
+    expect(offer.price).toBe("500.00");
+  });
+
+  it("title and canonical URL reference the artwork and the auction slug", async () => {
+    mockStorageState.auctionBySlug = baseAuction();
+    const meta = await resolveMetaTags("/auctions/red-harbor-sunset-auction1");
+    expect(meta.title).toContain("Red Harbor Sunset");
+    expect(meta.ogUrl).toBe("https://vernis9.art/auctions/red-harbor-sunset-auction1");
+  });
+
+  it("falls back to default meta when the auction is not found", async () => {
+    mockStorageState.auctionBySlug = undefined;
+    const meta = await resolveMetaTags("/auctions/nonexistent-slug");
+    expect(findLd(meta.jsonLd, "Event")).toBeUndefined();
+  });
+});
+
 describe("resolveMetaTags — notFound flag for real HTTP 404s (issue #508)", () => {
   it("is false/undefined for known static routes", async () => {
     for (const path of ["/", "/gallery", "/store", "/artists", "/blog", "/changelog", "/privacy", "/terms"]) {
@@ -604,6 +732,25 @@ describe("resolveMetaTags — notFound flag for real HTTP 404s (issue #508)", ()
       artworks: [],
     };
     expect((await resolveMetaTags("/curator-gallery/gallery-1")).notFound).toBe(true);
+  });
+
+  it("is true for /exhibitions/:slug when the gallery doesn't exist or isn't published", async () => {
+    mockStorageState.curatorGalleryBySlug = undefined;
+    expect((await resolveMetaTags("/exhibitions/nonexistent-slug")).notFound).toBe(true);
+
+    mockStorageState.curatorGalleryBySlug = {
+      id: "gallery-1",
+      slug: "gallery-1-slug",
+      isPublished: false,
+      curator: { id: "u", firstName: "A", lastName: "B" },
+      artworks: [],
+    };
+    expect((await resolveMetaTags("/exhibitions/gallery-1-slug")).notFound).toBe(true);
+  });
+
+  it("is true for /auctions/:slug when the auction doesn't exist", async () => {
+    mockStorageState.auctionBySlug = undefined;
+    expect((await resolveMetaTags("/auctions/nonexistent-slug")).notFound).toBe(true);
   });
 
   it("is false/undefined when a known static or dynamic route resolves successfully", async () => {

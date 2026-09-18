@@ -1,5 +1,16 @@
 # SEO Feature Changelog
 
+## 2026-09-18 — Public auction + exhibition detail pages with `Event` JSON-LD (#509)
+- New public routes `GET /auctions/:slug` and `GET /exhibitions/:slug`, with server-rendered meta tags + `Event` JSON-LD, following the same pattern as `/artworks/:slug` (#503). `/exhibitions/:slug` resolves against `curatorGalleries` — the table that actually backs the public `/exhibitions` listing, not the single-`isActive` maze-layout `exhibitions` table.
+- `Event` JSON-LD carries `startDate`/`endDate`, `eventAttendanceMode: OnlineEventAttendanceMode`, `eventStatus: EventScheduled`, `location: VirtualLocation`, and `organizer: { "@type": "Organization", name: "Vernis9" }` per the issue spec — a deliberate difference from the pre-existing `/curator-gallery/:id` `ExhibitionEvent` block (curator as `Person` organizer), which is untouched.
+- Auctions additionally carry an `offers` block: `Offer.price` = `auction.currentBid ?? auction.startingPrice`, with a nested `Offer.priceSpecification` (`UnitPriceSpecification`) and `availability` derived from whether the auction has ended.
+- New `slug` column on `auctions` and `curator_galleries` (migration `0015_add-auction-and-exhibition-slugs.sql`). Unlike `artworks.slug` (#503), this needed no `UPDATE` backfill statement — the column's SQL `DEFAULT` generates a fallback slug for pre-existing rows in the same `ADD COLUMN` statement, keeping the migration purely additive (see `specs/decisions/log/2026-09-18-auction-exhibition-slug-default-backfill.md`). New rows always get a real, human-readable slug from application code.
+- New API endpoints `GET /api/public/auctions/:slug` and `GET /api/public/exhibitions/:slug`.
+- New client pages `auction-detail.tsx` / `exhibition-detail.tsx`; `/curator-gallery/:id` is left unchanged for existing links.
+- Sitemap now includes active auctions and active (published, in-window) exhibitions by slug, each with `<image:image>` when a hero image exists.
+- `ShareButtons`/`SHARE_ITEM_TYPES` and the `/og/:type/:id.jpg` branded card route gained an `"auction"` variant, matching the existing `"exhibition"` one.
+- Verified locally end-to-end against a real Postgres instance (server started, migrations applied, both routes returned 200 with the expected JSON-LD, 404 for unknown slugs, sitemap included both) — see PR `## Verification`.
+
 ## 2026-09-18 — Explicit `width`/`height` on every `<img>` to prevent CLS (#507)
 - #496's audit (§3.11) found most `<img>` tags omit `width`/`height`, so Lighthouse's "Image elements do not have explicit width and height" audit fails and the browser can't reserve layout space before an image loads.
 - Every `<img>` and `<ResponsiveImage>` call site in `client/src` now sets `width`/`height`: matching the exact ratio of the container's Tailwind `aspect-*` class (or its fixed `w-N h-N` pixel size) where one exists, falling back to a `400×300` (4:3) default — per the issue's own suggested fallback — where no container aspect is declared.

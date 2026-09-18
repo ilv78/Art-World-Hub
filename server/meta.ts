@@ -19,7 +19,7 @@ const DEFAULT_OG_IMAGE = `${SITE_URL}/og-default.png`;
 // blog / exhibition / artist) get the branded card. The website's
 // general OG (`/`, `/store`, etc.) keeps DEFAULT_OG_IMAGE.
 function ogCardUrl(
-  type: "artwork" | "blog" | "exhibition" | "artist",
+  type: "artwork" | "blog" | "exhibition" | "artist" | "auction",
   id: string,
   bustParts: Array<string | null | undefined>,
 ): string {
@@ -490,6 +490,166 @@ async function resolveMetaTags(url: string): Promise<MetaTags> {
               { name: "Home", url: `${SITE_URL}/` },
               { name: "Exhibitions", url: `${SITE_URL}/exhibitions` },
               { name: gallery.name },
+            ),
+          ],
+        };
+      }
+    } catch {
+      // fall through to defaults; unknown, not confirmed-absent (see flag above)
+      dynamicRouteErrored = true;
+    }
+  }
+
+  // Dynamic: /exhibitions/:slug — the canonical, SEO-indexable exhibition
+  // detail URL (#509). Distinct from /curator-gallery/:id above: that route
+  // stays as-is for existing links/share targets, this one is what the
+  // sitemap and search engines see. Organizer is Vernis9 the organization
+  // (not the curator) per the issue spec, unlike the /curator-gallery/:id
+  // ExhibitionEvent above.
+  const exhibitionSlugMatch = path.match(/^\/exhibitions\/([^/]+)$/);
+  if (exhibitionSlugMatch) {
+    try {
+      const gallery = await storage.getCuratorGalleryBySlug(exhibitionSlugMatch[1]);
+      if (gallery && gallery.isPublished) {
+        const curatorName =
+          [gallery.curator.firstName, gallery.curator.lastName].filter(Boolean).join(" ") ||
+          "Curator";
+        const rawDescription =
+          gallery.description ||
+          `Curated exhibition by ${curatorName} on Vernis9 — ${gallery.artworks.length} artworks.`;
+        const description = rawDescription.slice(0, 160);
+        const heroImage = gallery.artworks[0]?.imageUrl;
+        const image = heroImage ? toAbsoluteUrl(heroImage) : DEFAULT_OG_IMAGE;
+        const galleryUrl = `${SITE_URL}/exhibitions/${gallery.slug}`;
+        const title = `${gallery.name} — Vernis9 Exhibition`;
+        const eventLd: Record<string, unknown> = {
+          "@context": "https://schema.org",
+          "@type": "Event",
+          name: gallery.name,
+          url: galleryUrl,
+          description,
+          image,
+          ...(gallery.startDate ? { startDate: new Date(gallery.startDate).toISOString() } : {}),
+          ...(gallery.endDate ? { endDate: new Date(gallery.endDate).toISOString() } : {}),
+          eventAttendanceMode: "https://schema.org/OnlineEventAttendanceMode",
+          eventStatus: "https://schema.org/EventScheduled",
+          location: {
+            "@type": "VirtualLocation",
+            url: galleryUrl,
+          },
+          organizer: {
+            "@type": "Organization",
+            name: "Vernis9",
+            url: `${SITE_URL}/`,
+          },
+        };
+        return {
+          title,
+          description,
+          ogTitle: title,
+          ogDescription: description,
+          ogType: "article",
+          ogUrl: galleryUrl,
+          ogImage: ogCardUrl("exhibition", gallery.id, [
+            gallery.name,
+            curatorName,
+            heroImage,
+          ]),
+          jsonLd: [
+            eventLd,
+            breadcrumb(
+              { name: "Home", url: `${SITE_URL}/` },
+              { name: "Exhibitions", url: `${SITE_URL}/exhibitions` },
+              { name: gallery.name },
+            ),
+          ],
+        };
+      }
+    } catch {
+      // fall through to defaults; unknown, not confirmed-absent (see flag above)
+      dynamicRouteErrored = true;
+    }
+  }
+
+  // Dynamic: /auctions/:slug — the canonical, SEO-indexable auction detail
+  // URL (#509). Emits an Event with an Offer carrying the current high bid,
+  // since a live auction is both a time-bound event and something with a
+  // price.
+  const auctionMatch = path.match(/^\/auctions\/([^/]+)$/);
+  if (auctionMatch) {
+    try {
+      const auction = await storage.getAuctionBySlug(auctionMatch[1]);
+      if (auction) {
+        const artwork = auction.artwork;
+        const rawDescription =
+          artwork.description ||
+          `Bid on "${artwork.title}" by ${artwork.artist.name} — live auction on Vernis9.`;
+        const description = rawDescription.slice(0, 160);
+        const image = toAbsoluteUrl(artwork.imageUrl);
+        const auctionUrl = `${SITE_URL}/auctions/${auction.slug}`;
+        const title = `${artwork.title} — Live Auction — Vernis9`;
+        const currentBidNumber = Number(auction.currentBid ?? auction.startingPrice);
+        const hasValidBid = Number.isFinite(currentBidNumber) && currentBidNumber > 0;
+        const now = new Date();
+        const hasEnded = now > new Date(auction.endTime);
+        const eventLd: Record<string, unknown> = {
+          "@context": "https://schema.org",
+          "@type": "Event",
+          name: `${artwork.title} — Live Auction`,
+          url: auctionUrl,
+          description,
+          image,
+          startDate: new Date(auction.startTime).toISOString(),
+          endDate: new Date(auction.endTime).toISOString(),
+          eventAttendanceMode: "https://schema.org/OnlineEventAttendanceMode",
+          eventStatus: "https://schema.org/EventScheduled",
+          location: {
+            "@type": "VirtualLocation",
+            url: auctionUrl,
+          },
+          organizer: {
+            "@type": "Organization",
+            name: "Vernis9",
+            url: `${SITE_URL}/`,
+          },
+          ...(hasValidBid
+            ? {
+                offers: {
+                  "@type": "Offer",
+                  url: auctionUrl,
+                  priceCurrency: "EUR",
+                  price: currentBidNumber.toFixed(2),
+                  availability: hasEnded
+                    ? "https://schema.org/SoldOut"
+                    : "https://schema.org/InStock",
+                  priceSpecification: {
+                    "@type": "UnitPriceSpecification",
+                    priceCurrency: "EUR",
+                    price: currentBidNumber.toFixed(2),
+                    name: "Current highest bid",
+                  },
+                },
+              }
+            : {}),
+        };
+        return {
+          title,
+          description,
+          ogTitle: title,
+          ogDescription: description,
+          ogType: "article",
+          ogUrl: auctionUrl,
+          ogImage: ogCardUrl("auction", auction.slug, [
+            artwork.title,
+            artwork.artist.name,
+            artwork.imageUrl,
+          ]),
+          jsonLd: [
+            eventLd,
+            breadcrumb(
+              { name: "Home", url: `${SITE_URL}/` },
+              { name: "Auctions", url: `${SITE_URL}/auctions` },
+              { name: artwork.title },
             ),
           ],
         };

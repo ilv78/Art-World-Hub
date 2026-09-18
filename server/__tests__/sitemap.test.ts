@@ -7,6 +7,8 @@ const { mockStorage } = vi.hoisted(() => ({
     getArtists: vi.fn(),
     getAllBlogPosts: vi.fn(),
     getArtworks: vi.fn(),
+    getActiveAuctions: vi.fn(),
+    getPublishedCuratorGalleries: vi.fn(),
   },
 }));
 
@@ -81,14 +83,55 @@ function blogPostRow(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function auctionRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "auction-1",
+    slug: "my-piece-auction-abc123",
+    artwork: artworkRow(),
+    startingPrice: "100",
+    currentBid: null,
+    minimumIncrement: "10",
+    startTime: new Date("2026-01-01T00:00:00Z"),
+    endTime: new Date("2026-12-31T00:00:00Z"),
+    status: "upcoming",
+    winnerName: null,
+    ...overrides,
+  };
+}
+
+function curatorGalleryRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "gallery-1",
+    slug: "spring-show-def456",
+    curatorId: "curator-1",
+    name: "Spring Show",
+    description: "A curated spring collection.",
+    galleryLayout: null,
+    galleryTemplate: "contemporary",
+    isPublished: true,
+    timezone: "UTC",
+    startDate: null,
+    endDate: null,
+    createdAt: new Date("2026-01-01T00:00:00Z"),
+    updatedAt: new Date("2026-01-01T00:00:00Z"),
+    curator: { id: "curator-1", firstName: "Cara", lastName: "Curator" },
+    artworks: [artworkRow()],
+    ...overrides,
+  };
+}
+
 beforeEach(() => {
   resetCache();
   mockStorage.getArtists.mockReset();
   mockStorage.getAllBlogPosts.mockReset();
   mockStorage.getArtworks.mockReset();
+  mockStorage.getActiveAuctions.mockReset();
+  mockStorage.getPublishedCuratorGalleries.mockReset();
   mockStorage.getArtists.mockResolvedValue([]);
   mockStorage.getAllBlogPosts.mockResolvedValue([]);
   mockStorage.getArtworks.mockResolvedValue([]);
+  mockStorage.getActiveAuctions.mockResolvedValue([]);
+  mockStorage.getPublishedCuratorGalleries.mockResolvedValue([]);
 });
 
 describe("GET /sitemap.xml — image sitemap (#504)", () => {
@@ -205,5 +248,33 @@ describe("GET /sitemap.xml — image sitemap (#504)", () => {
     ]);
     const res = await request(makeApp()).get("/sitemap.xml");
     expect(res.text).toContain("<image:loc>https://vernis9.art/uploads/foo.jpg</image:loc>");
+  });
+});
+
+describe("GET /sitemap.xml — auctions and exhibitions (#509)", () => {
+  it("includes active auctions by slug, with the artwork image", async () => {
+    mockStorage.getActiveAuctions.mockResolvedValue([auctionRow()]);
+    const res = await request(makeApp()).get("/sitemap.xml");
+    expect(res.text).toContain("<loc>https://vernis9.art/auctions/my-piece-auction-abc123</loc>");
+    expect(res.text).toContain("<image:loc>https://cdn.example.com/images/piece.jpg</image:loc>");
+  });
+
+  it("includes active (published) exhibitions by slug, with the hero artwork image", async () => {
+    mockStorage.getPublishedCuratorGalleries.mockResolvedValue([curatorGalleryRow()]);
+    const res = await request(makeApp()).get("/sitemap.xml");
+    expect(res.text).toContain("<loc>https://vernis9.art/exhibitions/spring-show-def456</loc>");
+    expect(res.text).toContain("<image:title>Spring Show</image:title>");
+  });
+
+  it("omits the image block for an exhibition with no artworks", async () => {
+    mockStorage.getPublishedCuratorGalleries.mockResolvedValue([
+      curatorGalleryRow({ artworks: [] }),
+    ]);
+    const res = await request(makeApp()).get("/sitemap.xml");
+    const block = res.text.match(
+      /<url>\s*<loc>https:\/\/vernis9\.art\/exhibitions\/spring-show-def456<\/loc>[\s\S]*?<\/url>/,
+    );
+    expect(block).not.toBeNull();
+    expect(block![0]).not.toContain("<image:image>");
   });
 });

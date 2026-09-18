@@ -24,7 +24,8 @@ Prepare Vernis9 for search engine discovery and social sharing. The site is a cl
 | Image lazy loading | Done | #368 — `loading="lazy"` on all below-the-fold images |
 | OG image | Done | #366 — default `og-default.png` + per-entity images |
 | Semantic HTML | Done | #505 — `<main>`/`<nav>` landmarks confirmed present (already existed via `public-layout.tsx`/`top-nav.tsx`, contra #496's curl-based finding — see Work Item 9); heading-order skips fixed on `/store`, `/artists`, `/auctions`, `/gallery`; `<section>` landmarks added to `/artists/:slug` |
-| URL structure | Done | `/artists/:slug` (#537) and `/artworks/:slug` (#503) — slug format `slugify(name|title)-<first-8-chars-of-uuid>`. Old UUID artist URLs 301-redirect to the slug form |
+| URL structure | Done | `/artists/:slug` (#537), `/artworks/:slug` (#503), `/auctions/:slug` and `/exhibitions/:slug` (#509) — slug format `slugify(name|title)-<first-8-chars-of-uuid>`. Old UUID artist URLs 301-redirect to the slug form |
+| Public auction + exhibition detail pages | Done | #509 — `/auctions/:slug` and `/exhibitions/:slug` server-rendered meta + `Event` JSON-LD, sitemap entries for active auctions and published/active curator galleries |
 | Alt text | Done | #369 — all img and AvatarImage have descriptive alt text |
 | HTTP status on unknown routes | Done | #508 — SPA catch-all returned 200 for every URL (soft-404); now 404s unknown static routes and dynamic routes whose entity doesn't exist |
 | Cumulative Layout Shift (artist profile) | Done | #553 — loading skeletons on `/artists/:slug` reshaped to match the loaded layout's geometry (banner + card container, gallery grid, blog cards), instead of a structurally different placeholder |
@@ -499,6 +500,31 @@ The avatar image (a candidate raised in the issue, and the reason #549 added `fe
 - [x] Every `<img>` and `<ResponsiveImage>` in `client/src` has explicit `width` and `height`
 - [x] `npm run check` and `npm test` pass unchanged
 - [ ] Lighthouse "Image elements do not have explicit width and height" passes and CLS < 0.1 on the deployed instance — requires a rendered-browser run; not something CI's `npm test` exercises (see PR `## Verification`)
+
+---
+
+### 11. Public Auction & Exhibition Detail Pages — `Event` JSON-LD
+
+**What it does:** Auctions and curated exhibitions are time-bound events with no public URL of their own before this — auctions were only reachable through `/auctions` (a listing) or the internal `/api/auctions/:id`, and exhibitions only through `/curator-gallery/:id` (keyed by database id, not a readable slug, and not in the sitemap). This adds canonical, slugged, SEO-indexable detail pages for both, following the same server-side meta + JSON-LD pattern as `/artworks/:slug` (Work Item 3/4) and `/artists/:slug`.
+
+**Priority:** P3 (low — per the issue: fewer entities than the artwork detail pages work, #496 audit gap §3.1 backlog #9)
+**Effort:** Medium
+
+**Implementation:**
+- **Schema:** `auctions.slug` and `curator_galleries.slug` (`text`, `NOT NULL UNIQUE`), added in migration `0015_add-auction-and-exhibition-slugs.sql`. Unlike the artwork slug migration (`0008`), this one needs no separate `UPDATE` backfill: the column's SQL `DEFAULT` computes a fallback slug (`auction-<8 hex>` / `exhibition-<8 hex>`, via `gen_random_uuid()`) for any pre-existing row in the same `ADD COLUMN` statement, so it stays a purely additive migration — see `specs/decisions/log/2026-09-18-auction-exhibition-slug-default-backfill.md`. Application code (`storage.createAuction` / `storage.createCuratorGallery`) always supplies a real, human-readable slug for new rows (`shared/auction-slug.ts`, `shared/curator-gallery-slug.ts` — same `slugify()` used by `shared/artwork-slug.ts`); the DB default only ever fires for rows that predate this migration.
+- **Which "exhibition" table:** the `exhibitions` table (the single-`isActive` maze-layout table behind `/gallery`) is *not* what `/exhibitions` and `/curator-gallery/:id` render — that's `curatorGalleries` (`isPublished`, `startDate`/`endDate`). `/exhibitions/:slug` resolves against `curatorGalleries`, matching the existing public listing.
+- **API:** `GET /api/public/auctions/:slug` and `GET /api/public/exhibitions/:slug` (`server/routes.ts`), mirroring `/api/public/artworks/:slug`. The exhibitions route applies the same `isPublished` + `startDate`/`endDate` gate as `/api/curator-galleries/:id`.
+- **Client:** `client/src/pages/auction-detail.tsx` and `client/src/pages/exhibition-detail.tsx`, routed at `/auctions/:slug` and `/exhibitions/:slug` in `client/src/App.tsx`. `/curator-gallery/:id` is left unchanged — existing links and share targets keep working; the new slug route is additive, not a replacement.
+- **Meta + JSON-LD (`server/meta.ts`):** two new `resolveMetaTags()` branches.
+  - `/exhibitions/:slug` emits `Event` (schema.org's `ExhibitionEvent` is itself an `Event` subtype, but the issue asks for the base type) with `startDate`/`endDate`, `eventAttendanceMode: OnlineEventAttendanceMode`, `eventStatus: EventScheduled`, `location: VirtualLocation`, and `organizer: { "@type": "Organization", name: "Vernis9" }` — per the issue's spec. This differs from the pre-existing `/curator-gallery/:id` `ExhibitionEvent` block, which uses the curator as a `Person` organizer; that route is untouched.
+  - `/auctions/:slug` emits `Event` with the same attendance/location/organizer shape, plus an `offers` block: `Offer.price` is `auction.currentBid ?? auction.startingPrice` (the same fallback `server/routes.ts`'s bid-validation path already uses), with a nested `Offer.priceSpecification` (`UnitPriceSpecification`) carrying the same figure, and `availability` (`InStock` / `SoldOut`) derived from whether `endTime` has passed.
+- **OG cards:** `server/routes/og-cards.ts` gained an `"auction"` type (artwork's own image + title, mirroring `"artwork"`); `SHARE_ITEM_TYPES` (`shared/schema.ts`) gained `"auction"` so `ShareButtons` works on the new auction page.
+- **Sitemap (`server/routes/sitemap.ts`):** two new loops — `storage.getActiveAuctions()` (time-window filter: `startTime <= now <= endTime`, mirrors the client's `getAuctionStatus()`) and `storage.getPublishedCuratorGalleries()` (already active-only: `isPublished` + `startDate`/`endDate` window). Each entry carries an `<image:image>` when a hero image is available.
+
+**Acceptance criteria:**
+- [x] `GET /auctions/:slug` and `GET /exhibitions/:slug` return 200 for real, valid entities and 404 for unknown slugs (verified locally against a real Postgres instance — see PR `## Verification`)
+- [ ] Google Rich Results Test validates the `Event` structured data — requires the deployed instance; not something CI's `npm test` exercises
+- [x] Sitemap includes active auctions and active (published, in-window) exhibitions by slug
 
 ---
 

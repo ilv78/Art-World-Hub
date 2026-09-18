@@ -278,6 +278,91 @@ describe("DatabaseStorage", () => {
     });
   });
 
+  describe("createAuction (issue #509)", () => {
+    it("derives a slug from the artwork title + auction id", async () => {
+      const selectMock = vi.mocked(db.select);
+      const selectChain = selectMock();
+      vi.mocked(selectChain.where).mockResolvedValueOnce([
+        { id: "artwork-1", title: "Red Harbor Sunset" },
+      ] as any);
+
+      const insertMock = vi.mocked(db.insert);
+      let capturedValues: any;
+      insertMock.mockImplementation(() => {
+        const chain: any = {
+          values: vi.fn().mockImplementation((v: any) => {
+            capturedValues = v;
+            return chain;
+          }),
+          returning: vi.fn().mockResolvedValue([{ id: capturedValues?.id, slug: capturedValues?.slug }]),
+        };
+        return chain;
+      });
+
+      await storage.createAuction({
+        artworkId: "artwork-1",
+        startingPrice: "100",
+        minimumIncrement: "10",
+        startTime: new Date(),
+        endTime: new Date(),
+      } as any);
+
+      expect(capturedValues).toBeDefined();
+      expect(capturedValues.id).toMatch(/^[0-9a-f-]{36}$/i);
+      const idPrefix = capturedValues.id.replace(/-/g, "").slice(0, 8);
+      expect(capturedValues.slug).toBe(`red-harbor-sunset-${idPrefix}`);
+    });
+  });
+
+  describe("getAuctionBySlug (issue #509)", () => {
+    it("returns undefined for empty result", async () => {
+      const selectMock = vi.mocked(db.select);
+      const chain = selectMock();
+      vi.mocked(chain.from).mockReturnThis();
+      vi.mocked(chain.innerJoin).mockReturnThis();
+      vi.mocked(chain.where).mockResolvedValueOnce([] as any);
+
+      const result = await storage.getAuctionBySlug("nonexistent-slug");
+      expect(result).toBeUndefined();
+    });
+  });
+
+  describe("createCuratorGallery (issue #509)", () => {
+    it("derives a slug from name + id", async () => {
+      const insertMock = vi.mocked(db.insert);
+      let capturedValues: any;
+      insertMock.mockImplementation(() => {
+        const chain: any = {
+          values: vi.fn().mockImplementation((v: any) => {
+            capturedValues = v;
+            return chain;
+          }),
+          returning: vi.fn().mockResolvedValue([{ id: capturedValues?.id, slug: capturedValues?.slug }]),
+        };
+        return chain;
+      });
+
+      await storage.createCuratorGallery({ curatorId: "curator-1", name: "Spring Show" } as any);
+
+      expect(capturedValues).toBeDefined();
+      expect(capturedValues.id).toMatch(/^[0-9a-f-]{36}$/i);
+      const idPrefix = capturedValues.id.replace(/-/g, "").slice(0, 8);
+      expect(capturedValues.slug).toBe(`spring-show-${idPrefix}`);
+    });
+  });
+
+  describe("getCuratorGalleryBySlug (issue #509)", () => {
+    it("returns undefined when no gallery matches the slug", async () => {
+      const selectMock = vi.mocked(db.select);
+      const chain = selectMock();
+      vi.mocked(chain.from).mockReturnThis();
+      vi.mocked(chain.where).mockResolvedValueOnce([] as any);
+
+      const result = await storage.getCuratorGalleryBySlug("nonexistent-slug");
+      expect(result).toBeUndefined();
+    });
+  });
+
   describe("updateArtist (issue #537)", () => {
     it("regenerates slug and retires the old slug into history on rename", async () => {
       // Current row returned by the pre-update SELECT inside the transaction.

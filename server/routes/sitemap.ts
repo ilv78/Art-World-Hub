@@ -46,10 +46,12 @@ router.get("/sitemap.xml", async (_req, res) => {
   }
 
   try {
-    const [artists, blogPosts, artworks] = await Promise.all([
+    const [artists, blogPosts, artworks, activeAuctions, activeExhibitions] = await Promise.all([
       storage.getArtists(),
       storage.getAllBlogPosts(),
       storage.getArtworks(),
+      storage.getActiveAuctions(),
+      storage.getPublishedCuratorGalleries(),
     ]);
 
     const staticRoutes = [
@@ -93,6 +95,33 @@ router.get("/sitemap.xml", async (_req, res) => {
         imageBlock(artwork.imageUrl, artwork.title, artwork.description),
         `  </url>`,
       ];
+      urls.push(lines.join("\n"));
+    }
+
+    for (const auction of activeAuctions) {
+      const lines = [
+        `  <url>`,
+        `    <loc>${SITE_URL}/auctions/${auction.slug}</loc>`,
+        `    <changefreq>daily</changefreq>`,
+        `    <priority>0.7</priority>`,
+        imageBlock(auction.artwork.imageUrl, auction.artwork.title),
+        `  </url>`,
+      ];
+      urls.push(lines.join("\n"));
+    }
+
+    for (const gallery of activeExhibitions) {
+      const heroImage = gallery.artworks[0]?.imageUrl;
+      const lines = [
+        `  <url>`,
+        `    <loc>${SITE_URL}/exhibitions/${gallery.slug}</loc>`,
+        `    <changefreq>weekly</changefreq>`,
+        `    <priority>0.7</priority>`,
+      ];
+      if (heroImage) {
+        lines.push(imageBlock(heroImage, gallery.name, gallery.description ?? undefined));
+      }
+      lines.push(`  </url>`);
       urls.push(lines.join("\n"));
     }
 
