@@ -117,7 +117,7 @@ export default function CuratorGalleryPage() {
               artworks={gallery.artworks}
               layout={layout}
               galleryTemplate={gallery.galleryTemplate || "contemporary"}
-              artist={{ id: gallery.id, slug: gallery.id, name: gallery.name, avatarUrl: null, specialization: `Curated by ${curatorName}`, bio: posterBio, email: null, country: null, userId: null, galleryLayout: null, galleryTemplate: null, socialLinks: null }}
+              artist={{ id: gallery.id, slug: gallery.id, name: gallery.name, avatarUrl: null, specialization: `Curated by ${curatorName}`, bio: posterBio, email: null, country: null, userId: null, galleryLayout: null, galleryTemplate: null, socialLinks: null, updatedAt: new Date(0) }}
               isImmersive={isImmersive}
               onRequestImmersive={toggleImmersive}
             />

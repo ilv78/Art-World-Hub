@@ -283,6 +283,29 @@ describe("resolveMetaTags — /artists/:slug canonical URL (issue #537)", () => 
   });
 });
 
+describe("resolveMetaTags — /artists/:slug richer Person schema (issue #538)", () => {
+  it("sets nationality from artist.country", async () => {
+    setMockArtist(baseArtist({ country: "Netherlands" }));
+    const meta = await resolveMetaTags("/artists/alexandra-constantin-alex0001");
+    const person = findLd(meta.jsonLd, "Person")!;
+    expect(person.nationality).toBe("Netherlands");
+  });
+
+  it("omits nationality when country is null", async () => {
+    setMockArtist(baseArtist({ country: null }));
+    const meta = await resolveMetaTags("/artists/alexandra-constantin-alex0001");
+    const person = findLd(meta.jsonLd, "Person")!;
+    expect(person.nationality).toBeUndefined();
+  });
+
+  it("cross-references the Vernis9 Organization via worksFor.@id", async () => {
+    setMockArtist(baseArtist());
+    const meta = await resolveMetaTags("/artists/alexandra-constantin-alex0001");
+    const person = findLd(meta.jsonLd, "Person")!;
+    expect(person.worksFor).toEqual({ "@id": "https://vernis9.art/#organization" });
+  });
+});
+
 describe("LCP image preload — / only (issue #560)", () => {
   beforeEach(() => {
     __resetHomeHeroCache();

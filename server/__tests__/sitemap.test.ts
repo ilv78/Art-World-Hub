@@ -40,6 +40,7 @@ function artistRow(overrides: Record<string, unknown> = {}) {
     bio: "bio",
     avatarUrl: null,
     galleryLayout: null,
+    updatedAt: new Date("2026-03-01T00:00:00Z"),
     ...overrides,
   };
 }
@@ -119,6 +120,14 @@ describe("GET /sitemap.xml — image sitemap (#504)", () => {
     const res = await request(makeApp()).get("/sitemap.xml");
     expect(res.text).toContain("<loc>https://vernis9.art/artists/alexandra-artist01</loc>");
     expect(res.text).not.toContain("<loc>https://vernis9.art/artists/artist-1</loc>");
+  });
+
+  it("emits <lastmod> from artist.updatedAt in ISO-8601 date form (#538)", async () => {
+    mockStorage.getArtists.mockResolvedValue([
+      artistRow({ updatedAt: new Date("2026-06-15T12:34:56Z") }),
+    ]);
+    const res = await request(makeApp()).get("/sitemap.xml");
+    expect(res.text).toContain("<lastmod>2026-06-15</lastmod>");
   });
 
   it("adds <image:image> for an artist with an avatar", async () => {

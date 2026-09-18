@@ -7,6 +7,14 @@
 - `server/__tests__/meta.test.ts` extended with a case asserting the new FAQ entry surfaces by full name in the homepage FAQPage JSON-LD.
 - Sitemap/robots/other SEO surfaces untouched — this issue was link text only.
 
+## 2026-09-18 — Artist `updatedAt` + sitemap `<lastmod>` + richer Person schema (#538)
+- Phase 3 of the artist-SEO ultraplan (#363), after Phase 1 (#535, sameAs) and Phase 2 (#537, slug URLs).
+- Added `artists.updatedAt` (`timestamp`, `defaultNow().notNull()`, additive migration `0015_add_artist_updated_at.sql`) — `storage.updateArtist` now sets it explicitly on every write (both the no-rename and slug-rename branches), matching the existing `blog_posts`/`curator_galleries` pattern rather than a DB trigger.
+- `server/routes/sitemap.ts` emits `<lastmod>` (ISO-8601 date) on every `/artists/:slug` `<url>` block from `artists.updatedAt`. Per the issue, `artworks` has no `updatedAt` column, so this is `artist.updatedAt` alone rather than a max over the artist's artworks too — v1 scope, explicitly allowed by the issue text.
+- `server/meta.ts`'s Person JSON-LD on `/artists/:slug` gained `nationality` (from `artists.country`, omitted when unset) and `worksFor` — a cross-reference to the homepage's Organization block via a new stable `@id` (`https://vernis9.art/#organization`) rather than re-emitting the Organization object on every artist page.
+- Third work item ("per-artist 1200×630 OG card") needed no new code: `GET /og/:type/:id.jpg` (`server/routes/og-cards.ts` + `server/lib/og-card.ts`, added under #577/#593) already serves a Sharp-rendered 1200×630 branded card for `type=artist`, and `server/meta.ts`'s `ogCardUrl()` already points the artist page's `og:image` at it. The issue's sketched acceptance-criteria path (`/og/artists/<slug>.png`) predates the actual shipped shape (`/og/artist/<slug>.jpg`, singular type segment, `.jpg`) — documented here and in `specs/features/seo/SPEC.md` rather than renamed, since the working route has existing callers and test coverage (`server/__tests__/og-card.test.ts`).
+- `specs/architecture/DATA-MODEL.md` updated for the new column.
+
 ## 2026-09-18 — Explicit `width`/`height` on every `<img>` to prevent CLS (#507)
 - #496's audit (§3.11) found most `<img>` tags omit `width`/`height`, so Lighthouse's "Image elements do not have explicit width and height" audit fails and the browser can't reserve layout space before an image loads.
 - Every `<img>` and `<ResponsiveImage>` call site in `client/src` now sets `width`/`height`: matching the exact ratio of the container's Tailwind `aspect-*` class (or its fixed `w-N h-N` pixel size) where one exists, falling back to a `400×300` (4:3) default — per the issue's own suggested fallback — where no container aspect is declared.
