@@ -89,6 +89,8 @@ export function CartSheet() {
                           src={item.artwork.imageUrl}
                           alt={item.artwork.title}
                           loading="lazy"
+                          width={64}
+                          height={64}
                           className="w-full h-full object-cover"
                         />
                       </div>

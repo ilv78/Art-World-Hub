@@ -80,6 +80,8 @@ function HeroCarousel({ artworks }: { artworks: ArtworkWithArtist[] }) {
             loading={i === 0 ? "eager" : "lazy"}
             fetchPriority={i === 0 ? "high" : undefined}
             decoding="async"
+            width={400}
+            height={300}
             className="w-full h-full object-cover animate-ken-burns"
             style={{
               animationDelay: `${i * -3}s`,
@@ -244,6 +246,8 @@ function ArtistSpotlight({ artists }: { artists: Artist[] }) {
                       src={artist.avatarUrl}
                       alt={artist.name}
                       loading="lazy"
+                      width={400}
+                      height={400}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                   ) : (
@@ -316,6 +320,8 @@ function BlogHighlights({ posts }: { posts: BlogPostWithArtist[] }) {
                       sizes={BLOG_SIZES.listCard}
                       loading="lazy"
                       decoding="async"
+                      width={400}
+                      height={250}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                   </div>
@@ -556,6 +562,8 @@ export default function Home() {
                             sizes={ARTWORK_SIZES.card}
                             loading="lazy"
                             decoding="async"
+                            width={400}
+                            height={300}
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                             pictureClassName="block w-full h-full"
                           />

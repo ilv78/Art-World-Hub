@@ -48,6 +48,8 @@ export function ArtworkCard({ artwork, onViewDetails, showAddToCart = true }: Ar
           sizes={ARTWORK_SIZES.card}
           loading="lazy"
           decoding="async"
+          width={320}
+          height={400}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           pictureClassName="block w-full h-full"
         />

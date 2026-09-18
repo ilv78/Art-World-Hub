@@ -365,6 +365,8 @@ export default function ArtistProfile() {
                           sizes={ARTWORK_SIZES.card}
                           loading="lazy"
                           decoding="async"
+                          width={400}
+                          height={300}
                           className="w-full h-full object-cover"
                           pictureClassName="block w-full h-full"
                         />
@@ -476,6 +478,8 @@ export default function ArtistProfile() {
                             sizes={BLOG_SIZES.listCard}
                             loading="lazy"
                             decoding="async"
+                            width={300}
+                            height={100}
                             className="w-full h-full object-cover"
                           />
                         </div>

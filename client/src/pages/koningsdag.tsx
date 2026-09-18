@@ -480,6 +480,8 @@ export default function Koningsdag() {
               <img
                 src="/campaigns/koningsdag/alexandra-painting.jpg"
                 alt="Reverse glass painting by Alexandra, 2026"
+                width={2304}
+                height={2560}
                 style={{ width: "100%", height: "auto", display: "block" }}
               />
             </div>

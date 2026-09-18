@@ -75,6 +75,8 @@ export default function BlogPost({ params }: { params: { id: string } }) {
             loading="eager"
             fetchPriority="high"
             decoding="async"
+            width={400}
+            height={225}
             className="w-full h-full object-cover"
           />
         </div>
