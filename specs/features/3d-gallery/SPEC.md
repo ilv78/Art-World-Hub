@@ -1,7 +1,7 @@
 # Feature: 3D Gallery System
 
 **Status:** Active
-**Last Updated:** 2026-03-12
+**Last Updated:** 2026-09-18
 **Owner:** Architecture
 
 ## Summary
@@ -83,12 +83,31 @@ interface MazeLayout {
 
 ### Regeneration Triggers
 
-Layout regenerates when:
+Layout regenerates **only on artwork mutation**, never on a read. Both gallery GET
+endpoints are read-only: `/api/artists/:id/gallery` returns the stored layout as-is,
+falling back to an unpersisted `generateWhiteRoomLayout(readyArtworks.length)` when
+none is stored yet; `/api/gallery/hallway` does the same per artist room, relying on
+the client's own `generateDefaultLayout()` fallback (`hallway-gallery-3d.tsx`) for
+artists with no stored layout. Neither endpoint writes to the database (#691 — the
+former "stale layout" check on the hallway route did a JSONB slot-count comparison
+and, if it looked wrong, wrote a fresh layout inline on every visitor's GET request:
+racey under concurrent traffic and an O(artists) write path on a public read).
+
+Layout regenerates (a real DB write) when:
 - Artwork `isReadyForExhibition` flag changes
 - Artwork `exhibitionOrder` changes
 - Exhibition-ready artwork is deleted
 - Manual via MCP tool `regenerate_gallery`
-- Stale layout detected on `/api/gallery/hallway` (slot count mismatch)
+
+### Hallway Query Shape
+
+`/api/gallery/hallway` fetches all artists and all exhibition-ready artworks in two
+queries — `storage.getArtists({ includeGalleryLayout: true })` and
+`storage.getAllExhibitionReadyArtworks()` — then groups artworks by `artistId` and
+sorts each artist's group by `exhibitionOrder` (then title) in JS, matching the order
+the layout's wall slots were assigned in. This replaced a per-artist `Promise.all`
+that ran one join per artist (N+1) and let a single artist's query failure 500 the
+whole endpoint.
 
 ### Texture Sizing
 

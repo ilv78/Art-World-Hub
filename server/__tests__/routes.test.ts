@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from "vites
 import request from "supertest";
 import type express from "express";
 import type { IStorage } from "../storage";
-import { createTestApp, mockStorage } from "./helpers/test-app";
+import { createTestApp, mockStorage, mockGenerateWhiteRoomLayout } from "./helpers/test-app";
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -89,6 +89,55 @@ describe("GET /api/artists/:id", () => {
     const res = await request(app).get("/api/artists/nonexistent");
     expect(res.status).toBe(404);
     expect(res.body.error).toBe("Artist not found");
+  });
+});
+
+describe("GET /api/artists/:id/gallery (issue #691)", () => {
+  it("never writes: uses the stored layout as-is and does not regenerate it", async () => {
+    const artist = { id: "1", name: "Alice", galleryLayout: { width: 5, height: 5, cells: [], spawnPoint: { x: 1, z: 1 } } };
+    (mockStorage.getArtist as ReturnType<typeof vi.fn>).mockResolvedValue(artist);
+    (mockStorage.getExhibitionReadyArtworks as ReturnType<typeof vi.fn>).mockResolvedValue([{ id: "aw1" }]);
+
+    const res = await request(app).get("/api/artists/1/gallery");
+    expect(res.status).toBe(200);
+    expect(res.body.layout).toEqual(artist.galleryLayout);
+    expect(mockStorage.regenerateArtistGallery).not.toHaveBeenCalled();
+  });
+
+  it("falls back to a computed layout without writing when none is stored", async () => {
+    const artist = { id: "1", name: "Alice", galleryLayout: null };
+    (mockStorage.getArtist as ReturnType<typeof vi.fn>).mockResolvedValue(artist);
+    (mockStorage.getExhibitionReadyArtworks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+
+    const res = await request(app).get("/api/artists/1/gallery");
+    expect(res.status).toBe(200);
+    expect(res.body.layout).toEqual(mockGenerateWhiteRoomLayout(0));
+    expect(mockStorage.regenerateArtistGallery).not.toHaveBeenCalled();
+  });
+});
+
+describe("GET /api/gallery/hallway (issue #691)", () => {
+  it("never writes and batches artwork lookups into a single call", async () => {
+    const artists = [
+      { id: "a1", name: "Alice", avatarUrl: null, specialization: null, bio: null, country: null, galleryLayout: { width: 3, height: 3, cells: [], spawnPoint: { x: 1, z: 1 } }, galleryTemplate: null },
+      { id: "a2", name: "Bob", avatarUrl: null, specialization: null, bio: null, country: null, galleryLayout: null, galleryTemplate: null },
+    ];
+    const readyArtworks = [
+      { id: "aw2", artistId: "a1", title: "B", exhibitionOrder: 2 },
+      { id: "aw1", artistId: "a1", title: "A", exhibitionOrder: 1 },
+    ];
+    (mockStorage.getArtists as ReturnType<typeof vi.fn>).mockResolvedValue(artists);
+    (mockStorage.getAllExhibitionReadyArtworks as ReturnType<typeof vi.fn>).mockResolvedValue(readyArtworks);
+
+    const res = await request(app).get("/api/gallery/hallway");
+    expect(res.status).toBe(200);
+    // a2 has no ready artworks, so it is dropped from the hallway.
+    expect(res.body).toHaveLength(1);
+    // Sorted by exhibitionOrder, not insertion order, so a1's room matches the layout it was built from.
+    expect(res.body[0].artworks.map((a: any) => a.id)).toEqual(["aw1", "aw2"]);
+    expect(mockStorage.getExhibitionReadyArtworks).not.toHaveBeenCalled();
+    expect(mockStorage.getAllExhibitionReadyArtworks).toHaveBeenCalledTimes(1);
+    expect(mockStorage.regenerateArtistGallery).not.toHaveBeenCalled();
   });
 });
 
