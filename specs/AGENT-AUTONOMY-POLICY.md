@@ -216,6 +216,7 @@ A revert costs minutes. A blocking question costs an afternoon. The asymmetry is
 | Never add a `NOT NULL UNIQUE` column to a populated table without backfilling first. | The #543 failure shape; it is why the local dev DB is currently broken. |
 | **The local dev database lags `shared/schema.ts` deliberately.** `/api/artists` and `/api/artworks` return 500 locally. Do not chase those; do not "fix" it as a side quest. | Known and accepted. Production and staging are unaffected. |
 | Schema changes update `specs/architecture/DATA-MODEL.md` in the same PR. | |
+| **A PR touching `shared/schema.ts` or `migrations/` that goes `DIRTY` against `main` mid-run is normal work, not an escalation.** Rebase, regenerate the migration number and Drizzle snapshot with `drizzle-kit generate` against the merged `schema.ts` (never hand-edit the number or the journal), then re-run `npm run check` — a required field another PR added to the schema can break a placeholder/fixture object elsewhere in the codebase that your own diff never touched, and that only surfaces once both PRs' code coexists. Re-push and continue. | Live on #808's parallel-dispatch test: #538 and #509 both generated `migrations/0015_*.sql` from the same `main`; after renumbering, #509's `exhibition-detail.tsx` placeholder object failed `tsc` because #538 had added `artists.updatedAt` — invisible until both sides coexisted. Fixed by hand that time; this rule makes it something an agent resolves itself instead of leaving `DIRTY`. (#820) |
 
 ---
 
@@ -327,6 +328,7 @@ Only for the gated list (§1), or for something genuinely unrecoverable if wrong
 
 | Date | Change |
 |---|---|
+| 2026-09-18 | §6: a schema/migration-touching PR going `DIRTY` mid-run (numbering collision, or a type shape that only breaks once two PRs' schema changes coexist) is normal work — rebase, regenerate via `drizzle-kit generate`, re-typecheck, re-push. The async case — a PR going `DIRTY` *after* its authoring run already ended, with nobody watching — needs workflow automation instead; the drafted `auto-merge.yml` extension is blocked by the PAT's `.github/workflows/` restriction (§3) and pasted in a PR comment for a human to apply. ([#820](https://github.com/ilv78/Art-World-Hub/issues/820)) |
 | 2026-09-15 | §3: the agent's PAT cannot push any change under `.github/workflows/` — server-side, `workflow`-scope restriction with no `GITHUB_TOKEN` workaround. Discovered on #729, which needed a new scheduled workflow; that PR ships the underlying script with the workflow YAML pasted into a comment for a human to apply. ([#729](https://github.com/ilv78/Art-World-Hub/issues/729)) |
 | 2026-09-12 | Tier B now starts itself: `agent-dispatch.yml` begins a run when a human applies `agent-ready`, serialised repository-wide and bounded by a daily ceiling. ([#753](https://github.com/ilv78/Art-World-Hub/issues/753)) |
 | 2026-09-12 | §9a: `PR Contract` made a required status check, with Dependabot and `autorelease` exempted first — a required check those PRs could never satisfy would have blocked every dependency update and every release. ([#752](https://github.com/ilv78/Art-World-Hub/issues/752)) |
