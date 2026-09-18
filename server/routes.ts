@@ -469,6 +469,7 @@ export async function registerRoutes(
       });
       res.json(artist);
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch artist profile");
       res.status(500).json({ error: "Failed to fetch artist profile" });
     }
   });
@@ -479,6 +480,7 @@ export async function registerRoutes(
       const artists = await storage.getArtists();
       res.json(artists);
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch artists");
       res.status(500).json({ error: "Failed to fetch artists" });
     }
   });
@@ -493,6 +495,7 @@ export async function registerRoutes(
       }
       res.json({ artist });
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch artist");
       res.status(500).json({ error: "Failed to fetch artist" });
     }
   });
@@ -505,6 +508,7 @@ export async function registerRoutes(
       }
       res.json(artist);
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch artist");
       res.status(500).json({ error: "Failed to fetch artist" });
     }
   });
@@ -544,6 +548,7 @@ export async function registerRoutes(
       const artworks = await storage.getArtworksByArtist(req.params.id, { includeDrafts });
       res.json(artworks);
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch artist artworks");
       res.status(500).json({ error: "Failed to fetch artist artworks" });
     }
   });
@@ -561,6 +566,7 @@ export async function registerRoutes(
       const layout = (artist.galleryLayout as any) ?? generateWhiteRoomLayout(readyArtworks.length);
       res.json({ layout, artworks: readyArtworks });
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch artist gallery");
       res.status(500).json({ error: "Failed to fetch artist gallery" });
     }
   });
@@ -600,6 +606,7 @@ export async function registerRoutes(
         .filter((r) => r.artworks.length > 0);
       res.json(artistRooms);
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch hallway gallery data");
       res.status(500).json({ error: "Failed to fetch hallway gallery data" });
     }
   });
@@ -610,6 +617,7 @@ export async function registerRoutes(
       const artworks = await storage.getArtworks();
       res.json(artworks);
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch artworks");
       res.status(500).json({ error: "Failed to fetch artworks" });
     }
   });
@@ -627,6 +635,7 @@ export async function registerRoutes(
       );
       res.json({ artwork, related });
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch artwork");
       res.status(500).json({ error: "Failed to fetch artwork" });
     }
   });
@@ -646,6 +655,7 @@ export async function registerRoutes(
       }
       res.json(artwork);
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch artwork");
       res.status(500).json({ error: "Failed to fetch artwork" });
     }
   });
@@ -656,6 +666,7 @@ export async function registerRoutes(
       const auctions = await storage.getAuctions();
       res.json(auctions);
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch auctions");
       res.status(500).json({ error: "Failed to fetch auctions" });
     }
   });
@@ -668,6 +679,7 @@ export async function registerRoutes(
       }
       res.json(auction);
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch auction");
       res.status(500).json({ error: "Failed to fetch auction" });
     }
   });
@@ -680,6 +692,7 @@ export async function registerRoutes(
       }
       res.json(auction);
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch auction");
       res.status(500).json({ error: "Failed to fetch auction" });
     }
   });
@@ -689,6 +702,7 @@ export async function registerRoutes(
       const bids = await storage.getBidsByAuction(req.params.id);
       res.json(bids);
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch bids");
       res.status(500).json({ error: "Failed to fetch bids" });
     }
   });
@@ -743,6 +757,7 @@ export async function registerRoutes(
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.issues[0].message });
       }
+      logger.error({ err: error }, "Failed to place bid");
       res.status(500).json({ error: "Failed to place bid" });
     }
   });
@@ -759,6 +774,7 @@ export async function registerRoutes(
       const orders = await storage.getOrdersByArtist(artist.id);
       res.json(orders);
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch orders");
       res.status(500).json({ error: "Failed to fetch orders" });
     }
   });
@@ -773,6 +789,7 @@ export async function registerRoutes(
       const artistOrders = await storage.getOrdersByArtist(req.params.id);
       res.json(artistOrders);
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch artist orders");
       res.status(500).json({ error: "Failed to fetch artist orders" });
     }
   });
@@ -823,6 +840,7 @@ export async function registerRoutes(
       if (error instanceof ArtworkAlreadySoldError) {
         return res.status(409).json({ error: "This artwork was just sold to another buyer" });
       }
+      logger.error({ err: error }, "Failed to create order");
       res.status(500).json({ error: "Failed to create order" });
     }
   });
@@ -861,6 +879,7 @@ export async function registerRoutes(
       const updated = await storage.updateOrderStatus(orderId, status);
       res.json(updated);
     } catch (error) {
+      logger.error({ err: error }, "Failed to update order status");
       res.status(500).json({ error: "Failed to update order status" });
     }
   });
@@ -871,6 +890,7 @@ export async function registerRoutes(
       const exhibitions = await storage.getExhibitions();
       res.json(exhibitions);
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch exhibitions");
       res.status(500).json({ error: "Failed to fetch exhibitions" });
     }
   });
@@ -883,6 +903,7 @@ export async function registerRoutes(
       }
       res.json(exhibition);
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch active exhibition");
       res.status(500).json({ error: "Failed to fetch active exhibition" });
     }
   });
@@ -895,6 +916,7 @@ export async function registerRoutes(
       }
       res.json(exhibition);
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch exhibition");
       res.status(500).json({ error: "Failed to fetch exhibition" });
     }
   });
@@ -905,6 +927,7 @@ export async function registerRoutes(
       const posts = await storage.getBlogPosts();
       res.json(posts);
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch blog posts");
       res.status(500).json({ error: "Failed to fetch blog posts" });
     }
   });
@@ -924,6 +947,7 @@ export async function registerRoutes(
       }
       res.json(post);
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch blog post");
       res.status(500).json({ error: "Failed to fetch blog post" });
     }
   });
@@ -936,6 +960,7 @@ export async function registerRoutes(
       const posts = await storage.getBlogPostsByArtist(req.params.id, { includeDrafts });
       res.json(posts);
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch artist blog posts");
       res.status(500).json({ error: "Failed to fetch artist blog posts" });
     }
   });
@@ -957,6 +982,7 @@ export async function registerRoutes(
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.issues[0].message });
       }
+      logger.error({ err: error }, "Failed to create blog post");
       res.status(500).json({ error: "Failed to create blog post" });
     }
   });
@@ -979,6 +1005,10 @@ export async function registerRoutes(
       const post = await storage.updateBlogPost(req.params.id, data);
       res.json(post!);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.issues[0].message });
+      }
+      logger.error({ err: error }, "Failed to update blog post");
       res.status(500).json({ error: "Failed to update blog post" });
     }
   });
@@ -1000,6 +1030,7 @@ export async function registerRoutes(
       await storage.deleteBlogPost(req.params.id);
       res.status(204).send();
     } catch (error) {
+      logger.error({ err: error }, "Failed to delete blog post");
       res.status(500).json({ error: "Failed to delete blog post" });
     }
   });
@@ -1022,6 +1053,7 @@ export async function registerRoutes(
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.issues[0].message });
       }
+      logger.error({ err: error }, "Failed to update artist");
       res.status(500).json({ error: "Failed to update artist" });
     }
   });
@@ -1047,6 +1079,7 @@ export async function registerRoutes(
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.issues[0].message });
       }
+      logger.error({ err: error }, "Failed to create artwork");
       res.status(500).json({ error: "Failed to create artwork" });
     }
   });
@@ -1078,6 +1111,10 @@ export async function registerRoutes(
       }
       res.json(artwork);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.issues[0].message });
+      }
+      logger.error({ err: error }, "Failed to update artwork");
       res.status(500).json({ error: "Failed to update artwork" });
     }
   });
@@ -1117,6 +1154,7 @@ export async function registerRoutes(
       const galleries = await storage.getActiveAndUpcomingCuratorGalleries();
       res.json(galleries);
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch exhibitions");
       res.status(500).json({ error: "Failed to fetch exhibitions" });
     }
   });
@@ -1130,6 +1168,7 @@ export async function registerRoutes(
         artworks: g.artworks,
       })));
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch curated galleries");
       res.status(500).json({ error: "Failed to fetch curated galleries" });
     }
   });
@@ -1144,6 +1183,7 @@ export async function registerRoutes(
       if (gallery.endDate && now > new Date(gallery.endDate)) return res.status(404).json({ error: "Gallery not found" });
       res.json(gallery);
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch gallery");
       res.status(500).json({ error: "Failed to fetch gallery" });
     }
   });
@@ -1158,6 +1198,7 @@ export async function registerRoutes(
       if (gallery.endDate && now > new Date(gallery.endDate)) return res.status(404).json({ error: "Exhibition not found" });
       res.json(gallery);
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch exhibition");
       res.status(500).json({ error: "Failed to fetch exhibition" });
     }
   });
@@ -1189,6 +1230,7 @@ export async function registerRoutes(
       const artworks = await storage.getAllExhibitionReadyArtworks();
       res.json(artworks);
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch artworks");
       res.status(500).json({ error: "Failed to fetch artworks" });
     }
   });
@@ -1200,6 +1242,7 @@ export async function registerRoutes(
       const galleries = await storage.getCuratorGalleriesByCurator(userId);
       res.json(galleries);
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch galleries");
       res.status(500).json({ error: "Failed to fetch galleries" });
     }
   });
@@ -1212,6 +1255,7 @@ export async function registerRoutes(
       const gallery = await storage.createCuratorGallery(data);
       res.status(201).json(gallery);
     } catch (error) {
+      logger.error({ err: error }, "Failed to create gallery");
       res.status(500).json({ error: "Failed to create gallery" });
     }
   });
@@ -1229,6 +1273,7 @@ export async function registerRoutes(
       const updated = await storage.updateCuratorGallery(req.params.id, data);
       res.json(updated);
     } catch (error) {
+      logger.error({ err: error }, "Failed to update gallery");
       res.status(500).json({ error: "Failed to update gallery" });
     }
   });
@@ -1243,6 +1288,7 @@ export async function registerRoutes(
       await storage.deleteCuratorGallery(req.params.id);
       res.json({ success: true });
     } catch (error) {
+      logger.error({ err: error }, "Failed to delete gallery");
       res.status(500).json({ error: "Failed to delete gallery" });
     }
   });
@@ -1261,6 +1307,7 @@ export async function registerRoutes(
       const updated = await storage.getCuratorGallery(req.params.id);
       res.json(updated);
     } catch (error) {
+      logger.error({ err: error }, "Failed to update gallery artworks");
       res.status(500).json({ error: "Failed to update gallery artworks" });
     }
   });
@@ -1273,6 +1320,7 @@ export async function registerRoutes(
       const safeUsers = users.map(({ password: _, ...u }) => u);
       res.json(safeUsers);
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch users");
       res.status(500).json({ error: "Failed to fetch users" });
     }
   });
@@ -1290,6 +1338,7 @@ export async function registerRoutes(
       const { password: _, ...safeUser } = user;
       res.json(safeUser);
     } catch (error) {
+      logger.error({ err: error }, "Failed to update user role");
       res.status(500).json({ error: "Failed to update user role" });
     }
   });
@@ -1312,6 +1361,7 @@ export async function registerRoutes(
       }
       res.status(204).send();
     } catch (error) {
+      logger.error({ err: error }, "Failed to delete user");
       res.status(500).json({ error: "Failed to delete user" });
     }
   });
@@ -1321,6 +1371,7 @@ export async function registerRoutes(
       const artists = await storage.getArtists();
       res.json(artists);
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch artists");
       res.status(500).json({ error: "Failed to fetch artists" });
     }
   });
@@ -1333,6 +1384,7 @@ export async function registerRoutes(
       }
       res.status(204).send();
     } catch (error) {
+      logger.error({ err: error }, "Failed to delete artist");
       res.status(500).json({ error: "Failed to delete artist" });
     }
   });
@@ -1342,6 +1394,7 @@ export async function registerRoutes(
       const artworks = await storage.getArtworks();
       res.json(artworks);
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch artworks");
       res.status(500).json({ error: "Failed to fetch artworks" });
     }
   });
@@ -1361,6 +1414,7 @@ export async function registerRoutes(
       }
       res.status(204).send();
     } catch (error) {
+      logger.error({ err: error }, "Failed to delete artwork");
       res.status(500).json({ error: "Failed to delete artwork" });
     }
   });
@@ -1370,6 +1424,7 @@ export async function registerRoutes(
       const exhibitions = await storage.getExhibitions();
       res.json(exhibitions);
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch exhibitions");
       res.status(500).json({ error: "Failed to fetch exhibitions" });
     }
   });
@@ -1382,6 +1437,7 @@ export async function registerRoutes(
       }
       res.status(204).send();
     } catch (error) {
+      logger.error({ err: error }, "Failed to delete exhibition");
       res.status(500).json({ error: "Failed to delete exhibition" });
     }
   });
@@ -1391,6 +1447,7 @@ export async function registerRoutes(
       const posts = await storage.getAllBlogPosts();
       res.json(posts);
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch blog posts");
       res.status(500).json({ error: "Failed to fetch blog posts" });
     }
   });
@@ -1403,6 +1460,7 @@ export async function registerRoutes(
       }
       res.status(204).send();
     } catch (error) {
+      logger.error({ err: error }, "Failed to delete blog post");
       res.status(500).json({ error: "Failed to delete blog post" });
     }
   });
@@ -1413,6 +1471,7 @@ export async function registerRoutes(
       const settings = await storage.getSiteSettings();
       res.json(settings);
     } catch (error) {
+      logger.error({ err: error }, "Failed to fetch site settings");
       res.status(500).json({ error: "Failed to fetch site settings" });
     }
   });
@@ -1423,6 +1482,7 @@ export async function registerRoutes(
       const updated = await storage.updateSiteSettings({ galleryTemplate });
       res.json(updated);
     } catch (error) {
+      logger.error({ err: error }, "Failed to update site settings");
       res.status(500).json({ error: "Failed to update site settings" });
     }
   });
