@@ -22,6 +22,8 @@ const ArtistProfile = lazy(() => import("@/pages/artist-profile"));
 const Blog = lazy(() => import("@/pages/blog"));
 const BlogPost = lazy(() => import("@/pages/blog-post"));
 const ArtworkDetail = lazy(() => import("@/pages/artwork-detail"));
+const AuctionDetail = lazy(() => import("@/pages/auction-detail"));
+const ExhibitionDetail = lazy(() => import("@/pages/exhibition-detail"));
 const AuthPage = lazy(() => import("@/pages/auth-page"));
 const SetPassword = lazy(() => import("@/pages/set-password"));
 const AdminPage = lazy(() => import("@/pages/admin"));
@@ -65,8 +67,10 @@ function Router() {
         <Route path="/" component={Home} />
         <Route path="/gallery" component={Gallery} />
         <Route path="/exhibitions" component={Exhibitions} />
+        <Route path="/exhibitions/:slug" component={ExhibitionDetail} />
         <Route path="/store" component={Store} />
         <Route path="/auctions" component={Auctions} />
+        <Route path="/auctions/:slug" component={AuctionDetail} />
         <Route path="/artists" component={Artists} />
         <Route path="/artists/:slug" component={ArtistProfile} />
         <Route path="/artworks/:slug" component={ArtworkDetail} />

@@ -32,7 +32,10 @@ beforeEach(() => {
   (mockStorage.getArtwork as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
   (mockStorage.getArtworksByArtist as ReturnType<typeof vi.fn>).mockResolvedValue([]);
   (mockStorage.getAuctions as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+  (mockStorage.getActiveAuctions as ReturnType<typeof vi.fn>).mockResolvedValue([]);
   (mockStorage.getAuction as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+  (mockStorage.getAuctionBySlug as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+  (mockStorage.getCuratorGalleryBySlug as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
   (mockStorage.getBidsByAuction as ReturnType<typeof vi.fn>).mockResolvedValue([]);
   (mockStorage.getOrders as ReturnType<typeof vi.fn>).mockResolvedValue([]);
   (mockStorage.getOrder as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
@@ -213,6 +216,92 @@ describe("GET /api/auctions", () => {
     const res = await request(app).get("/api/auctions");
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
+  });
+});
+
+describe("GET /api/public/auctions/:slug (issue #509)", () => {
+  it("returns 200 with the auction when slug resolves", async () => {
+    const auction = {
+      id: "auction-1",
+      slug: "red-harbor-sunset-auction1",
+      startingPrice: "100.00",
+      currentBid: null,
+      artwork: { id: "aw-1", title: "Red Harbor Sunset", artist: { id: "a-1", name: "Ana" } },
+    };
+    (mockStorage.getAuctionBySlug as ReturnType<typeof vi.fn>).mockResolvedValue(auction);
+
+    const res = await request(app).get("/api/public/auctions/red-harbor-sunset-auction1");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(auction);
+  });
+
+  it("returns 404 for an unknown slug", async () => {
+    (mockStorage.getAuctionBySlug as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+
+    const res = await request(app).get("/api/public/auctions/does-not-exist");
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("Auction not found");
+  });
+});
+
+describe("GET /api/public/exhibitions/:slug (issue #509)", () => {
+  const baseGallery = {
+    id: "gallery-1",
+    slug: "spring-show-gallery1",
+    name: "Spring Show",
+    isPublished: true,
+    startDate: null,
+    endDate: null,
+    curator: { id: "c-1", firstName: "Cara", lastName: "Curator" },
+    artworks: [],
+  };
+
+  it("returns 200 with the gallery when slug resolves and is published", async () => {
+    (mockStorage.getCuratorGalleryBySlug as ReturnType<typeof vi.fn>).mockResolvedValue(baseGallery);
+
+    const res = await request(app).get("/api/public/exhibitions/spring-show-gallery1");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(baseGallery);
+  });
+
+  it("returns 404 for an unknown slug", async () => {
+    (mockStorage.getCuratorGalleryBySlug as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+
+    const res = await request(app).get("/api/public/exhibitions/does-not-exist");
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("Exhibition not found");
+  });
+
+  it("returns 404 when the gallery is not published", async () => {
+    (mockStorage.getCuratorGalleryBySlug as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...baseGallery,
+      isPublished: false,
+    });
+
+    const res = await request(app).get("/api/public/exhibitions/spring-show-gallery1");
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 404 when the exhibition hasn't started yet", async () => {
+    const future = new Date(Date.now() + 86_400_000);
+    (mockStorage.getCuratorGalleryBySlug as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...baseGallery,
+      startDate: future,
+    });
+
+    const res = await request(app).get("/api/public/exhibitions/spring-show-gallery1");
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 404 when the exhibition has already ended", async () => {
+    const past = new Date(Date.now() - 86_400_000);
+    (mockStorage.getCuratorGalleryBySlug as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...baseGallery,
+      endDate: past,
+    });
+
+    const res = await request(app).get("/api/public/exhibitions/spring-show-gallery1");
+    expect(res.status).toBe(404);
   });
 });
 
