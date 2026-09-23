@@ -120,6 +120,13 @@
       "when": 1789717734099,
       "tag": "0016_add-auction-and-exhibition-slugs",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1790182395136,
+      "tag": "0017_add_user_approval_status",
+      "breakpoints": true
     }
   ]
 }

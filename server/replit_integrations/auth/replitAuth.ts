@@ -11,7 +11,6 @@ import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { authStorage } from "./storage";
-import { storage } from "../../storage";
 import { sendMagicLinkEmail } from "../../email";
 import { z } from "zod";
 import type { User, UserRole } from "@shared/models/auth";
@@ -114,22 +113,18 @@ function updateUserSession(
 
 async function upsertUser(claims: any) {
   // Google OIDC claims: sub, email, given_name, family_name, picture
-  const user = await authStorage.upsertUser({
+  //
+  // No artist profile is provisioned here even for a brand-new account: that
+  // is a resource the account should not consume until an administrator has
+  // signed off (see approvalStatus on the users table). It is created by the
+  // admin approval endpoint instead, once approved.
+  await authStorage.upsertUser({
     id: claims["sub"],
     email: claims["email"],
     firstName: claims["given_name"] ?? claims["first_name"],
     lastName: claims["family_name"] ?? claims["last_name"],
     profileImageUrl: claims["picture"] ?? claims["profile_image_url"],
   });
-
-  // Only create artist profile for regular users (not curators/admins)
-  if (user.role === "user") {
-    await storage.ensureArtistProfile(user.id, {
-      firstName: claims["given_name"] ?? claims["first_name"],
-      lastName: claims["family_name"] ?? claims["last_name"],
-      email: claims["email"],
-    });
-  }
 }
 
 // Build the origin (protocol + host + port) for callback URLs
@@ -237,20 +232,12 @@ export async function setupAuth(app: Express) {
         return res.redirect("/auth?error=expired_token");
       }
 
-      // Create or get user
+      // Create or get user. No artist profile is provisioned here — that
+      // resource is created on admin approval instead (see upsertUser).
       const user = await authStorage.upsertUser({
         email: link.email,
         emailVerified: true,
       });
-
-      // Only create artist profile for regular users (not curators/admins)
-      if (user.role === "user") {
-        await storage.ensureArtistProfile(user.id, {
-          firstName: user.firstName || undefined,
-          lastName: user.lastName || undefined,
-          email: user.email || undefined,
-        });
-      }
 
       req.login(buildSessionUser(user), (err) => {
         if (err) {
@@ -406,6 +393,31 @@ export async function setupAuth(app: Express) {
   });
 }
 
+const APPROVAL_REQUIRED_MESSAGE: Record<"pending" | "rejected", string> = {
+  pending: "Your account is pending administrator approval.",
+  rejected: "Your account has been rejected. Contact an administrator.",
+};
+
+// Returns true (and writes the response) when `dbUser` may not proceed —
+// missing entirely, or not yet signed off by an administrator (#831). Shared
+// by every role-checking middleware below so approval is enforced in one
+// place rather than re-derived at each call site.
+function rejectUnapproved(res: Parameters<RequestHandler>[1], dbUser: User | undefined): boolean {
+  if (!dbUser) {
+    res.status(401).json({ message: "Unauthorized" });
+    return true;
+  }
+  if (dbUser.approvalStatus !== "approved") {
+    res.status(403).json({
+      message: APPROVAL_REQUIRED_MESSAGE[dbUser.approvalStatus as "pending" | "rejected"],
+      code: "ACCOUNT_NOT_APPROVED",
+      approvalStatus: dbUser.approvalStatus,
+    });
+    return true;
+  }
+  return false;
+}
+
 export const isAdmin: RequestHandler = async (req, res, next) => {
   const user = req.user as any;
 
@@ -419,7 +431,8 @@ export const isAdmin: RequestHandler = async (req, res, next) => {
   }
 
   const dbUser = await authStorage.getUser(userId);
-  if (!dbUser || dbUser.role !== "admin") {
+  if (rejectUnapproved(res, dbUser)) return;
+  if (dbUser!.role !== "admin") {
     return res.status(403).json({ message: "Forbidden — admin access required" });
   }
 
@@ -439,14 +452,19 @@ export const isCurator: RequestHandler = async (req, res, next) => {
   }
 
   const dbUser = await authStorage.getUser(userId);
-  if (!dbUser || (dbUser.role !== "curator" && dbUser.role !== "admin")) {
+  if (rejectUnapproved(res, dbUser)) return;
+  if (dbUser!.role !== "curator" && dbUser!.role !== "admin") {
     return res.status(403).json({ message: "Forbidden — curator access required" });
   }
 
   return next();
 };
 
-export const isAuthenticated: RequestHandler = async (req, res, next) => {
+// Session validity only — no approval check. Used directly by routes (like
+// "who am I") that a pending or rejected user must still be able to reach so
+// the client can render the right state. Everything else should use
+// `isAuthenticated` below.
+export const isSessionValid: RequestHandler = async (req, res, next) => {
   const user = req.user as any;
 
   if (typeof (req as any).isAuthenticated !== "function" || !req.isAuthenticated()) {
@@ -479,4 +497,17 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     res.status(401).json({ message: "Unauthorized" });
     return;
   }
+};
+
+// Resource-consuming routes (uploads, artwork/order/blog mutations, artist
+// profile edits, …) require both a valid session and an administrator's
+// sign-off (#831): a brand-new account is "pending" until approved and must
+// not be able to touch these before then.
+export const isAuthenticated: RequestHandler = async (req, res, next) => {
+  return isSessionValid(req, res, async () => {
+    const userId = (req.user as any)?.claims?.sub;
+    const dbUser = userId ? await authStorage.getUser(userId) : undefined;
+    if (rejectUnapproved(res, dbUser)) return;
+    return next();
+  });
 };
