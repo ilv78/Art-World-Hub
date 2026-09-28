@@ -1,7 +1,7 @@
 # Agent Autonomy Policy
 
 **Status:** Active
-**Last Updated:** 2026-09-23
+**Last Updated:** 2026-09-28
 **Issue:** [#744](https://github.com/ilv78/Art-World-Hub/issues/744)
 
 ---
@@ -261,6 +261,14 @@ Therefore:
 3. Where a local run is the only way to exercise something (an `ANALYZE`-only plugin, a rotation policy), run it locally and say so.
 4. **"Done" means every pipeline triggered by the merge has completed** — CI/CD, Security, Documentation Agent — not that the merge landed.
 5. Before handing anything back to the developer, confirm the server starts cleanly.
+6. **A workflow step's `failure` conclusion is not proof the work inside it failed** — check
+   for a substance signal (a transcript, a result record, an actual artifact) before
+   trusting the step's colour. `claude-code-action` throws on `--max-turns` *after* a
+   successful run and after writing its transcript, so `Work the issue` can read `failure`
+   for a run its own SDK called `success`. `agent-dispatch.yml`'s `Confirm the run produced
+   work` step should read that trailing record before declaring `agent-failed` — drafted
+   and verified, pasted in a PR comment for a human to apply since the PAT cannot push it
+   (§3 below). See `specs/workflows/AGENT-PIPELINE.md` §3 for the mechanism. (#818)
 
 ---
 
@@ -331,6 +339,7 @@ Only for the gated list (§1), or for something genuinely unrecoverable if wrong
 |---|---|
 | 2026-09-23 | §6: staging's `drizzle-kit push` exits 0 when it aborts, silently skipping every pending schema change; the entrypoint now fails the container start instead, and recovery is manual SQL on staging (additive: autonomous; data-rewriting: gated). ([#833](https://github.com/ilv78/Art-World-Hub/issues/833)) |
 | 2026-09-18 | §6: a schema/migration-touching PR going `DIRTY` mid-run (numbering collision, or a type shape that only breaks once two PRs' schema changes coexist) is normal work — rebase, regenerate via `drizzle-kit generate`, re-typecheck, re-push. The async case — a PR going `DIRTY` *after* its authoring run already ended, with nobody watching — needs workflow automation instead; the drafted `auto-merge.yml` extension is blocked by the PAT's `.github/workflows/` restriction (§3) and pasted in a PR comment for a human to apply. ([#820](https://github.com/ilv78/Art-World-Hub/issues/820)) |
+| 2026-09-18 | §9: a workflow step's `failure` conclusion is not proof the work failed — `claude-code-action` throws on `--max-turns` after a successful run and after writing its transcript. The dispatcher fix is drafted and verified but could not ship in the same PR, per the existing §3 `.github/workflows/` PAT restriction. ([#818](https://github.com/ilv78/Art-World-Hub/issues/818)) |
 | 2026-09-15 | §3: the agent's PAT cannot push any change under `.github/workflows/` — server-side, `workflow`-scope restriction with no `GITHUB_TOKEN` workaround. Discovered on #729, which needed a new scheduled workflow; that PR ships the underlying script with the workflow YAML pasted into a comment for a human to apply. ([#729](https://github.com/ilv78/Art-World-Hub/issues/729)) |
 | 2026-09-12 | Tier B now starts itself: `agent-dispatch.yml` begins a run when a human applies `agent-ready`, serialised repository-wide and bounded by a daily ceiling. ([#753](https://github.com/ilv78/Art-World-Hub/issues/753)) |
 | 2026-09-12 | §9a: `PR Contract` made a required status check, with Dependabot and `autorelease` exempted first — a required check those PRs could never satisfy would have blocked every dependency update and every release. ([#752](https://github.com/ilv78/Art-World-Hub/issues/752)) |
