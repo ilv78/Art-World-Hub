@@ -211,9 +211,14 @@ jobs:
             # Ensure upload subdirs exist on the Docker volume (new subdirs may be missing)
             docker compose run --rm --no-deps --user root --entrypoint sh app -c "mkdir -p /app/uploads/artworks /app/uploads/blog-covers /app/uploads/avatars /app/uploads/og-cards /app/logs && chown -R appuser:appgroup /app/uploads /app/logs"
             docker compose up -d --remove-orphans
-            # Run pending database migrations
-            echo "Running database migrations..."
-            docker compose exec -T app npx drizzle-kit migrate || echo "Warning: migration failed or no pending migrations"
+            # Staging's compose sets no DB_MIGRATION_MODE, so docker-entrypoint.sh
+            # already pushed the schema on container start (push mode). This step
+            # was running `drizzle-kit migrate` instead — a no-op against a database
+            # with no migration journal — and its failure was swallowed by `|| echo`,
+            # masking real push failures too (#692). Match the entrypoint's actual
+            # mode and let a genuine failure fail the deploy.
+            echo "Running database schema push..."
+            docker compose exec -T app npx drizzle-kit push --force
             echo "Waiting for app to be healthy..."
             for i in $(seq 1 60); do
               if docker compose exec -T app node -e "fetch('http://localhost:5000/health').then(r => { if (!r.ok) process.exit(1) })" 2>/dev/null; then
@@ -508,7 +513,7 @@ jobs:
             docker compose up -d --remove-orphans
             # Run pending database migrations (push mode, like staging)
             echo "Running database schema push..."
-            docker compose exec -T app npx drizzle-kit push --force || echo "Warning: schema push failed"
+            docker compose exec -T app npx drizzle-kit push --force
             echo "Waiting for app to be healthy..."
             for i in $(seq 1 60); do
               if docker compose exec -T app node -e "fetch('http://localhost:5000/health').then(r => { if (!r.ok) process.exit(1) })" 2>/dev/null; then
