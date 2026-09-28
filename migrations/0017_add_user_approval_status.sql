@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "approval_status" varchar DEFAULT 'approved' NOT NULL;

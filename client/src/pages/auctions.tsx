@@ -77,6 +77,8 @@ function AuctionCard({
           src={auction.artwork.imageUrl}
           alt={auction.artwork.title}
           loading="lazy"
+          width={400}
+          height={300}
           className="w-full h-full object-cover"
         />
         <Badge
@@ -379,6 +381,8 @@ export default function Auctions() {
                       src={selectedAuction.artwork.imageUrl}
                       alt={selectedAuction.artwork.title}
                       loading="lazy"
+                      width={96}
+                      height={96}
                       className="w-full h-full object-cover"
                     />
                   </div>

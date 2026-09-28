@@ -1,0 +1,160 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Helmet } from "react-helmet-async";
+import { MazeGallery3D } from "@/components/maze-gallery-3d";
+import { ArtworkCard } from "@/components/artwork-card";
+import { ArtworkDetailDialog } from "@/components/artwork-detail-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Box, X } from "lucide-react";
+import { useImmersiveMode } from "@/hooks/use-immersive-mode";
+import { ShareButtons } from "@/components/share-buttons";
+import { getCanonicalShareUrl } from "@/lib/share-urls";
+import { useArtworkModalFromQuery } from "@/hooks/use-modal-from-query";
+import { ViewModeToggle, type ViewMode } from "@/components/view-mode-toggle";
+import type { ArtworkWithArtist, CuratorGalleryWithArtworks, MazeLayout } from "@shared/schema";
+
+// The canonical, SEO-indexable exhibition detail page (#509) — backed by
+// /api/public/exhibitions/:slug and server/meta.ts's /exhibitions/:slug
+// branch. /curator-gallery/:id keeps working unchanged for existing links;
+// this is the same underlying curatorGalleries record, just resolved by
+// slug instead of id.
+export default function ExhibitionDetail({
+  params,
+}: {
+  params: { slug: string };
+}) {
+  const { isImmersive, toggleImmersive } = useImmersiveMode();
+  const initialView: ViewMode = (() => {
+    if (typeof window === "undefined") return "classic";
+    const requested = new URLSearchParams(window.location.search).get("view");
+    return requested === "3d" ? "3d" : "classic";
+  })();
+  const [viewMode, setViewMode] = useState<ViewMode>(initialView);
+  const [selectedArtwork, setSelectedArtwork] = useState<ArtworkWithArtist | null>(null);
+
+  const { data: gallery, isLoading, error } = useQuery<CuratorGalleryWithArtworks>({
+    queryKey: [`/api/public/exhibitions/${params.slug}`],
+  });
+
+  useArtworkModalFromQuery({
+    artworks: gallery?.artworks,
+    selected: selectedArtwork,
+    setSelected: setSelectedArtwork,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="p-6">
+        <Skeleton className="h-[500px] rounded-md" />
+      </div>
+    );
+  }
+
+  if (error || !gallery) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Box className="w-12 h-12 text-muted-foreground" />
+        <p className="text-lg text-muted-foreground">Exhibition not found or no longer available.</p>
+      </div>
+    );
+  }
+
+  const layout = gallery.galleryLayout as MazeLayout | null;
+  const curatorName = [gallery.curator.firstName, gallery.curator.lastName].filter(Boolean).join(" ") || "Curator";
+
+  const posterBio = (() => {
+    const parts: string[] = [];
+    if (gallery.description) parts.push(gallery.description);
+    parts.push("");
+    const byArtist = new Map<string, { name: string; titles: string[] }>();
+    for (const aw of gallery.artworks) {
+      if (!byArtist.has(aw.artist.id)) byArtist.set(aw.artist.id, { name: aw.artist.name, titles: [] });
+      byArtist.get(aw.artist.id)!.titles.push(aw.title);
+    }
+    for (const { name, titles } of Array.from(byArtist.values())) {
+      parts.push(`${name}: ${titles.join(", ")}`);
+    }
+    return parts.join("\n");
+  })();
+
+  return (
+    <div className={`flex flex-col ${isImmersive ? "h-screen" : viewMode === "3d" ? "h-[calc(100vh-4rem)]" : "min-h-[calc(100vh-4rem)]"}`}>
+      <Helmet><title>{`${gallery.name} — Vernis9 Exhibition`}</title></Helmet>
+      {isImmersive && (
+        <Button
+          size="icon"
+          variant="secondary"
+          className="fixed top-4 right-4 z-50 shadow-lg"
+          onClick={toggleImmersive}
+          data-testid="button-exit-immersive"
+        >
+          <X className="w-5 h-5" />
+        </Button>
+      )}
+      {!isImmersive && (
+        <div className="p-4 border-b bg-background flex flex-col sm:flex-row sm:flex-wrap sm:items-start sm:justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="font-serif text-2xl font-bold">{gallery.name}</h1>
+            <p className="text-sm text-muted-foreground">
+              Curated by {curatorName}
+              {gallery.description && ` — ${gallery.description}`}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <ShareButtons
+              url={getCanonicalShareUrl()}
+              itemType="exhibition"
+              itemId={gallery.id}
+              title={`${gallery.name} — Vernis9 Exhibition`}
+              description={gallery.description || `Curated exhibition by ${curatorName} on Vernis9.`}
+              imageUrl={gallery.artworks[0]?.imageUrl}
+            />
+            {gallery.artworks.length > 0 && layout && (
+              <ViewModeToggle value={viewMode} onValueChange={setViewMode} />
+            )}
+          </div>
+        </div>
+      )}
+      <div className="flex-1 relative">
+        {gallery.artworks.length > 0 && layout ? (
+          viewMode === "3d" ? (
+            <MazeGallery3D
+              artworks={gallery.artworks}
+              layout={layout}
+              galleryTemplate={gallery.galleryTemplate || "contemporary"}
+              artist={{ id: gallery.id, slug: gallery.id, name: gallery.name, avatarUrl: null, specialization: `Curated by ${curatorName}`, bio: posterBio, email: null, country: null, userId: null, galleryLayout: null, galleryTemplate: null, socialLinks: null, updatedAt: new Date() }}
+              isImmersive={isImmersive}
+              onRequestImmersive={toggleImmersive}
+            />
+          ) : (
+            <div className="p-4 sm:p-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {gallery.artworks.map((artwork) => (
+                  <ArtworkCard
+                    key={artwork.id}
+                    artwork={artwork}
+                    onViewDetails={() => setSelectedArtwork(artwork)}
+                  />
+                ))}
+              </div>
+            </div>
+          )
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <Box className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">This gallery has no artworks yet.</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <ArtworkDetailDialog
+        artwork={selectedArtwork}
+        open={!!selectedArtwork}
+        onOpenChange={(open) => !open && setSelectedArtwork(null)}
+      />
+    </div>
+  );
+}

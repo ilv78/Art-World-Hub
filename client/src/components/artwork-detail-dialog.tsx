@@ -72,6 +72,8 @@ export function ArtworkDetailDialog({
               sizes={ARTWORK_SIZES.detail}
               loading="lazy"
               decoding="async"
+              width={400}
+              height={300}
               className="w-full h-auto object-contain max-h-[75vh]"
             />
             {!artwork.isForSale && (

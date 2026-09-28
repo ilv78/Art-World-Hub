@@ -1,12 +1,14 @@
 import type { Express } from "express";
 import { authStorage } from "./storage";
-import { isAuthenticated } from "./replitAuth";
+import { isSessionValid } from "./replitAuth";
 import { authLogger as logger } from "../../logger";
 
 // Register auth-specific routes
 export function registerAuthRoutes(app: Express): void {
-  // Get current authenticated user
-  app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
+  // Get current authenticated user. Deliberately uses isSessionValid rather
+  // than isAuthenticated: a pending or rejected user (#831) still needs to
+  // read their own record so the client can render the right state.
+  app.get("/api/auth/user", isSessionValid, async (req: any, res) => {
     try {
       const claims = req.user?.claims;
       const userId = claims?.sub;

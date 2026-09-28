@@ -1881,6 +1881,8 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
               src={selectedArtwork.imageUrl}
               alt={selectedArtwork.title}
               loading="lazy"
+              width={400}
+              height={300}
               className="w-full h-full object-contain bg-black/40"
             />
           </div>
@@ -2024,6 +2026,8 @@ export function MazeGallery3D({ artworks, layout = defaultLayout, whiteRoom = fa
                             src={artwork.imageUrl}
                             alt={artwork.title}
                             loading="lazy"
+                            width={400}
+                            height={400}
                             className="w-full h-full object-cover transition-transform duration-300 group-hover/artwork:scale-110"
                           />
                         </div>

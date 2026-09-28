@@ -237,6 +237,8 @@ export default function Artists() {
                               src={artwork.imageUrl}
                               alt={artwork.title}
                               loading="lazy"
+                              width={400}
+                              height={400}
                               className="w-full h-full object-cover transition-transform duration-300 group-hover/artwork:scale-110"
                             />
                           </div>

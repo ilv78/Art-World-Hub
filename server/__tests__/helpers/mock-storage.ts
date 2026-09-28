@@ -26,7 +26,9 @@ export function createMockStorage(): IStorage {
 
     // Auctions
     getAuctions: vi.fn().mockResolvedValue([]),
+    getActiveAuctions: vi.fn().mockResolvedValue([]),
     getAuction: vi.fn().mockResolvedValue(undefined),
+    getAuctionBySlug: vi.fn().mockResolvedValue(undefined),
     createAuction: vi.fn().mockResolvedValue({}),
     updateAuction: vi.fn().mockResolvedValue(undefined),
 
@@ -63,6 +65,7 @@ export function createMockStorage(): IStorage {
     // Curator Galleries
     getCuratorGalleriesByCurator: vi.fn().mockResolvedValue([]),
     getCuratorGallery: vi.fn().mockResolvedValue(undefined),
+    getCuratorGalleryBySlug: vi.fn().mockResolvedValue(undefined),
     getPublishedCuratorGalleries: vi.fn().mockResolvedValue([]),
     getActiveAndUpcomingCuratorGalleries: vi.fn().mockResolvedValue([]),
     createCuratorGallery: vi.fn().mockResolvedValue({}),

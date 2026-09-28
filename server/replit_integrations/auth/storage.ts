@@ -1,4 +1,4 @@
-import { users, magicLinks, type User, type UpsertUser, type MagicLink } from "@shared/models/auth";
+import { users, magicLinks, type User, type UpsertUser, type MagicLink, type UserApprovalStatus } from "@shared/models/auth";
 import { db } from "../../db";
 import { eq, and, isNull, gt } from "drizzle-orm";
 
@@ -10,6 +10,7 @@ export interface IAuthStorage {
   setPassword(userId: string, hashedPassword: string): Promise<void>;
   createMagicLink(email: string, token: string, expiresAt: Date): Promise<MagicLink>;
   consumeMagicLink(token: string): Promise<MagicLink | undefined>;
+  setApprovalStatus(userId: string, status: UserApprovalStatus): Promise<User | undefined>;
 }
 
 class AuthStorage implements IAuthStorage {
@@ -28,11 +29,18 @@ class AuthStorage implements IAuthStorage {
     // Do NOT update the primary key `id` on email conflict.
     const hasEmail = !!userData.email;
 
+    // New accounts default to "pending" (overriding the column's "approved"
+    // default, which only exists to grandfather rows that predate this
+    // column). An existing account's approvalStatus must never be reset by a
+    // login/profile-sync upsert, so it is deliberately excluded from `set`
+    // below — only the dedicated approve/reject flow changes it post-creation.
+    const insertValues = { approvalStatus: "pending" as UserApprovalStatus, ...userData };
+
     if (hasEmail) {
-      const { id: _id, ...userDataNoId } = userData as any;
+      const { id: _id, approvalStatus: _approvalStatus, ...userDataNoId } = insertValues as any;
       const [user] = await db
         .insert(users)
-        .values(userData)
+        .values(insertValues)
         .onConflictDoUpdate({
           target: users.email,
           set: {
@@ -44,13 +52,14 @@ class AuthStorage implements IAuthStorage {
       return user;
     }
 
+    const { approvalStatus: _approvalStatus, ...userDataNoApproval } = insertValues as any;
     const [user] = await db
       .insert(users)
-      .values(userData)
+      .values(insertValues)
       .onConflictDoUpdate({
         target: users.id,
         set: {
-          ...userData,
+          ...userDataNoApproval,
           updatedAt: new Date(),
         },
       })
@@ -72,6 +81,15 @@ class AuthStorage implements IAuthStorage {
       .values({ email, token, expiresAt })
       .returning();
     return link;
+  }
+
+  async setApprovalStatus(userId: string, status: UserApprovalStatus): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ approvalStatus: status, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
   }
 
   async consumeMagicLink(token: string): Promise<MagicLink | undefined> {

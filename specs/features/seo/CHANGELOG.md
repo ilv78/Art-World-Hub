@@ -1,5 +1,39 @@
 # SEO Feature Changelog
 
+## 2026-09-18 — Public auction + exhibition detail pages with `Event` JSON-LD (#509)
+- New public routes `GET /auctions/:slug` and `GET /exhibitions/:slug`, with server-rendered meta tags + `Event` JSON-LD, following the same pattern as `/artworks/:slug` (#503). `/exhibitions/:slug` resolves against `curatorGalleries` — the table that actually backs the public `/exhibitions` listing, not the single-`isActive` maze-layout `exhibitions` table.
+- `Event` JSON-LD carries `startDate`/`endDate`, `eventAttendanceMode: OnlineEventAttendanceMode`, `eventStatus: EventScheduled`, `location: VirtualLocation`, and `organizer: { "@type": "Organization", name: "Vernis9" }` per the issue spec — a deliberate difference from the pre-existing `/curator-gallery/:id` `ExhibitionEvent` block (curator as `Person` organizer), which is untouched.
+- Auctions additionally carry an `offers` block: `Offer.price` = `auction.currentBid ?? auction.startingPrice`, with a nested `Offer.priceSpecification` (`UnitPriceSpecification`) and `availability` derived from whether the auction has ended.
+- New `slug` column on `auctions` and `curator_galleries` (migration `0016_add-auction-and-exhibition-slugs.sql`). Unlike `artworks.slug` (#503), this needed no `UPDATE` backfill statement — the column's SQL `DEFAULT` generates a fallback slug for pre-existing rows in the same `ADD COLUMN` statement, keeping the migration purely additive (see `specs/decisions/log/2026-09-18-auction-exhibition-slug-default-backfill.md`). New rows always get a real, human-readable slug from application code.
+- New API endpoints `GET /api/public/auctions/:slug` and `GET /api/public/exhibitions/:slug`.
+- New client pages `auction-detail.tsx` / `exhibition-detail.tsx`; `/curator-gallery/:id` is left unchanged for existing links.
+- Sitemap now includes active auctions and active (published, in-window) exhibitions by slug, each with `<image:image>` when a hero image exists.
+- `ShareButtons`/`SHARE_ITEM_TYPES` and the `/og/:type/:id.jpg` branded card route gained an `"auction"` variant, matching the existing `"exhibition"` one.
+- Verified locally end-to-end against a real Postgres instance (server started, migrations applied, both routes returned 200 with the expected JSON-LD, 404 for unknown slugs, sitemap included both) — see PR `## Verification`.
+
+## 2026-09-18 — Internal linking + FAQ mention by full artist name — Ultraplan Phase 4 (#539)
+- Parent Ultraplan's Phase 4 (after #535's DB fix, #537's slug URLs, #538): soft signals — internal anchor text mentioning "Alexandra Constantin" verbatim from more than one page.
+- `shared/faqs.ts`'s `Faq` interface gained an optional `link: { text, href }`, and a sixth entry, "Who is Alexandra Constantin?", uses it to link `alexandra-constantin-4493f600` with exact-match anchor text — the cheapest single internal link the issue asked for. `server/meta.ts`'s FAQPage JSON-LD is unaffected (`Answer.text` is plain text regardless); `client/src/pages/home.tsx`'s accordion renders the link as a `wouter` `<Link>` after the answer.
+- `client/src/pages/artwork-detail.tsx`'s existing link to the creator (#503) wrapped the artist's full name together with a generic "View artist profile" caption inside one `<a>` — the exact pattern the issue calls out. Removed the caption so the anchor's clickable text is just `{artwork.artist.name}`.
+- `server/__tests__/meta.test.ts` extended with a case asserting the new FAQ entry surfaces by full name in the homepage FAQPage JSON-LD.
+- Sitemap/robots/other SEO surfaces untouched — this issue was link text only.
+
+## 2026-09-18 — Artist `updatedAt` + sitemap `<lastmod>` + richer Person schema (#538)
+- Phase 3 of the artist-SEO ultraplan (#363), after Phase 1 (#535, sameAs) and Phase 2 (#537, slug URLs).
+- Added `artists.updatedAt` (`timestamp`, `defaultNow().notNull()`, additive migration `0015_add_artist_updated_at.sql`) — `storage.updateArtist` now sets it explicitly on every write (both the no-rename and slug-rename branches), matching the existing `blog_posts`/`curator_galleries` pattern rather than a DB trigger.
+- `server/routes/sitemap.ts` emits `<lastmod>` (ISO-8601 date) on every `/artists/:slug` `<url>` block from `artists.updatedAt`. Per the issue, `artworks` has no `updatedAt` column, so this is `artist.updatedAt` alone rather than a max over the artist's artworks too — v1 scope, explicitly allowed by the issue text.
+- `server/meta.ts`'s Person JSON-LD on `/artists/:slug` gained `nationality` (from `artists.country`, omitted when unset) and `worksFor` — a cross-reference to the homepage's Organization block via a new stable `@id` (`https://vernis9.art/#organization`) rather than re-emitting the Organization object on every artist page.
+- Third work item ("per-artist 1200×630 OG card") needed no new code: `GET /og/:type/:id.jpg` (`server/routes/og-cards.ts` + `server/lib/og-card.ts`, added under #577/#593) already serves a Sharp-rendered 1200×630 branded card for `type=artist`, and `server/meta.ts`'s `ogCardUrl()` already points the artist page's `og:image` at it. The issue's sketched acceptance-criteria path (`/og/artists/<slug>.png`) predates the actual shipped shape (`/og/artist/<slug>.jpg`, singular type segment, `.jpg`) — documented here and in `specs/features/seo/SPEC.md` rather than renamed, since the working route has existing callers and test coverage (`server/__tests__/og-card.test.ts`).
+- `specs/architecture/DATA-MODEL.md` updated for the new column.
+
+## 2026-09-18 — Explicit `width`/`height` on every `<img>` to prevent CLS (#507)
+- #496's audit (§3.11) found most `<img>` tags omit `width`/`height`, so Lighthouse's "Image elements do not have explicit width and height" audit fails and the browser can't reserve layout space before an image loads.
+- Every `<img>` and `<ResponsiveImage>` call site in `client/src` now sets `width`/`height`: matching the exact ratio of the container's Tailwind `aspect-*` class (or its fixed `w-N h-N` pixel size) where one exists, falling back to a `400×300` (4:3) default — per the issue's own suggested fallback — where no container aspect is declared.
+- Neither `artworks`, `artists`, nor `blog_posts` store intrinsic image dimensions (`shared/schema.ts` has no `imageWidth`/`imageHeight` columns), so DB-backed images cannot use real values; the one static asset outside the DB (`client/public/campaigns/koningsdag/alexandra-painting.jpg`) got its real dimensions (`2304×2560`) read from the file instead.
+- `ResponsiveImage` (`client/src/components/responsive-image.tsx`) needed no code change — it already spreads all `img` props, including `width`/`height`, onto the underlying `<img>`.
+- Zero visual diff: every affected image already had `w-full`/`h-full`/`h-auto` or an explicit fixed size in its `className`, which overrides the attribute-derived box once CSS applies — the `width`/`height` attributes only affect the pre-load placeholder size.
+- Lighthouse re-verification against the deployed instance is a manual post-merge step — CI has no browser-lab CLS check (see PR `## Verification`).
+
 ## 2026-09-17 — Semantic HTML pass: landmarks + heading hierarchy (#505)
 - #496's audit claimed no `<main>`/`<nav>` existed anywhere — a curl-based check against the pre-hydration SPA shell, which really has neither; both already existed in the rendered DOM (`public-layout.tsx`'s `<main>` since #289, `top-nav.tsx`'s desktop `<nav>`) and are what Lighthouse/axe DevTools, the tools this issue's acceptance criteria name, actually see.
 - What was real: `store.tsx`, `artists.tsx`, `auctions.tsx`, and `gallery.tsx`'s classic image viewer rendered their first sub-heading as `<h3>` directly under the page `<h1>`, skipping `<h2>` — a genuine axe `heading-order` violation.

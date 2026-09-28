@@ -2,7 +2,8 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from "vites
 import request from "supertest";
 import type express from "express";
 import type { IStorage } from "../storage";
-import { createTestApp, mockStorage } from "./helpers/test-app";
+import { createTestApp, mockStorage, mockGenerateWhiteRoomLayout } from "./helpers/test-app";
+import { authStorage } from "../replit_integrations/auth";
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -32,7 +33,10 @@ beforeEach(() => {
   (mockStorage.getArtwork as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
   (mockStorage.getArtworksByArtist as ReturnType<typeof vi.fn>).mockResolvedValue([]);
   (mockStorage.getAuctions as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+  (mockStorage.getActiveAuctions as ReturnType<typeof vi.fn>).mockResolvedValue([]);
   (mockStorage.getAuction as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+  (mockStorage.getAuctionBySlug as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+  (mockStorage.getCuratorGalleryBySlug as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
   (mockStorage.getBidsByAuction as ReturnType<typeof vi.fn>).mockResolvedValue([]);
   (mockStorage.getOrders as ReturnType<typeof vi.fn>).mockResolvedValue([]);
   (mockStorage.getOrder as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
@@ -86,6 +90,55 @@ describe("GET /api/artists/:id", () => {
     const res = await request(app).get("/api/artists/nonexistent");
     expect(res.status).toBe(404);
     expect(res.body.error).toBe("Artist not found");
+  });
+});
+
+describe("GET /api/artists/:id/gallery (issue #691)", () => {
+  it("never writes: uses the stored layout as-is and does not regenerate it", async () => {
+    const artist = { id: "1", name: "Alice", galleryLayout: { width: 5, height: 5, cells: [], spawnPoint: { x: 1, z: 1 } } };
+    (mockStorage.getArtist as ReturnType<typeof vi.fn>).mockResolvedValue(artist);
+    (mockStorage.getExhibitionReadyArtworks as ReturnType<typeof vi.fn>).mockResolvedValue([{ id: "aw1" }]);
+
+    const res = await request(app).get("/api/artists/1/gallery");
+    expect(res.status).toBe(200);
+    expect(res.body.layout).toEqual(artist.galleryLayout);
+    expect(mockStorage.regenerateArtistGallery).not.toHaveBeenCalled();
+  });
+
+  it("falls back to a computed layout without writing when none is stored", async () => {
+    const artist = { id: "1", name: "Alice", galleryLayout: null };
+    (mockStorage.getArtist as ReturnType<typeof vi.fn>).mockResolvedValue(artist);
+    (mockStorage.getExhibitionReadyArtworks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+
+    const res = await request(app).get("/api/artists/1/gallery");
+    expect(res.status).toBe(200);
+    expect(res.body.layout).toEqual(mockGenerateWhiteRoomLayout(0));
+    expect(mockStorage.regenerateArtistGallery).not.toHaveBeenCalled();
+  });
+});
+
+describe("GET /api/gallery/hallway (issue #691)", () => {
+  it("never writes and batches artwork lookups into a single call", async () => {
+    const artists = [
+      { id: "a1", name: "Alice", avatarUrl: null, specialization: null, bio: null, country: null, galleryLayout: { width: 3, height: 3, cells: [], spawnPoint: { x: 1, z: 1 } }, galleryTemplate: null },
+      { id: "a2", name: "Bob", avatarUrl: null, specialization: null, bio: null, country: null, galleryLayout: null, galleryTemplate: null },
+    ];
+    const readyArtworks = [
+      { id: "aw2", artistId: "a1", title: "B", exhibitionOrder: 2 },
+      { id: "aw1", artistId: "a1", title: "A", exhibitionOrder: 1 },
+    ];
+    (mockStorage.getArtists as ReturnType<typeof vi.fn>).mockResolvedValue(artists);
+    (mockStorage.getAllExhibitionReadyArtworks as ReturnType<typeof vi.fn>).mockResolvedValue(readyArtworks);
+
+    const res = await request(app).get("/api/gallery/hallway");
+    expect(res.status).toBe(200);
+    // a2 has no ready artworks, so it is dropped from the hallway.
+    expect(res.body).toHaveLength(1);
+    // Sorted by exhibitionOrder, not insertion order, so a1's room matches the layout it was built from.
+    expect(res.body[0].artworks.map((a: any) => a.id)).toEqual(["aw1", "aw2"]);
+    expect(mockStorage.getExhibitionReadyArtworks).not.toHaveBeenCalled();
+    expect(mockStorage.getAllExhibitionReadyArtworks).toHaveBeenCalledTimes(1);
+    expect(mockStorage.regenerateArtistGallery).not.toHaveBeenCalled();
   });
 });
 
@@ -213,6 +266,92 @@ describe("GET /api/auctions", () => {
     const res = await request(app).get("/api/auctions");
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
+  });
+});
+
+describe("GET /api/public/auctions/:slug (issue #509)", () => {
+  it("returns 200 with the auction when slug resolves", async () => {
+    const auction = {
+      id: "auction-1",
+      slug: "red-harbor-sunset-auction1",
+      startingPrice: "100.00",
+      currentBid: null,
+      artwork: { id: "aw-1", title: "Red Harbor Sunset", artist: { id: "a-1", name: "Ana" } },
+    };
+    (mockStorage.getAuctionBySlug as ReturnType<typeof vi.fn>).mockResolvedValue(auction);
+
+    const res = await request(app).get("/api/public/auctions/red-harbor-sunset-auction1");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(auction);
+  });
+
+  it("returns 404 for an unknown slug", async () => {
+    (mockStorage.getAuctionBySlug as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+
+    const res = await request(app).get("/api/public/auctions/does-not-exist");
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("Auction not found");
+  });
+});
+
+describe("GET /api/public/exhibitions/:slug (issue #509)", () => {
+  const baseGallery = {
+    id: "gallery-1",
+    slug: "spring-show-gallery1",
+    name: "Spring Show",
+    isPublished: true,
+    startDate: null,
+    endDate: null,
+    curator: { id: "c-1", firstName: "Cara", lastName: "Curator" },
+    artworks: [],
+  };
+
+  it("returns 200 with the gallery when slug resolves and is published", async () => {
+    (mockStorage.getCuratorGalleryBySlug as ReturnType<typeof vi.fn>).mockResolvedValue(baseGallery);
+
+    const res = await request(app).get("/api/public/exhibitions/spring-show-gallery1");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(baseGallery);
+  });
+
+  it("returns 404 for an unknown slug", async () => {
+    (mockStorage.getCuratorGalleryBySlug as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+
+    const res = await request(app).get("/api/public/exhibitions/does-not-exist");
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("Exhibition not found");
+  });
+
+  it("returns 404 when the gallery is not published", async () => {
+    (mockStorage.getCuratorGalleryBySlug as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...baseGallery,
+      isPublished: false,
+    });
+
+    const res = await request(app).get("/api/public/exhibitions/spring-show-gallery1");
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 404 when the exhibition hasn't started yet", async () => {
+    const future = new Date(Date.now() + 86_400_000);
+    (mockStorage.getCuratorGalleryBySlug as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...baseGallery,
+      startDate: future,
+    });
+
+    const res = await request(app).get("/api/public/exhibitions/spring-show-gallery1");
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 404 when the exhibition has already ended", async () => {
+    const past = new Date(Date.now() - 86_400_000);
+    (mockStorage.getCuratorGalleryBySlug as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...baseGallery,
+      endDate: past,
+    });
+
+    const res = await request(app).get("/api/public/exhibitions/spring-show-gallery1");
+    expect(res.status).toBe(404);
   });
 });
 
@@ -908,6 +1047,73 @@ describe("GET /api/admin/logs", () => {
     } finally {
       fs.renameSync(tmpPath, logFile);
     }
+  });
+});
+
+// ----- Admin user approval (#831) -----
+
+describe("PATCH /api/admin/users/:id/approval", () => {
+  beforeEach(() => {
+    (authStorage.setApprovalStatus as ReturnType<typeof vi.fn>).mockReset();
+    (mockStorage.ensureArtistProfile as ReturnType<typeof vi.fn>).mockReset();
+  });
+
+  it("rejects an invalid status with 400", async () => {
+    const res = await request(app).patch("/api/admin/users/user-1/approval").send({ status: "not-a-status" });
+    expect(res.status).toBe(400);
+    expect(authStorage.setApprovalStatus).not.toHaveBeenCalled();
+  });
+
+  it("approves a pending user and provisions their artist profile", async () => {
+    (authStorage.setApprovalStatus as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "user-1",
+      email: "new@example.com",
+      role: "user",
+      approvalStatus: "approved",
+      firstName: "New",
+      lastName: "User",
+    });
+    (mockStorage.ensureArtistProfile as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "artist-1" });
+
+    const res = await request(app).patch("/api/admin/users/user-1/approval").send({ status: "approved" });
+
+    expect(res.status).toBe(200);
+    expect(authStorage.setApprovalStatus).toHaveBeenCalledWith("user-1", "approved");
+    expect(mockStorage.ensureArtistProfile).toHaveBeenCalledWith("user-1", expect.objectContaining({ email: "new@example.com" }));
+    expect(res.body.password).toBeUndefined();
+  });
+
+  it("rejecting a user does not provision an artist profile", async () => {
+    (authStorage.setApprovalStatus as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "user-1",
+      role: "user",
+      approvalStatus: "rejected",
+    });
+
+    const res = await request(app).patch("/api/admin/users/user-1/approval").send({ status: "rejected" });
+
+    expect(res.status).toBe(200);
+    expect(mockStorage.ensureArtistProfile).not.toHaveBeenCalled();
+  });
+
+  it("approving a curator/admin does not provision an artist profile", async () => {
+    (authStorage.setApprovalStatus as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "user-2",
+      role: "curator",
+      approvalStatus: "approved",
+    });
+
+    const res = await request(app).patch("/api/admin/users/user-2/approval").send({ status: "approved" });
+
+    expect(res.status).toBe(200);
+    expect(mockStorage.ensureArtistProfile).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 when the user does not exist", async () => {
+    (authStorage.setApprovalStatus as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+
+    const res = await request(app).patch("/api/admin/users/missing/approval").send({ status: "approved" });
+    expect(res.status).toBe(404);
   });
 });
 

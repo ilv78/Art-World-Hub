@@ -1,6 +1,13 @@
 export interface Faq {
   question: string;
   answer: string;
+  /** Optional internal link rendered after the answer. Anchor text should be
+   *  an exact-match keyword (e.g. an artist's full name) — that is the point
+   *  of adding it (#539). */
+  link?: {
+    text: string;
+    href: string;
+  };
 }
 
 export const FAQS: Faq[] = [
@@ -28,5 +35,14 @@ export const FAQS: Faq[] = [
     question: "How is artwork shipped?",
     answer:
       "Shipping is arranged between you and the artist. The artist packs and dispatches the work and shares any tracking details directly.",
+  },
+  {
+    question: "Who is Alexandra Constantin?",
+    answer:
+      "Alexandra Constantin is a reverse glass painter exhibiting on Vernis9, working from the Netherlands. Explore her originals and read her story on her artist profile:",
+    link: {
+      text: "Alexandra Constantin",
+      href: "/artists/alexandra-constantin-4493f600",
+    },
   },
 ];

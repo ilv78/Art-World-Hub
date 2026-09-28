@@ -24,6 +24,7 @@ As a visitor, I want to browse active auctions and place bids on artworks, so th
 - [x] Upcoming auctions show "Coming Soon" (disabled)
 - [x] Ended auctions show "Auction Ended" (disabled)
 - [x] Progress bar visualization for active auctions
+- [x] Canonical, SEO-indexable detail page at `/auctions/:slug` (#509), with server-rendered meta tags + `Event`/`Offer` JSON-LD, sharing the same bid dialog/flow as the `/auctions` listing
 
 ## Technical Design
 
@@ -36,7 +37,7 @@ Status is derived client-side from timestamps (no server-side state transitions)
 
 ### Database Tables
 
-- `auctions` — `id`, `artworkId`, `startingPrice`, `currentBid`, `minimumIncrement`, `startTime`, `endTime`, `status`, `winnerName`
+- `auctions` — `id`, `artworkId`, `slug` (unique, #509), `startingPrice`, `currentBid`, `minimumIncrement`, `startTime`, `endTime`, `status`, `winnerName`
 - `bids` — `id`, `auctionId`, `bidderName`, `amount`, `timestamp`
 
 ### Endpoints
@@ -45,8 +46,20 @@ Status is derived client-side from timestamps (no server-side state transitions)
 |--------|----------|------|---------|
 | GET | `/api/auctions` | No | List all auctions (with artwork + artist) |
 | GET | `/api/auctions/:id` | No | Auction detail with bids |
+| GET | `/api/public/auctions/:slug` | No | Auction detail by slug (#509) — backs `/auctions/:slug` |
 | GET | `/api/auctions/:id/bids` | No | Bid history (newest first) |
 | POST | `/api/auctions/:id/bids` | No | Place bid (validates timing + amount) |
+
+### Detail page (#509)
+
+`/auctions/:slug` (`client/src/pages/auction-detail.tsx`) is the canonical, SEO-indexable
+counterpart to the `/auctions` listing — same status logic, same bid dialog/mutation
+(`POST /api/auctions/:id/bids`), same bid-history query. `slug` is generated from the
+artwork's title (`shared/auction-slug.ts`, format `slugify(title)-<first-8-chars-of-uuid>`)
+at auction-creation time (`storage.createAuction`); pre-existing rows get a random
+DB-generated fallback slug instead — see `specs/decisions/log/2026-09-18-auction-exhibition-slug-default-backfill.md`.
+Server-side meta + `Event`/`Offer` JSON-LD for the route lives in `server/meta.ts`
+(`/auctions/:slug` branch) — `specs/features/seo/SPEC.md` Work Item 11 has the full shape.
 
 ### Bid Validation Rules
 

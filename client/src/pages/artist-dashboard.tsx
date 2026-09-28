@@ -86,6 +86,8 @@ function FileUploadField({
           src={imageUrl}
           alt={previewAlt}
           loading="lazy"
+          width={400}
+          height={300}
           className="mt-2 rounded-md max-h-40 object-contain border"
         />
       )}
@@ -500,6 +502,8 @@ export default function ArtistDashboard() {
           src={artwork.imageUrl}
           alt={artwork.title}
           loading="lazy"
+          width={400}
+          height={300}
           className="w-full h-full object-cover"
         />
         <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
@@ -599,6 +603,8 @@ export default function ArtistDashboard() {
             sizes={BLOG_SIZES.listCard}
             loading="lazy"
             decoding="async"
+            width={96}
+            height={64}
             className="w-24 h-16 object-cover rounded-md"
           />
         )}
@@ -675,6 +681,25 @@ export default function ArtistDashboard() {
             Log In to Continue
           </a>
         </Button>
+      </div>
+    );
+  }
+
+  // Account created but not yet signed off by an administrator (#831):
+  // /api/artists/me is a resource-consuming route, so it 403s until approved.
+  if (user?.approvalStatus && user.approvalStatus !== "approved") {
+    const isRejected = user.approvalStatus === "rejected";
+    return (
+      <div className="p-6 flex flex-col items-center justify-center min-h-[60vh] text-center">
+        <Palette className="h-16 w-16 text-muted-foreground mb-6" />
+        <h1 className="font-serif text-3xl font-bold mb-2">
+          {isRejected ? "Account not approved" : "Approval pending"}
+        </h1>
+        <p className="text-muted-foreground mb-6 max-w-md">
+          {isRejected
+            ? "An administrator has not approved this account. Contact support if you believe this is a mistake."
+            : "Your account is waiting for an administrator to sign off. You'll be able to set up your artist profile as soon as it's approved."}
+        </p>
       </div>
     );
   }
@@ -1186,6 +1211,8 @@ export default function ArtistDashboard() {
                             src={order.artwork.imageUrl}
                             alt={order.artwork.title}
                             loading="lazy"
+                            width={64}
+                            height={64}
                             className="w-full h-full object-cover"
                           />
                         </div>

@@ -121,6 +121,8 @@ export default function ArtworkDetail({
               loading="eager"
               fetchPriority="high"
               decoding="async"
+              width={400}
+              height={300}
               className="w-full h-auto object-contain max-h-[80vh]"
             />
             {!artwork.isForSale && (
@@ -148,13 +150,8 @@ export default function ArtworkDetail({
                     {initialsOf(artwork.artist.name)}
                   </AvatarFallback>
                 </Avatar>
-                <div>
-                  <div className="font-medium group-hover:text-primary transition-colors">
-                    {artwork.artist.name}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    View artist profile
-                  </div>
+                <div className="font-medium group-hover:text-primary transition-colors">
+                  {artwork.artist.name}
                 </div>
               </Link>
             </header>
@@ -285,6 +282,8 @@ export default function ArtworkDetail({
                       sizes={ARTWORK_SIZES.card}
                       loading="lazy"
                       decoding="async"
+                      width={400}
+                      height={400}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       pictureClassName="block w-full h-full"
                     />

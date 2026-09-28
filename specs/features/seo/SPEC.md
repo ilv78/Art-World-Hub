@@ -13,9 +13,10 @@ Prepare Vernis9 for search engine discovery and social sharing. The site is a cl
 | Area | Status | Notes |
 |------|--------|-------|
 | `robots.txt` | Done | #364, #376 — dynamic route at `/robots.txt` (blocks indexing on non-production) |
-| `sitemap.xml` | Done | #365 — dynamic endpoint at `/sitemap.xml`; #504 — Google image-sitemap namespace + `<image:image>` for artist avatars, artwork images (title + caption), and blog cover images |
+| `sitemap.xml` | Done | #365 — dynamic endpoint at `/sitemap.xml`; #504 — Google image-sitemap namespace + `<image:image>` for artist avatars, artwork images (title + caption), and blog cover images; #538 — `<lastmod>` on artist entries from `artists.updatedAt` |
 | Per-page meta tags | Done | #366 — server-side injection + react-helmet-async |
-| Structured data (JSON-LD) | Done | #367 — Organization, Person, BlogPosting, BreadcrumbList; #501 — WebSite+SearchAction, FAQPage (homepage); #503 — VisualArtwork + Offer on `/artworks/:slug`; #535 — `sameAs` on Person JSON-LD (derived from `artists.socialLinks`) |
+| Structured data (JSON-LD) | Done | #367 — Organization, Person, BlogPosting, BreadcrumbList; #501 — WebSite+SearchAction, FAQPage (homepage); #503 — VisualArtwork + Offer on `/artworks/:slug`; #535 — `sameAs` on Person JSON-LD (derived from `artists.socialLinks`); #538 — Person `nationality` (from `artists.country`) + `worksFor` cross-referencing the Organization block via `@id` |
+| Per-entity OG cards | Done | #577, #593 — dynamic 1200×630 branded card at `GET /og/:type/:id.jpg` (`server/routes/og-cards.ts` + `server/lib/og-card.ts`, Sharp-rendered from an SVG template, disk-cached, source-image-mtime invalidated) for artwork/blog/exhibition/artist; `server/meta.ts`'s `ogCardUrl()` points `og:image` at it for all four types. Satisfies #538 Work Item "per-artist OG card" — already shipped ahead of this issue under a different route shape (`/og/artist/<slug>.jpg`, not `/og/artists/<slug>.png` as originally sketched) |
 | Public artwork detail pages | Done | #503 — `/artworks/:slug` server-rendered meta + JSON-LD, sitemap entries |
 | Twitter cards | Done | #366 — `twitter:card`, `twitter:title`, `twitter:description`, `twitter:image` |
 | Canonical URLs | Done | #366 — `<link rel="canonical">` on every page |
@@ -24,10 +25,13 @@ Prepare Vernis9 for search engine discovery and social sharing. The site is a cl
 | Image lazy loading | Done | #368 — `loading="lazy"` on all below-the-fold images |
 | OG image | Done | #366 — default `og-default.png` + per-entity images |
 | Semantic HTML | Done | #505 — `<main>`/`<nav>` landmarks confirmed present (already existed via `public-layout.tsx`/`top-nav.tsx`, contra #496's curl-based finding — see Work Item 9); heading-order skips fixed on `/store`, `/artists`, `/auctions`, `/gallery`; `<section>` landmarks added to `/artists/:slug` |
-| URL structure | Done | `/artists/:slug` (#537) and `/artworks/:slug` (#503) — slug format `slugify(name|title)-<first-8-chars-of-uuid>`. Old UUID artist URLs 301-redirect to the slug form |
+| URL structure | Done | `/artists/:slug` (#537), `/artworks/:slug` (#503), `/auctions/:slug` and `/exhibitions/:slug` (#509) — slug format `slugify(name|title)-<first-8-chars-of-uuid>`. Old UUID artist URLs 301-redirect to the slug form |
+| Public auction + exhibition detail pages | Done | #509 — `/auctions/:slug` and `/exhibitions/:slug` server-rendered meta + `Event` JSON-LD, sitemap entries for active auctions and published/active curator galleries |
 | Alt text | Done | #369 — all img and AvatarImage have descriptive alt text |
 | HTTP status on unknown routes | Done | #508 — SPA catch-all returned 200 for every URL (soft-404); now 404s unknown static routes and dynamic routes whose entity doesn't exist |
 | Cumulative Layout Shift (artist profile) | Done | #553 — loading skeletons on `/artists/:slug` reshaped to match the loaded layout's geometry (banner + card container, gallery grid, blog cards), instead of a structurally different placeholder |
+| `<img>` explicit width/height | Done | #507 — every `<img>` and `<ResponsiveImage>` in `client/src` now carries `width`/`height` attributes, sized to the Tailwind `aspect-*` class of its container (or a 4:3 default where none exists), so the browser reserves layout space before the image loads |
+| Internal linking by artist name | Done | #539 (Ultraplan Phase 4, after #535/#537/#538) — homepage FAQ gained a Q&A naming "Alexandra Constantin" with an exact-match anchor to her artist profile; `/artworks/:slug`'s existing link to the creator (#503) had its clickable text trimmed to just the artist's full name, dropping the generic "View artist profile" wrapper |
 
 ## Work Items
 
@@ -126,14 +130,15 @@ Prepare Vernis9 for search engine discovery and social sharing. The site is a cl
 - Blog post URL carries `<image:image>` only when `coverImageUrl` is set.
 - `<image:title>` is truncated to 100 chars; `<image:caption>` to 500. Both are XML-escaped — every user-supplied string on the sitemap must go through `xmlEscape()`.
 - Relative image paths are absolutized against `SITE_URL`.
+- `<lastmod>` (ISO-8601 date, e.g. `2026-06-15`) is emitted for blog posts from `blogPosts.updatedAt`, and for artists from `artists.updatedAt` (#538). `artists.updatedAt` is set explicitly by `storage.updateArtist` on every write — see `specs/architecture/DATA-MODEL.md`. `artworks` has no `updatedAt` column yet, so artist `<lastmod>` reflects only the artist row, not a max over their artworks — acceptable per #538's v1 scope; artwork URLs currently carry no `<lastmod>` at all.
 
 **Acceptance criteria:**
-- [ ] `GET /sitemap.xml` returns valid XML
-- [ ] All static public routes are listed
-- [ ] All artists are listed with their IDs
-- [ ] All published blog posts are listed
-- [ ] Response is cached (not a DB query per request)
-- [ ] `lastmod` is set where data is available
+- [x] `GET /sitemap.xml` returns valid XML
+- [x] All static public routes are listed
+- [x] All artists are listed with their slugs
+- [x] All published blog posts are listed
+- [x] Response is cached (not a DB query per request)
+- [x] `lastmod` is set where data is available (blog posts, artists)
 - [ ] `xmlns:image` namespace is declared on the root element
 - [ ] Every artwork URL has `<image:image>` with `<image:title>` + `<image:caption>`
 
@@ -218,6 +223,7 @@ Inject JSON-LD `<script>` tags server-side alongside the meta tag injection (Wor
 {
   "@context": "https://schema.org",
   "@type": "Organization",
+  "@id": "https://vernis9.art/#organization",
   "name": "Vernis9",
   "url": "https://vernis9.art",
   "logo": "https://vernis9.art/favicon.svg",
@@ -225,6 +231,9 @@ Inject JSON-LD `<script>` tags server-side alongside the meta tag injection (Wor
   "sameAs": []
 }
 ```
+`@id` is a stable cross-reference (#538) so other JSON-LD blocks — e.g. Person's
+`worksFor` on an artist page — can point at this entity by URI instead of
+re-emitting the whole Organization object on every page.
 
 **Homepage — WebSite + SearchAction** (enables Google sitelinks search box, added in #501):
 ```json
@@ -258,7 +267,9 @@ Inject JSON-LD `<script>` tags server-side alongside the meta tag injection (Wor
   ]
 }
 ```
-FAQ copy is hard-coded in `shared/faqs.ts` (5 entries covering what Vernis9 is, who can sell, commission policy, how to buy, shipping). Both the server (JSON-LD in `server/meta.ts`) and the client (visible accordion section on the homepage) import from this single source of truth. Google's FAQPage rich-result guidelines require that the Q&A content be visible on the page, so the accordion is not optional — keep it in sync with the schema. Changes to FAQ copy require a PR — there is no admin UI.
+FAQ copy is hard-coded in `shared/faqs.ts` (6 entries covering what Vernis9 is, who can sell, commission policy, how to buy, shipping, and — as of #539 — one naming a specific artist for an SEO campaign). Both the server (JSON-LD in `server/meta.ts`) and the client (visible accordion section on the homepage) import from this single source of truth. Google's FAQPage rich-result guidelines require that the Q&A content be visible on the page, so the accordion is not optional — keep it in sync with the schema. Changes to FAQ copy require a PR — there is no admin UI.
+
+A `Faq` entry may carry an optional `link: { text, href }`, rendered by the homepage accordion as a `wouter` `<Link>` appended after the answer text. `text` should be an exact-match keyword (typically a full name) for internal-linking SEO value, not generic text like "click here" — the whole point of adding it. `server/meta.ts`'s FAQPage JSON-LD only emits `answer` as the `Answer.text` (schema.org's `Answer` is plain text; the link carries no JSON-LD-visible weight, only in-page crawlable HTML). The Alexandra Constantin entry hard-codes her real profile slug (`alexandra-constantin-4493f600`, matching the id from #535) directly in `shared/faqs.ts` rather than through a "featured artist" config — this is a one-off, named campaign per the parent Ultraplan (#363), not a general mechanism, and an artist rename still resolves correctly because `/artists/:slug` 301s retired slugs (#537).
 
 **Artist profile — Person:**
 ```json
@@ -266,13 +277,21 @@ FAQ copy is hard-coded in `shared/faqs.ts` (5 entries covering what Vernis9 is, 
   "@context": "https://schema.org",
   "@type": "Person",
   "name": "Artist Name",
-  "url": "https://vernis9.art/artists/:id",
+  "url": "https://vernis9.art/artists/:slug",
   "image": "avatar URL",
   "description": "Artist bio",
   "jobTitle": "Artist",
-  "knowsAbout": "specialization"
+  "worksFor": { "@id": "https://vernis9.art/#organization" },
+  "nationality": "artist.country",
+  "knowsAbout": "specialization",
+  "sameAs": ["https://instagram.com/...", "..."]
 }
 ```
+`sameAs` is derived from `artists.socialLinks`, absolute `http(s)` URLs only (#535).
+`worksFor` and `nationality` were added in #538 — `worksFor` cross-references the
+homepage Organization block above via `@id` rather than re-emitting it, and
+`nationality` is only emitted when `artists.country` is set. Both `image` and
+`sameAs` are omitted, not emitted empty, when their source field is unset.
 
 **Blog post — BlogPosting:**
 ```json
@@ -476,6 +495,53 @@ The avatar image (a candidate raised in the issue, and the reason #549 added `fe
 - [x] Page content is inside a `<main>` landmark (pre-existing, confirmed rather than re-added)
 - [x] `artist-profile.tsx` has `<section>` landmarks around the bio and artworks/tabs areas
 - [ ] Lighthouse Accessibility + SEO score does not drop, and axe DevTools "page has heading-order" passes — both require a rendered-browser run against the deployed instance; not something CI's `npm test` exercises (see PR `## Verification`)
+
+---
+
+### 10. Explicit `width`/`height` on `<img>` — CLS
+
+**What it does:** Lighthouse's "Image elements do not have explicit width and height" audit flags any `<img>` without sizing hints, because the browser can't reserve layout space for it before the image downloads — the surrounding content jumps when it finally loads. This is the same Core Web Vitals metric (CLS) as #553, but the cause here is the image element itself rather than a loading-state/loaded-state mismatch.
+
+**Priority:** P3 (low — the audit backlog item this closes, #496 §3.11, is itself tagged low priority)
+**Effort:** Small
+
+**Root cause:** none of the `<img>`/`<ResponsiveImage>` call sites in `client/src` set `width`/`height`. Most already render inside a container sized by a Tailwind `aspect-*` utility or a fixed `w-N h-N`, so the *visual* layout doesn't shift in practice — but the audit inspects the `<img>` element itself, not its ancestors, and artworks/avatars/blog covers have no stored intrinsic dimensions in the schema (`shared/schema.ts` has no `imageWidth`/`imageHeight` columns) to source real values from.
+
+**Implementation:**
+- Every `<img>` and `<ResponsiveImage>` in `client/src` now has `width`/`height` attributes. `ResponsiveImage` (`client/src/components/responsive-image.tsx`) needed no code change — it already spreads its props (including `width`/`height`) onto the underlying `<img>`.
+- Where the image's container declares a Tailwind `aspect-*` class (`aspect-square`, `aspect-4/3`, `aspect-4/5`, `aspect-video`, `aspect-[16/10]`, `aspect-3/1`) or a fixed `w-N h-N`, the attribute values reproduce that exact ratio/pixel size (e.g. `aspect-4/3` → `400×300`, `w-16 h-16` → `64×64`).
+- Where no aspect ratio is declared anywhere (large `object-contain` detail views, hero banners that are fully sized by `w-full h-full` on both axes), a `400×300` (4:3) default is used, per the issue's own suggested fallback — the CSS classes already on every one of these (`w-full`, `h-full`, `h-auto`) override the attribute-derived box once loaded, so the fallback only affects the pre-load placeholder size, never the final rendered size.
+- The one static (non-DB) asset, `client/public/campaigns/koningsdag/alexandra-painting.jpg`, got its real intrinsic dimensions (`2304×2560`) read directly from the file instead of a guessed default.
+
+**Acceptance criteria:**
+- [x] Every `<img>` and `<ResponsiveImage>` in `client/src` has explicit `width` and `height`
+- [x] `npm run check` and `npm test` pass unchanged
+- [ ] Lighthouse "Image elements do not have explicit width and height" passes and CLS < 0.1 on the deployed instance — requires a rendered-browser run; not something CI's `npm test` exercises (see PR `## Verification`)
+
+---
+
+### 11. Public Auction & Exhibition Detail Pages — `Event` JSON-LD
+
+**What it does:** Auctions and curated exhibitions are time-bound events with no public URL of their own before this — auctions were only reachable through `/auctions` (a listing) or the internal `/api/auctions/:id`, and exhibitions only through `/curator-gallery/:id` (keyed by database id, not a readable slug, and not in the sitemap). This adds canonical, slugged, SEO-indexable detail pages for both, following the same server-side meta + JSON-LD pattern as `/artworks/:slug` (Work Item 3/4) and `/artists/:slug`.
+
+**Priority:** P3 (low — per the issue: fewer entities than the artwork detail pages work, #496 audit gap §3.1 backlog #9)
+**Effort:** Medium
+
+**Implementation:**
+- **Schema:** `auctions.slug` and `curator_galleries.slug` (`text`, `NOT NULL UNIQUE`), added in migration `0015_add-auction-and-exhibition-slugs.sql`. Unlike the artwork slug migration (`0008`), this one needs no separate `UPDATE` backfill: the column's SQL `DEFAULT` computes a fallback slug (`auction-<8 hex>` / `exhibition-<8 hex>`, via `gen_random_uuid()`) for any pre-existing row in the same `ADD COLUMN` statement, so it stays a purely additive migration — see `specs/decisions/log/2026-09-18-auction-exhibition-slug-default-backfill.md`. Application code (`storage.createAuction` / `storage.createCuratorGallery`) always supplies a real, human-readable slug for new rows (`shared/auction-slug.ts`, `shared/curator-gallery-slug.ts` — same `slugify()` used by `shared/artwork-slug.ts`); the DB default only ever fires for rows that predate this migration.
+- **Which "exhibition" table:** the `exhibitions` table (the single-`isActive` maze-layout table behind `/gallery`) is *not* what `/exhibitions` and `/curator-gallery/:id` render — that's `curatorGalleries` (`isPublished`, `startDate`/`endDate`). `/exhibitions/:slug` resolves against `curatorGalleries`, matching the existing public listing.
+- **API:** `GET /api/public/auctions/:slug` and `GET /api/public/exhibitions/:slug` (`server/routes.ts`), mirroring `/api/public/artworks/:slug`. The exhibitions route applies the same `isPublished` + `startDate`/`endDate` gate as `/api/curator-galleries/:id`.
+- **Client:** `client/src/pages/auction-detail.tsx` and `client/src/pages/exhibition-detail.tsx`, routed at `/auctions/:slug` and `/exhibitions/:slug` in `client/src/App.tsx`. `/curator-gallery/:id` is left unchanged — existing links and share targets keep working; the new slug route is additive, not a replacement.
+- **Meta + JSON-LD (`server/meta.ts`):** two new `resolveMetaTags()` branches.
+  - `/exhibitions/:slug` emits `Event` (schema.org's `ExhibitionEvent` is itself an `Event` subtype, but the issue asks for the base type) with `startDate`/`endDate`, `eventAttendanceMode: OnlineEventAttendanceMode`, `eventStatus: EventScheduled`, `location: VirtualLocation`, and `organizer: { "@type": "Organization", name: "Vernis9" }` — per the issue's spec. This differs from the pre-existing `/curator-gallery/:id` `ExhibitionEvent` block, which uses the curator as a `Person` organizer; that route is untouched.
+  - `/auctions/:slug` emits `Event` with the same attendance/location/organizer shape, plus an `offers` block: `Offer.price` is `auction.currentBid ?? auction.startingPrice` (the same fallback `server/routes.ts`'s bid-validation path already uses), with a nested `Offer.priceSpecification` (`UnitPriceSpecification`) carrying the same figure, and `availability` (`InStock` / `SoldOut`) derived from whether `endTime` has passed.
+- **OG cards:** `server/routes/og-cards.ts` gained an `"auction"` type (artwork's own image + title, mirroring `"artwork"`); `SHARE_ITEM_TYPES` (`shared/schema.ts`) gained `"auction"` so `ShareButtons` works on the new auction page.
+- **Sitemap (`server/routes/sitemap.ts`):** two new loops — `storage.getActiveAuctions()` (time-window filter: `startTime <= now <= endTime`, mirrors the client's `getAuctionStatus()`) and `storage.getPublishedCuratorGalleries()` (already active-only: `isPublished` + `startDate`/`endDate` window). Each entry carries an `<image:image>` when a hero image is available.
+
+**Acceptance criteria:**
+- [x] `GET /auctions/:slug` and `GET /exhibitions/:slug` return 200 for real, valid entities and 404 for unknown slugs (verified locally against a real Postgres instance — see PR `## Verification`)
+- [ ] Google Rich Results Test validates the `Event` structured data — requires the deployed instance; not something CI's `npm test` exercises
+- [x] Sitemap includes active auctions and active (published, in-window) exhibitions by slug
 
 ---
 

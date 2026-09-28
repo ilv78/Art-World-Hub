@@ -7,7 +7,7 @@ import { logger } from "../logger";
 
 const router = Router();
 
-const VALID_TYPES = ["artwork", "blog", "exhibition", "artist"] as const;
+const VALID_TYPES = ["artwork", "blog", "exhibition", "artist", "auction"] as const;
 type ItemType = (typeof VALID_TYPES)[number];
 
 // Paths derived from process.cwd() are computed per-request rather than at
@@ -71,6 +71,15 @@ async function resolveCardSpec(type: ItemType, id: string): Promise<CardSpec | n
       sourceImagePath: resolveAssetPath(heroArtwork?.imageUrl),
       title: gallery.name,
       subtitle: `Curated by ${curatorName}`,
+    };
+  }
+  if (type === "auction") {
+    const auction = await storage.getAuctionBySlug(id);
+    if (!auction) return null;
+    return {
+      sourceImagePath: resolveAssetPath(auction.artwork.imageUrl),
+      title: auction.artwork.title,
+      subtitle: `Auction — by ${auction.artwork.artist.name}`,
     };
   }
   if (type === "artist") {

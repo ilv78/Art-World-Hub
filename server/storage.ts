@@ -28,6 +28,8 @@ import { eq, desc, asc, and, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { makeArtworkSlug } from "@shared/artwork-slug";
 import { makeArtistSlug } from "@shared/artist-slug";
+import { makeAuctionSlug } from "@shared/auction-slug";
+import { makeCuratorGallerySlug } from "@shared/curator-gallery-slug";
 
 // Thrown by createOrder when the partial unique index on orders.artworkId
 // (IDX_orders_artwork_active, see shared/schema.ts) rejects a second
@@ -65,7 +67,9 @@ export interface IStorage {
   
   // Auctions
   getAuctions(): Promise<AuctionWithArtwork[]>;
+  getActiveAuctions(): Promise<AuctionWithArtwork[]>;
   getAuction(id: string): Promise<AuctionWithArtwork | undefined>;
+  getAuctionBySlug(slug: string): Promise<AuctionWithArtwork | undefined>;
   createAuction(auction: InsertAuction): Promise<Auction>;
   updateAuction(id: string, auction: Partial<InsertAuction>): Promise<Auction | undefined>;
   
@@ -106,6 +110,7 @@ export interface IStorage {
   // Curator Galleries
   getCuratorGalleriesByCurator(curatorId: string): Promise<CuratorGalleryWithArtworks[]>;
   getCuratorGallery(id: string): Promise<CuratorGalleryWithArtworks | undefined>;
+  getCuratorGalleryBySlug(slug: string): Promise<CuratorGalleryWithArtworks | undefined>;
   getPublishedCuratorGalleries(): Promise<CuratorGalleryWithArtworks[]>;
   getActiveAndUpcomingCuratorGalleries(): Promise<CuratorGalleryWithArtworks[]>;
   createCuratorGallery(gallery: InsertCuratorGallery): Promise<CuratorGallery>;
@@ -156,6 +161,7 @@ const ARTIST_COLUMNS_SANS_GALLERY_LAYOUT = {
   email: artists.email,
   galleryTemplate: artists.galleryTemplate,
   socialLinks: artists.socialLinks,
+  updatedAt: artists.updatedAt,
 };
 
 export class DatabaseStorage implements IStorage {
@@ -383,15 +389,50 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(artworks, eq(auctions.artworkId, artworks.id))
       .innerJoin(artists, eq(artworks.artistId, artists.id))
       .where(eq(auctions.id, id));
-    
+
     if (result.length === 0) return undefined;
-    
+
     const { auctions: auction, artworks: artwork, artists: artist } = result[0];
     return { ...auction, artwork: { ...artwork, artist } };
   }
 
+  async getAuctionBySlug(slug: string): Promise<AuctionWithArtwork | undefined> {
+    const result = await db
+      .select()
+      .from(auctions)
+      .innerJoin(artworks, eq(auctions.artworkId, artworks.id))
+      .innerJoin(artists, eq(artworks.artistId, artists.id))
+      .where(eq(auctions.slug, slug));
+
+    if (result.length === 0) return undefined;
+
+    const { auctions: auction, artworks: artwork, artists: artist } = result[0];
+    return { ...auction, artwork: { ...artwork, artist } };
+  }
+
+  // Active: startTime <= now <= endTime — mirrors getAuctionStatus() in
+  // client/src/pages/auctions.tsx (the `status` column itself defaults to
+  // "upcoming" and is not kept in sync, so it isn't a usable filter).
+  async getActiveAuctions(): Promise<AuctionWithArtwork[]> {
+    const now = new Date();
+    const result = await db
+      .select()
+      .from(auctions)
+      .innerJoin(artworks, eq(auctions.artworkId, artworks.id))
+      .innerJoin(artists, eq(artworks.artistId, artists.id))
+      .where(and(sql`${auctions.startTime} <= ${now}`, sql`${auctions.endTime} >= ${now}`));
+
+    return result.map(({ auctions: auction, artworks: artwork, artists: artist }) => ({
+      ...auction,
+      artwork: { ...artwork, artist },
+    }));
+  }
+
   async createAuction(insertAuction: InsertAuction): Promise<Auction> {
-    const [auction] = await db.insert(auctions).values(insertAuction).returning();
+    const id = randomUUID();
+    const [artwork] = await db.select().from(artworks).where(eq(artworks.id, insertAuction.artworkId));
+    const slug = makeAuctionSlug(artwork?.title ?? "", id);
+    const [auction] = await db.insert(auctions).values({ ...insertAuction, id, slug }).returning();
     return auction;
   }
 
@@ -598,7 +639,7 @@ export class DatabaseStorage implements IStorage {
     if (!updateData.name) {
       const [artist] = await db
         .update(artists)
-        .set(updateData)
+        .set({ ...updateData, updatedAt: new Date() })
         .where(eq(artists.id, id))
         .returning();
       return artist;
@@ -622,7 +663,7 @@ export class DatabaseStorage implements IStorage {
       }
       const [artist] = await tx
         .update(artists)
-        .set({ ...updateData, slug: newSlug })
+        .set({ ...updateData, slug: newSlug, updatedAt: new Date() })
         .where(eq(artists.id, id))
         .returning();
       return artist;
@@ -771,6 +812,12 @@ export class DatabaseStorage implements IStorage {
     return this.hydrateCuratorGallery(gallery);
   }
 
+  async getCuratorGalleryBySlug(slug: string): Promise<CuratorGalleryWithArtworks | undefined> {
+    const [gallery] = await db.select().from(curatorGalleries).where(eq(curatorGalleries.slug, slug));
+    if (!gallery) return undefined;
+    return this.hydrateCuratorGallery(gallery);
+  }
+
   async getPublishedCuratorGalleries(): Promise<CuratorGalleryWithArtworks[]> {
     const now = new Date();
     const galleries = await db.select().from(curatorGalleries)
@@ -799,7 +846,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCuratorGallery(gallery: InsertCuratorGallery): Promise<CuratorGallery> {
-    const [created] = await db.insert(curatorGalleries).values(gallery).returning();
+    const id = randomUUID();
+    const slug = makeCuratorGallerySlug(gallery.name, id);
+    const [created] = await db.insert(curatorGalleries).values({ ...gallery, id, slug }).returning();
     return created;
   }
 
