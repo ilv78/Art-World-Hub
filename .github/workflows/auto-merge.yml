@@ -41,6 +41,15 @@ name: Auto-Merge
 # `update-branch` fail — logged and skipped, never force-resolved — and the PR is left
 # DIRTY for the existing "checks absent = not a bypass" handling
 # (AGENT-PIPELINE.md §3) to surface to a human.
+#
+# #820: a `DIRTY` PR (a real conflict, not just BEHIND) that touches `shared/schema.ts`
+# or `migrations/` is the one shape of that "left for a human" case with a known,
+# recurring cause — two Tier B runs on the same schema surface, one merging underneath
+# the other. Nothing here was watching for it, so it could sit blocked indefinitely with
+# no signal. The second step in `update-behind-on-main-push` flags exactly that: DIRTY,
+# labelled `agent-review`, touching the schema surface, not already flagged — comment and
+# apply `agent-stuck`, reusing the existing silent-escalation path (#800/#801) instead of
+# inventing a second one.
 
 on:
   pull_request_target:
@@ -106,4 +115,38 @@ jobs:
             head=$(gh pr view "$n" --repo "$REPO" --json headRefOid --jq .headRefOid)
             gh api -X PUT "repos/$REPO/pulls/$n/update-branch" -f expected_head_sha="$head" --jq .message \
               || echo "::warning::update-branch failed for PR #$n — likely a real conflict, leaving it for the existing conflict handling"
+          done
+
+      - name: Flag DIRTY agent-review PRs touching shared/schema.ts or migrations/ (#820)
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+          REPO: ${{ github.repository }}
+        run: |
+          dirty=$(gh pr list --repo "$REPO" --state open --label agent-review --json number,mergeStateStatus --jq '.[] | select(.mergeStateStatus == "DIRTY") | .number')
+          for n in $dirty; do
+            already=$(gh pr view "$n" --repo "$REPO" --json labels --jq '[.labels[].name] | index("agent-stuck")')
+            if [ "$already" != "null" ]; then
+              continue
+            fi
+            files=$(gh pr diff "$n" --repo "$REPO" --name-only)
+            if echo "$files" | grep -qE '^(migrations/|shared/schema\.ts$)'; then
+              echo "Flagging DIRTY PR #$n (touches schema/migrations)"
+              gh pr comment "$n" --repo "$REPO" --body "$(cat <<'BODY'
+          ## agent-stuck: DIRTY against `main`, touches `shared/schema.ts` or `migrations/`
+
+          Another PR merged underneath this one and it now conflicts with `main` on the
+          schema surface (#820: parallel Tier B runs on `shared/schema.ts`/`migrations/`
+          can generate colliding migration numbers, or one PR's schema change can
+          invalidate a type shape another PR relies on — visible only once both
+          coexist). Auto-merge only resolves `BEHIND`, not `DIRTY`, so this was
+          otherwise going to sit blocked with no signal.
+
+          Per `specs/AGENT-AUTONOMY-POLICY.md` §6: rebase onto `main`, regenerate the
+          migration number and Drizzle snapshot with `drizzle-kit generate`, re-run
+          `npm run check`, and re-push. This is normal Tier B work, not a second
+          escalation — remove `agent-stuck` once pushed and green.
+          BODY
+          )"
+              gh pr edit "$n" --repo "$REPO" --add-label agent-stuck
+            fi
           done
