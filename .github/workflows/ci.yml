@@ -211,9 +211,14 @@ jobs:
             # Ensure upload subdirs exist on the Docker volume (new subdirs may be missing)
             docker compose run --rm --no-deps --user root --entrypoint sh app -c "mkdir -p /app/uploads/artworks /app/uploads/blog-covers /app/uploads/avatars /app/uploads/og-cards /app/logs && chown -R appuser:appgroup /app/uploads /app/logs"
             docker compose up -d --remove-orphans
-            # Run pending database migrations
-            echo "Running database migrations..."
-            docker compose exec -T app npx drizzle-kit migrate || echo "Warning: migration failed or no pending migrations"
+            # Staging's compose sets no DB_MIGRATION_MODE, so docker-entrypoint.sh
+            # already pushed the schema on container start (push mode). This step
+            # was running `drizzle-kit migrate` instead — a no-op against a database
+            # with no migration journal — and its failure was swallowed by `|| echo`,
+            # masking real push failures too (#692). Match the entrypoint's actual
+            # mode and let a genuine failure fail the deploy.
+            echo "Running database schema push..."
+            docker compose exec -T app npx drizzle-kit push --force
             echo "Waiting for app to be healthy..."
             for i in $(seq 1 60); do
               if docker compose exec -T app node -e "fetch('http://localhost:5000/health').then(r => { if (!r.ok) process.exit(1) })" 2>/dev/null; then
@@ -256,6 +261,44 @@ jobs:
             LATEST=$(echo "$CHANGELOG" | grep -oE '## \[[0-9]+\.[0-9]+\.[0-9]+\]' | head -1)
             echo "Changelog check passed — latest entry: $LATEST"
           fi
+
+      # /health never touches the database, so a stale schema passed every check
+      # above for five days while all logins returned 500 (#833). These requests
+      # select every column of their tables: a missing column is a 500 here.
+      - name: Smoke test — database schema
+        run: |
+          BASE_URL="${{ secrets.STAGING_URL }}"
+          FAILED=0
+
+          for path in /api/artworks /api/auctions /api/curated-exhibitions; do
+            STATUS=$(curl --silent --output /dev/null --write-out "%{http_code}" "$BASE_URL$path")
+            if [ "$STATUS" != "200" ]; then
+              echo "FAIL: GET $path returned HTTP $STATUS"
+              FAILED=1
+            else
+              echo "GET $path — 200"
+            fi
+          done
+
+          # A login for an unknown account must be rejected (401), not error
+          # (500) — a 500 means the users query itself is broken. One request
+          # per deploy is well inside the login rate limit (10 per 15 min).
+          STATUS=$(curl --silent --output /dev/null --write-out "%{http_code}" \
+            -X POST "$BASE_URL/api/auth/login" -H 'Content-Type: application/json' \
+            -d '{"email":"ci-smoke-no-such-user@example.invalid","password":"not-a-real-password"}')
+          if [ "$STATUS" != "401" ]; then
+            echo "FAIL: POST /api/auth/login (unknown user) returned HTTP $STATUS, expected 401"
+            FAILED=1
+          else
+            echo "POST /api/auth/login (unknown user) — 401"
+          fi
+
+          if [ "$FAILED" != "0" ]; then
+            echo "Database smoke test failed — the staging schema is likely out of date with shared/schema.ts."
+            echo "Check the app's startup log for the drizzle-kit push output."
+            exit 1
+          fi
+          echo "Database smoke test passed"
 
       - name: Smoke test — logging infrastructure
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
@@ -328,7 +371,8 @@ jobs:
           | Run | [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |
           | Version reported by staging | \`$(printf '%s' "$version" | head -c 200)\` |
 
-          Smoke tests passed: health endpoint, version and changelog, and the logging
+          Smoke tests passed: health endpoint, version and changelog, database schema
+          (DB-backed reads return 200, unknown-user login returns 401), and the logging
           infrastructure (active rotated log file present, valid NDJSON, startup entry,
           MCP audit entries).
 
@@ -469,7 +513,7 @@ jobs:
             docker compose up -d --remove-orphans
             # Run pending database migrations (push mode, like staging)
             echo "Running database schema push..."
-            docker compose exec -T app npx drizzle-kit push --force || echo "Warning: schema push failed"
+            docker compose exec -T app npx drizzle-kit push --force
             echo "Waiting for app to be healthy..."
             for i in $(seq 1 60); do
               if docker compose exec -T app node -e "fetch('http://localhost:5000/health').then(r => { if (!r.ok) process.exit(1) })" 2>/dev/null; then

@@ -3,6 +3,7 @@ import request from "supertest";
 import type express from "express";
 import type { IStorage } from "../storage";
 import { createTestApp, mockStorage, mockGenerateWhiteRoomLayout } from "./helpers/test-app";
+import { authStorage } from "../replit_integrations/auth";
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -1046,6 +1047,73 @@ describe("GET /api/admin/logs", () => {
     } finally {
       fs.renameSync(tmpPath, logFile);
     }
+  });
+});
+
+// ----- Admin user approval (#831) -----
+
+describe("PATCH /api/admin/users/:id/approval", () => {
+  beforeEach(() => {
+    (authStorage.setApprovalStatus as ReturnType<typeof vi.fn>).mockReset();
+    (mockStorage.ensureArtistProfile as ReturnType<typeof vi.fn>).mockReset();
+  });
+
+  it("rejects an invalid status with 400", async () => {
+    const res = await request(app).patch("/api/admin/users/user-1/approval").send({ status: "not-a-status" });
+    expect(res.status).toBe(400);
+    expect(authStorage.setApprovalStatus).not.toHaveBeenCalled();
+  });
+
+  it("approves a pending user and provisions their artist profile", async () => {
+    (authStorage.setApprovalStatus as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "user-1",
+      email: "new@example.com",
+      role: "user",
+      approvalStatus: "approved",
+      firstName: "New",
+      lastName: "User",
+    });
+    (mockStorage.ensureArtistProfile as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "artist-1" });
+
+    const res = await request(app).patch("/api/admin/users/user-1/approval").send({ status: "approved" });
+
+    expect(res.status).toBe(200);
+    expect(authStorage.setApprovalStatus).toHaveBeenCalledWith("user-1", "approved");
+    expect(mockStorage.ensureArtistProfile).toHaveBeenCalledWith("user-1", expect.objectContaining({ email: "new@example.com" }));
+    expect(res.body.password).toBeUndefined();
+  });
+
+  it("rejecting a user does not provision an artist profile", async () => {
+    (authStorage.setApprovalStatus as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "user-1",
+      role: "user",
+      approvalStatus: "rejected",
+    });
+
+    const res = await request(app).patch("/api/admin/users/user-1/approval").send({ status: "rejected" });
+
+    expect(res.status).toBe(200);
+    expect(mockStorage.ensureArtistProfile).not.toHaveBeenCalled();
+  });
+
+  it("approving a curator/admin does not provision an artist profile", async () => {
+    (authStorage.setApprovalStatus as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "user-2",
+      role: "curator",
+      approvalStatus: "approved",
+    });
+
+    const res = await request(app).patch("/api/admin/users/user-2/approval").send({ status: "approved" });
+
+    expect(res.status).toBe(200);
+    expect(mockStorage.ensureArtistProfile).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 when the user does not exist", async () => {
+    (authStorage.setApprovalStatus as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+
+    const res = await request(app).patch("/api/admin/users/missing/approval").send({ status: "approved" });
+    expect(res.status).toBe(404);
   });
 });
 

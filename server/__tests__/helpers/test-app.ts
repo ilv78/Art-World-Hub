@@ -115,8 +115,9 @@ vi.mock("../../replit_integrations/auth", () => ({
     next();
   },
   authStorage: {
-    getUser: vi.fn().mockResolvedValue({ id: "test-user-id", role: "user" }),
+    getUser: vi.fn().mockResolvedValue({ id: "test-user-id", role: "user", approvalStatus: "approved" }),
     upsertUser: vi.fn(),
+    setApprovalStatus: vi.fn().mockResolvedValue({ id: "test-user-id", role: "user", approvalStatus: "approved" }),
   },
 }));
 

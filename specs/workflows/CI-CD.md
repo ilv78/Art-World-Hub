@@ -1,7 +1,7 @@
 # Vernis9 — CI/CD Pipeline Specification
 
 **Status:** Active
-**Last Updated:** 2026-09-15
+**Last Updated:** 2026-09-23
 
 ---
 
@@ -520,6 +520,7 @@ DB passwords and session secrets are stored in `.env` files on the VPS (not in G
                │  Health check (2 min)    │
                │  Smoke test (external)   │
                │  Smoke test (version)    │  ← /api/version + /api/changelog (warnings only)
+               │  Smoke test (DB schema)  │  ← DB-backed reads 200 + unknown-user login 401
                │  Smoke test (logging)    │  ← Verifies log file exists, valid JSON
                │  Git tag release-N       │
                │  📱 Telegram notify      │
@@ -726,6 +727,21 @@ After the health check passes, both staging (`ci.yml`) and production (`deploy-p
 
 **Workflows:** `ci.yml` (staging deploy job, after health check), `deploy-production.yml` (after health check, before rollback step).
 
+### 6.7 Staging Schema Push Guard + Database Smoke Test
+
+Staging runs `drizzle-kit push --force` from `docker-entrypoint.sh`. **`drizzle-kit push` exits 0 even when it aborts**, either on an interactive prompt it can't answer without a TTY (e.g. "truncate table?" when adding a UNIQUE constraint to a populated table) or on a failed statement (e.g. a unique index over duplicate rows). An abort applies **none** of the pending changes, so the app booted on a stale schema while every deploy check stayed green.
+
+Two guards, added in [#833](https://github.com/ilv78/Art-World-Hub/issues/833):
+
+| Guard | Where | Behavior on failure |
+|---|---|---|
+| Entrypoint checks the push output for `Error:` / `error:` / `Interactive prompts require a TTY` (as well as a non-zero exit) | `docker-entrypoint.sh` (push mode only) | **Container refuses to start.** The health check fails and the deploy goes red. Staging is down until the pending migration SQL is applied manually. |
+| `Smoke test — database schema`: `GET /api/artworks`, `/api/auctions`, `/api/curated-exhibitions` must return 200; `POST /api/auth/login` for a non-existent account must return **401** | `ci.yml` staging deploy job, after the version smoke test | **Failure.** A missing column turns these into 500s. |
+
+**Why fail hard:** staging down with a red deploy is visible within minutes. Staging up on a stale schema went unnoticed for five days (#817 → #831), during which every login returned 500. The structural fix is to run staging in migrate mode ([#543](https://github.com/ilv78/Art-World-Hub/issues/543)).
+
+**Recovery when the guard trips:** apply the pending `migrations/*.sql` bodies to the staging DB in a transaction (`docker compose exec -T db psql …`), then `docker compose restart app`. Data-changing fixes (e.g. deduplicating rows so a unique index can build) are gated (`specs/AGENT-AUTONOMY-POLICY.md` §1.1).
+
 ---
 
 ## 7. Revision Log
@@ -769,3 +785,4 @@ After the health check passes, both staging (`ci.yml`) and production (`deploy-p
 | 2026-09-11 | Added `gated-paths.yml` — mechanical enforcement of the gated list in `specs/AGENT-AUTONOMY-POLICY.md` §1 (#744). Runs `script/gated-paths.mjs` on every PR and fails until the developer applies the `human-approved` label. Covers the two gated items a diff can reveal: destructive schema/data statements in `migrations/*.sql` (matched on each statement's **leading keyword**, because every additive Drizzle migration contains `ON DELETE no action ON UPDATE no action` in its foreign keys) and secret-shaped paths. Lives in its own workflow so that applying a label re-runs only this check, not the Docker build and two Trivy scans. Self-guarding: the script, its workflow and the policy are themselves gated paths. Validated against all 14 migrations in the repo — flags exactly the three that backfill or tighten data (#513, #543 shapes), passes the other 11. ([#744](https://github.com/ilv78/Art-World-Hub/issues/744)) |
 | 2026-09-11 | Pruned `.trivyignore.yaml` from 50 entries to zero (#739), completing #728. A scan of the production image with the ignore file not applied showed every entry was redundant: 32 are classified vendored by `script/partition-trivy.mjs` (10 npm-CLI-bundled, 22 drizzle-kit esbuild) and 18 suppressed findings the gate no longer sees (12 absent from the image entirely, 6 still present but MEDIUM, below the CRITICAL/HIGH threshold). Blocking set unchanged at 0, verified by scanning with the pruned file and diffing the partitioner output against the unsuppressed baseline. This is also the first CI run in which the #728 vendored warning table renders on real data — until the prune, Trivy applied the suppressions before the report reached the partitioner, so every run reported `0 blocking, 0 vendored`. ([#739](https://github.com/ilv78/Art-World-Hub/issues/739)) |
 | 2026-09-15 | Added `trivyignore-expiry.yml` (#729, postmortem action item 4): weekly (Monday 08:00 UTC) + manual-dispatch job running `script/check-trivyignore-expiry.mjs`, which fails when a `.trivyignore.yaml` entry is already past `expired_at` or within 14 days of it. Closes the failure mode where the five `libgnutls30` suppressions lapsed silently and only surfaced as a second cause of an already-red pipeline during the 61-day staging freeze. `ci-failure-notify.yml`'s `workflow_run` watch list gained the new workflow name so a failure reaches Telegram through the existing persistent-alert path rather than a new one. Added §5.6. ([#729](https://github.com/ilv78/Art-World-Hub/issues/729)) |
+| 2026-09-23 | Staging schema push guard + database smoke test (§6.7). `drizzle-kit push` exits 0 when it aborts, so since #817 (2026-09-18) every staging deploy had silently skipped all pending schema changes; #831's `users.approval_status` then made every login 500 while CI stayed green. `docker-entrypoint.sh` now fails the container start when the push output reports an error, and the staging deploy gained a DB-touching smoke test (DB-backed reads 200, unknown-user login 401). ([#833](https://github.com/ilv78/Art-World-Hub/issues/833)) |

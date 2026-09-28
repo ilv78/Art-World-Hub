@@ -435,6 +435,7 @@ jobs:
           ISSUE: ${{ steps.pick.outputs.issue }}
           REPO: ${{ github.repository }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          TRANSCRIPT: ${{ runner.temp }}/claude-execution-output.json
           TRANSCRIPT_URL: ${{ steps.transcript.outputs.artifact-url }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -457,6 +458,33 @@ jobs:
               -d disable_web_page_preview="true" \
               -d text="$text" > /dev/null || true
           }
+
+          # #818: a `failure` conclusion on `Work the issue` is not itself evidence the
+          # agent failed. `claude-code-action` enforces `--max-turns` by throwing *after*
+          # a genuinely successful run — confirmed by reading its source
+          # (base-action/src/run-claude-sdk.ts): `writeExecutionFile(messages)` runs
+          # before the max-turns check, so the transcript this workflow already keeps
+          # (see "Keep the run transcript" above) reflects the truth even when the step
+          # is red. The transcript is a JSON array of SDK messages; when a result exists
+          # it is always the last element, because the action's own read loop breaks
+          # immediately after pushing it. Read it once here and reuse it in both branches
+          # below, rather than trusting the step's pass/fail colour.
+          TRANSCRIPT_RESULT=""
+          if [ -f "$TRANSCRIPT" ]; then
+            TRANSCRIPT_RESULT=$(jq -c '.[-1] | select(.type=="result")' "$TRANSCRIPT" 2>/dev/null) || true
+          fi
+          TRANSCRIPT_SUCCESS=false
+          TRANSCRIPT_TURNS="unknown"
+          # `// empty` is wrong for a boolean field: jq's alternative operator treats
+          # `false` as falsy exactly like `null`, so `.is_error // empty` silently
+          # discards the one value (`is_error: false`) this check exists to detect.
+          # Caught by testing against a fixture matching the issue's own example
+          # before this shipped — do not "simplify" this back to `// empty`.
+          if [ -n "$TRANSCRIPT_RESULT" ] \
+             && [ "$(jq -r 'if (.subtype=="success") and (.is_error==false) then "yes" else "no" end' <<<"$TRANSCRIPT_RESULT")" = "yes" ]; then
+            TRANSCRIPT_SUCCESS=true
+            TRANSCRIPT_TURNS=$(jq -r '.num_turns // "unknown"' <<<"$TRANSCRIPT_RESULT")
+          fi
 
           # Head branch only, deliberately. Matching the PR *body* for "#<issue>" looks
           # more forgiving and is wrong: #762's body discusses the failed #688 run at
@@ -530,6 +558,37 @@ jobs:
               exit 0
             fi
 
+            # #818: the action's own trailing result record overrides a bare "no PR"
+            # verdict. A `failure` step conclusion can mean the agent was denied every
+            # tool (genuinely nothing happened) or it can mean --max-turns tripped after
+            # the agent had already finished and simply had not pushed yet — the result
+            # record is the only thing that tells them apart. Only a transcript that says
+            # subtype=="success" and is_error==false earns this: anything missing,
+            # malformed, or a real error falls through to agent-failed unchanged, same
+            # "err terminal" rule as the OUTCOME_FILE check above.
+            if [ "$TRANSCRIPT_SUCCESS" = true ]; then
+              gh issue edit "$ISSUE" --repo "$REPO" \
+                --remove-label agent-working --add-label agent-stuck
+              gh issue edit "$ISSUE" --repo "$REPO" --remove-label agent-failed || true
+
+              gh issue comment "$ISSUE" --repo "$REPO" --body "### Agent run reported success, but no PR was found
+
+          \`Work the issue\` ended in \`failure\`, but the action's own trailing result record says \`subtype: success\`, \`is_error: false\` (num_turns: $TRANSCRIPT_TURNS) — most likely \`claude-code-action\` enforcing \`--max-turns\` after the agent had already finished. No branch matching \`feature/issue-${ISSUE}-*\` exists, though, so there is nothing to review yet.
+
+          Not marked \`agent-failed\`: a run the action itself calls successful should not burn a terminal state or a daily-ceiling slot. Re-apply \`agent-ready\` to retry, or raise \`--max-turns\` in \`.github/workflows/agent-dispatch.yml\` if this recurs.
+
+          Run: $RUN_URL
+          Transcript (30-day artifact): ${TRANSCRIPT_URL:-not captured; see the Artifacts section of the run}"
+
+              notify_telegram "@racu8_bot
+          🧑‍💻 <b>agent-stuck on #${ISSUE}</b> (no PR, but transcript reports success — turns: ${TRANSCRIPT_TURNS})
+          <a href=\"${RUN_URL}\">View run</a>"
+
+              echo "::warning::Work the issue step failed but its transcript reports success (turns=$TRANSCRIPT_TURNS) and no PR exists; agent-stuck applied instead of agent-failed."
+              echo "Issue #$ISSUE: transcript reports success despite no PR; claim released, agent-stuck applied pending human review."
+              exit 0
+            fi
+
             gh issue edit "$ISSUE" --repo "$REPO" \
               --remove-label agent-working --add-label agent-failed
             # Mutually exclusive states (#800): a stale `agent-stuck` from an earlier
@@ -550,6 +609,14 @@ jobs:
           fi
 
           PR_NUM=$(printf '%s' "$PR" | jq -r '.number')
+
+          # #818: visibility only — a PR already exists, so nothing about the label
+          # lifecycle changes, but a red `Work the issue` step next to a green PR is
+          # confusing enough on its own (this is exactly what #509/run 35319082967
+          # looked like) that it is worth saying why in the log.
+          if [ "$TRANSCRIPT_SUCCESS" = true ]; then
+            echo "::notice::Work the issue step may show failure (e.g. --max-turns) but its transcript reports success (turns=$TRANSCRIPT_TURNS); PR #$PR_NUM exists so no state change is needed."
+          fi
 
           # `agent-failed` wins over `agent-stuck` if somehow both are present: failed is
           # terminal and stuck is not, and over-escalating is the safe direction.

@@ -6,7 +6,7 @@ import { normalizeArtworkForCreate, normalizeArtworkForUpdate } from "./publish"
 import type { Artist, ArtworkWithArtist, Order, InsertOrder, ArtworkEnquiry } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth, registerAuthRoutes, isAuthenticated, isAdmin, isCurator, authStorage } from "./replit_integrations/auth";
-import { USER_ROLES, type UserRole } from "@shared/models/auth";
+import { USER_ROLES, USER_APPROVAL_STATUSES, type UserRole, type UserApprovalStatus } from "@shared/models/auth";
 import https from "https";
 import http from "http";
 import { getResendClient, getFromEmail } from "./email";
@@ -1340,6 +1340,37 @@ export async function registerRoutes(
     } catch (error) {
       logger.error({ err: error }, "Failed to update user role");
       res.status(500).json({ error: "Failed to update user role" });
+    }
+  });
+
+  // Approve or reject a new account (#831). Approval is the point at which
+  // the account may start consuming resources: the artist profile is
+  // provisioned here rather than at signup, for "user"-role accounts only.
+  app.patch("/api/admin/users/:id/approval", isAdmin, async (req: any, res) => {
+    try {
+      const status = req.body.status as string;
+      if (!status || !USER_APPROVAL_STATUSES.includes(status as UserApprovalStatus)) {
+        return res.status(400).json({ error: `Invalid status. Must be one of: ${USER_APPROVAL_STATUSES.join(", ")}` });
+      }
+
+      const user = await authStorage.setApprovalStatus(req.params.id, status as UserApprovalStatus);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (status === "approved" && user.role === "user") {
+        await storage.ensureArtistProfile(user.id, {
+          firstName: user.firstName || undefined,
+          lastName: user.lastName || undefined,
+          email: user.email || undefined,
+        });
+      }
+
+      const { password: _, ...safeUser } = user;
+      res.json(safeUser);
+    } catch (error) {
+      logger.error({ err: error }, "Failed to update user approval status");
+      res.status(500).json({ error: "Failed to update user approval status" });
     }
   });
 

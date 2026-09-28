@@ -28,6 +28,7 @@ type AdminUser = {
   id: string;
   email: string | null;
   role: string;
+  approvalStatus: string;
   firstName: string | null;
   lastName: string | null;
   emailVerified: boolean | null;
@@ -191,6 +192,24 @@ export default function AdminPage() {
     },
   });
 
+  const updateApprovalMutation = useMutation({
+    mutationFn: ({ userId, status }: { userId: string; status: "approved" | "rejected" }) =>
+      apiFetch(`/api/admin/users/${userId}/approval`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      }),
+    onSuccess: (_data, { status }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/artists"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/artists"] });
+      toast({ title: status === "approved" ? "User approved" : "User rejected" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Failed to update approval status", description: err.message, variant: "destructive" });
+    },
+  });
+
   const deleteUserMutation = useMutation({
     mutationFn: (id: string) => apiFetch(`/api/admin/users/${id}`, { method: "DELETE" }),
     onSuccess: () => {
@@ -347,6 +366,7 @@ export default function AdminPage() {
                       <TableHead>Email</TableHead>
                       <TableHead>Name</TableHead>
                       <TableHead>Role</TableHead>
+                      <TableHead>Approval</TableHead>
                       <TableHead>Verified</TableHead>
                       <TableHead>Created</TableHead>
                       <TableHead>Actions</TableHead>
@@ -372,6 +392,39 @@ export default function AdminPage() {
                               <SelectItem value="admin">admin</SelectItem>
                             </SelectContent>
                           </Select>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              variant={
+                                u.approvalStatus === "approved"
+                                  ? "default"
+                                  : u.approvalStatus === "rejected"
+                                    ? "destructive"
+                                    : "secondary"
+                              }
+                            >
+                              {u.approvalStatus}
+                            </Badge>
+                            {u.approvalStatus !== "approved" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => updateApprovalMutation.mutate({ userId: u.id, status: "approved" })}
+                              >
+                                Approve
+                              </Button>
+                            )}
+                            {u.approvalStatus !== "rejected" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => updateApprovalMutation.mutate({ userId: u.id, status: "rejected" })}
+                              >
+                                Reject
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Badge variant={u.emailVerified ? "default" : "secondary"}>

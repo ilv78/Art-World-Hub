@@ -685,6 +685,25 @@ export default function ArtistDashboard() {
     );
   }
 
+  // Account created but not yet signed off by an administrator (#831):
+  // /api/artists/me is a resource-consuming route, so it 403s until approved.
+  if (user?.approvalStatus && user.approvalStatus !== "approved") {
+    const isRejected = user.approvalStatus === "rejected";
+    return (
+      <div className="p-6 flex flex-col items-center justify-center min-h-[60vh] text-center">
+        <Palette className="h-16 w-16 text-muted-foreground mb-6" />
+        <h1 className="font-serif text-3xl font-bold mb-2">
+          {isRejected ? "Account not approved" : "Approval pending"}
+        </h1>
+        <p className="text-muted-foreground mb-6 max-w-md">
+          {isRejected
+            ? "An administrator has not approved this account. Contact support if you believe this is a mistake."
+            : "Your account is waiting for an administrator to sign off. You'll be able to set up your artist profile as soon as it's approved."}
+        </p>
+      </div>
+    );
+  }
+
   // Loading artist profile (auto-creates if needed)
   if (!myArtist && !myArtistLoading) {
     return (
