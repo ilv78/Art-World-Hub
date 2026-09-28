@@ -212,13 +212,16 @@ jobs:
             docker compose run --rm --no-deps --user root --entrypoint sh app -c "mkdir -p /app/uploads/artworks /app/uploads/blog-covers /app/uploads/avatars /app/uploads/og-cards /app/logs && chown -R appuser:appgroup /app/uploads /app/logs"
             docker compose up -d --remove-orphans
             # Staging's compose sets no DB_MIGRATION_MODE, so docker-entrypoint.sh
-            # already pushed the schema on container start (push mode). This step
-            # was running `drizzle-kit migrate` instead — a no-op against a database
-            # with no migration journal — and its failure was swallowed by `|| echo`,
-            # masking real push failures too (#692). Match the entrypoint's actual
-            # mode and let a genuine failure fail the deploy.
-            echo "Running database schema push..."
-            docker compose exec -T app npx drizzle-kit push --force
+            # already pushed the schema on container start (push mode) before this
+            # step runs. #692 fixed this step to match that mode (it had been
+            # running `drizzle-kit migrate`, a no-op here) — but a *second*, external
+            # `push --force` right after is worse than redundant: unlike the
+            # entrypoint (#833/#834), it has no detection for drizzle-kit's
+            # exits-0-while-silently-aborting failure mode (an unattended TTY
+            # prompt), so a schema change could fail here with this step still
+            # reporting green. Removed; the entrypoint is the one place this is
+            # safe to run, and it already fails the container (and so this step's
+            # health check below) if the push didn't really succeed.
             echo "Waiting for app to be healthy..."
             for i in $(seq 1 60); do
               if docker compose exec -T app node -e "fetch('http://localhost:5000/health').then(r => { if (!r.ok) process.exit(1) })" 2>/dev/null; then
@@ -511,9 +514,9 @@ jobs:
             # Ensure upload subdirs exist on the Docker volume (new subdirs may be missing)
             docker compose run --rm --no-deps --user root --entrypoint sh app -c "mkdir -p /app/uploads/artworks /app/uploads/blog-covers /app/uploads/avatars /app/uploads/og-cards /app/logs && chown -R appuser:appgroup /app/uploads /app/logs"
             docker compose up -d --remove-orphans
-            # Run pending database migrations (push mode, like staging)
-            echo "Running database schema push..."
-            docker compose exec -T app npx drizzle-kit push --force
+            # Preview's compose sets no DB_MIGRATION_MODE either, so
+            # docker-entrypoint.sh already pushed the schema on container start —
+            # see the identical reasoning in the staging step above (#692, #833).
             echo "Waiting for app to be healthy..."
             for i in $(seq 1 60); do
               if docker compose exec -T app node -e "fetch('http://localhost:5000/health').then(r => { if (!r.ok) process.exit(1) })" 2>/dev/null; then
